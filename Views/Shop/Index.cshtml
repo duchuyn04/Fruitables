@@ -1,0 +1,62 @@
+@using Fruitables.ViewModels
+@model ShopViewModel
+@{
+    ViewData["Title"] = "Cửa hàng";
+}
+
+<!-- Single Page Header start -->
+<div class="container-fluid page-header py-5">
+    <h1 class="text-center text-white display-6">Cửa hàng</h1>
+    <ol class="breadcrumb justify-content-center mb-0">
+        <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Trang chủ</a></li>
+        <li class="breadcrumb-item active text-white">Cửa hàng</li>
+    </ol>
+</div>
+<!-- Single Page Header End -->
+
+<!-- Fruits Shop Start-->
+<div class="container-fluid fruite py-5">
+    <div class="container py-5">
+        <h1 class="mb-4">Cửa hàng trái cây tươi</h1>
+        <div class="row g-4">
+            <div class="col-lg-12">
+                <div class="row g-4">
+                    <div class="col-xl-3">
+                        <form asp-controller="Shop" asp-action="Index" method="get" class="input-group w-100 mx-auto d-flex">
+                            @if (Model.SelectedCategoryId.HasValue)
+                            {
+                                <input type="hidden" name="categoryId" value="@Model.SelectedCategoryId" />
+                            }
+                            <input type="search" name="search" class="form-control p-3" placeholder="Tìm kiếm..." value="@Model.SearchTerm">
+                            <button type="submit" class="input-group-text p-3"><i class="fa fa-search"></i></button>
+                        </form>
+                    </div>
+                    <div class="col-6"></div>
+                    <div class="col-xl-3">
+                        <div class="bg-light ps-3 py-3 rounded d-flex justify-content-between mb-4">
+                            <label for="sortBy">Sắp xếp:</label>
+                            <select id="sortBy" name="sortBy" class="border-0 form-select-sm bg-light me-3" onchange="location.href=this.value">
+                                <option value="@Url.Action("Index", "Shop", new { categoryId = Model.SelectedCategoryId, search = Model.SearchTerm })" selected="@(string.IsNullOrEmpty(Model.SortBy))">Mặc định</option>
+                                <option value="@Url.Action("Index", "Shop", new { categoryId = Model.SelectedCategoryId, search = Model.SearchTerm, sortBy = "newest" })" selected="@(Model.SortBy == "newest")">Mới nhất</option>
+                                <option value="@Url.Action("Index", "Shop", new { categoryId = Model.SelectedCategoryId, search = Model.SearchTerm, sortBy = "price_asc" })" selected="@(Model.SortBy == "price_asc")">Giá: Thấp đến cao</option>
+                                <option value="@Url.Action("Index", "Shop", new { categoryId = Model.SelectedCategoryId, search = Model.SearchTerm, sortBy = "price_desc" })" selected="@(Model.SortBy == "price_desc")">Giá: Cao đến thấp</option>
+                                <option value="@Url.Action("Index", "Shop", new { categoryId = Model.SelectedCategoryId, search = Model.SearchTerm, sortBy = "name" })" selected="@(Model.SortBy == "name")">Tên</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="row g-4">
+                    <div class="col-lg-3">
+                        <partial name="_ShopSidebar" model="Model" />
+                    </div>
+                    <div class="col-lg-9">
+                        <div class="row g-4 justify-content-center">
+                            <partial name="_ShopProducts" model="Model" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Fruits Shop End-->

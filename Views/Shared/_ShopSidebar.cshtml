@@ -1,0 +1,91 @@
+@using Fruitables.Models
+@using Fruitables.ViewModels
+@{
+    var model = Model as ShopViewModel;
+    var categories = model?.Categories ?? ViewBag.Categories as List<Category> ?? new List<Category>();
+    var featuredProducts = ViewBag.FeaturedProducts as List<Product> ?? new List<Product>();
+    var selectedCategoryId = model?.SelectedCategoryId ?? ViewBag.CategoryId as int?;
+}
+
+<div class="row g-4">
+    <div class="col-lg-12">
+        <div class="mb-3">
+            <h4>Categories</h4>
+            <ul class="list-unstyled fruite-categorie">
+                @foreach (var category in categories)
+                {
+                    var isActive = selectedCategoryId == category.Id;
+                    <li>
+                        <div class="d-flex justify-content-between fruite-name">
+                            <a asp-controller="Shop" asp-action="Index" asp-route-categoryId="@category.Id" class="@(isActive ? "text-primary fw-bold" : "")">
+                                <i class="fas fa-apple-alt me-2"></i>@category.Name
+                            </a>
+                            <span>(@(category.Products?.Count(p => p.IsActive) ?? 0))</span>
+                        </div>
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+    <div class="col-lg-12">
+        <div class="mb-3">
+            <h4 class="mb-2">Price</h4>
+            <form asp-controller="Shop" asp-action="Index" method="get">
+                @if (selectedCategoryId.HasValue)
+                {
+                    <input type="hidden" name="categoryId" value="@selectedCategoryId" />
+                }
+                <input type="range" class="form-range w-100" id="rangeInput" name="maxPrice" min="0" max="500" value="@(model?.MaxPrice ?? 500)" oninput="amount.value=rangeInput.value">
+                <output id="amount" name="amount" for="rangeInput">@(model?.MaxPrice ?? 500)</output>
+                <button type="submit" class="btn btn-sm btn-primary mt-2">Filter</button>
+            </form>
+        </div>
+    </div>
+    <div class="col-lg-12">
+        <h4 class="mb-3">Featured products</h4>
+        @foreach (var product in featuredProducts.Take(3))
+        {
+            var primaryImage = product.Images?.FirstOrDefault(i => i.IsPrimary)?.ImageUrl ?? product.Images?.FirstOrDefault()?.ImageUrl ?? "~/img/featur-1.jpg";
+            <div class="d-flex align-items-center justify-content-start mb-3">
+                <div class="rounded me-4" style="width: 100px; height: 100px;">
+                    <a asp-controller="Shop" asp-action="Detail" asp-route-id="@product.Id">
+                        <img src="@primaryImage" class="img-fluid rounded" alt="@product.Name">
+                    </a>
+                </div>
+                <div>
+                    <h6 class="mb-2">
+                        <a asp-controller="Shop" asp-action="Detail" asp-route-id="@product.Id">@product.Name</a>
+                    </h6>
+                    <div class="d-flex mb-2">
+                        @for (int i = 0; i < 5; i++)
+                        {
+                            <i class="fa fa-star @(i < 4 ? "text-secondary" : "")"></i>
+                        }
+                    </div>
+                    <div class="d-flex mb-2">
+                        @if (product.SalePrice.HasValue)
+                        {
+                            <h5 class="fw-bold me-2">@product.SalePrice.Value.ToString("F2") $</h5>
+                            <h5 class="text-danger text-decoration-line-through">@product.Price.ToString("F2") $</h5>
+                        }
+                        else
+                        {
+                            <h5 class="fw-bold me-2">@product.Price.ToString("F2") $</h5>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+        <div class="d-flex justify-content-center my-4">
+            <a asp-controller="Shop" asp-action="Index" class="btn border border-secondary px-4 py-3 rounded-pill text-primary w-100">View More</a>
+        </div>
+    </div>
+    <div class="col-lg-12">
+        <div class="position-relative">
+            <img src="~/img/banner-fruits.jpg" class="img-fluid w-100 rounded" alt="">
+            <div class="position-absolute" style="top: 50%; right: 10px; transform: translateY(-50%);">
+                <h3 class="text-secondary fw-bold">Fresh <br> Fruits <br> Banner</h3>
+            </div>
+        </div>
+    </div>
+</div>

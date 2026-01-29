@@ -1,0 +1,152 @@
+@model Fruitables.ViewModels.CategoryListViewModel
+@{
+    ViewData["Title"] = "Quản lý danh mục";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminDashboardLayout.cshtml";
+}
+
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="mb-1">Quản lý danh mục</h4>
+        <p class="text-muted mb-0">Quản lý danh mục sản phẩm của cửa hàng</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="Trash" class="btn btn-outline-secondary">
+            <i class="fas fa-trash me-2"></i>Thùng rác
+        </a>
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Thêm danh mục
+        </a>
+    </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
+    @if (TempData["Success"] != null)
+    {
+        <div class="toast show" role="alert" data-bs-autohide="true" data-bs-delay="5000">
+            <div class="toast-header bg-success text-white">
+                <i class="fas fa-check-circle me-2"></i>
+                <strong class="me-auto">Thành công</strong>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+            </div>
+            <div class="toast-body">@TempData["Success"]</div>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="toast show" role="alert" data-bs-autohide="true" data-bs-delay="5000">
+            <div class="toast-header bg-danger text-white">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                <strong class="me-auto">Lỗi</strong>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+            </div>
+            <div class="toast-body">@TempData["Error"]</div>
+        </div>
+    }
+</div>
+
+<!-- Category Tree -->
+<div class="admin-card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-sitemap me-2"></i>Cây danh mục</span>
+        <small class="text-muted">Kéo thả để sắp xếp thứ tự</small>
+    </div>
+    <div class="card-body p-0">
+        @if (Model.Categories.Any())
+        {
+            <div class="table-responsive" style="overflow: visible;">
+                <table class="table table-hover mb-0" id="categoryTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 40%">Tên danh mục</th>
+                            <th>Slug</th>
+                            <th class="text-center">Sản phẩm</th>
+                            <th class="text-center">Trạng thái</th>
+                            <th class="text-center" style="width: 120px;">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="categoryTreeBody">
+                        @await Html.PartialAsync("_CategoryTreeRows", Model.Categories)
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-5">
+                <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
+                <p class="text-muted">Chưa có danh mục nào</p>
+                <a asp-action="Create" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Tạo danh mục đầu tiên
+                </a>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Soft Delete Confirmation Modal -->
+<div class="modal fade" id="softDeleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-trash-alt text-warning me-2"></i>Chuyển vào thùng rác</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Bạn có chắc chắn muốn chuyển danh mục <strong id="softDeleteCategoryName"></strong> vào thùng rác?</p>
+                <p class="text-muted mb-0"><small>Danh mục sẽ được chuyển vào thùng rác và có thể khôi phục.</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <form id="softDeleteForm" method="post" style="display: inline;">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-warning">Chuyển vào thùng rác</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hard Delete Confirmation Modal -->
+<div class="modal fade" id="hardDeleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="fas fa-exclamation-triangle me-2"></i>Xóa vĩnh viễn</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    <strong>Cảnh báo:</strong> Hành động này không thể hoàn tác!
+                </div>
+                <p>Bạn có chắc chắn muốn xóa vĩnh viễn danh mục <strong id="hardDeleteCategoryName"></strong>?</p>
+                <p class="text-muted mb-0"><small>Danh mục và tất cả sản phẩm bên trong (nếu chưa có trong đơn hàng) sẽ bị xóa hoàn toàn.</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <form id="hardDeleteForm" method="post" style="display: inline;">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-danger">Xóa vĩnh viễn</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function confirmSoftDelete(id, name) {
+        document.getElementById('softDeleteCategoryName').textContent = name;
+        document.getElementById('softDeleteForm').action = '@Url.Action("SoftDelete", "Category", new { area = "Admin" })/' + id;
+        new bootstrap.Modal(document.getElementById('softDeleteModal')).show();
+    }
+
+    function confirmHardDelete(id, name) {
+        document.getElementById('hardDeleteCategoryName').textContent = name;
+        document.getElementById('hardDeleteForm').action = '@Url.Action("Delete", "Category", new { area = "Admin" })/' + id;
+        new bootstrap.Modal(document.getElementById('hardDeleteModal')).show();
+    }
+</script>
+}

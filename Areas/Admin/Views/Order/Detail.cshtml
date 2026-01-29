@@ -1,0 +1,1365 @@
+@model Fruitables.Models.Order
+@using Fruitables.Models
+@using Fruitables.Helpers
+@{
+    ViewData["Title"] = $"Đơn hàng #{Model.OrderNumber}";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminDashboardLayout.cshtml";
+
+    var shippingAddress = AddressSnapshotHelper.FromSnapshot(Model.ShippingSnapshot);
+    var vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+    var createdAtVN = TimeZoneInfo.ConvertTimeFromUtc(Model.CreatedAt, vnTimeZone);
+}
+
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <a asp-action="Index" class="text-muted text-decoration-none mb-2 d-inline-block">
+                <i class="fas fa-arrow-left me-1"></i> Quay lại danh sách
+            </a>
+            <h4 class="mb-1">Đơn hàng #@Model.OrderNumber</h4>
+            <p class="text-muted mb-0">Ngày tạo: @createdAtVN.ToString("dd/MM/yyyy HH:mm:ss")</p>
+        </div>
+        <div>
+            <span class="badge @GetStatusBadgeClass(Model.Status) fs-6 me-2">
+                @GetStatusDisplayName(Model.Status)
+            </span>
+            <span class="badge @GetPaymentStatusBadgeClass(Model.PaymentStatus) fs-6">
+                @GetPaymentStatusDisplayName(Model.PaymentStatus)
+            </span>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Left Column -->
+        <div class="col-lg-8">
+            <!-- Order Items -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-shopping-cart me-2"></i>Sản phẩm</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Sản phẩm</th>
+                                    <th class="text-center">Số lượng</th>
+                                    <th class="text-end">Đơn giá</th>
+                                    <th class="text-end">Thành tiền</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model.Items)
+                                {
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                @if (item.Product?.Images?.Any() == true)
+                                                {
+                                                    <img src="@item.Product.Images.First().ImageUrl" alt="@item.ProductName" 
+                                                         class="rounded me-3" style="width: 50px; height: 50px; object-fit: cover;">
+                                                }
+                                                else
+                                                {
+                                                    <div class="bg-light rounded me-3 d-flex align-items-center justify-content-center" 
+                                                         style="width: 50px; height: 50px;">
+                                                        <i class="fas fa-image text-muted"></i>
+                                                    </div>
+                                                }
+                                                <div>
+                                                    <span class="fw-bold">@item.ProductName</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="text-center">@item.Quantity</td>
+                                        <td class="text-end">@item.Price.ToString("N0")đ</td>
+                                        <td class="text-end fw-bold">@item.Total.ToString("N0")đ</td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <td colspan="3" class="text-end">Tạm tính:</td>
+                                    <td class="text-end">@Model.Subtotal.ToString("N0")đ</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="3" class="text-end">Phí vận chuyển:</td>
+                                    <td class="text-end">@Model.ShippingFee.ToString("N0")đ</td>
+                                </tr>
+                                @if (Model.Discount > 0)
+                                {
+                                    <tr>
+                                        <td colspan="3" class="text-end">Giảm giá:</td>
+                                        <td class="text-end text-danger">-@Model.Discount.ToString("N0")đ</td>
+                                    </tr>
+                                }
+                                <tr>
+                                    <td colspan="3" class="text-end fw-bold">Tổng cộng:</td>
+                                    <td class="text-end fw-bold text-primary fs-5">@Model.Total.ToString("N0")đ</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status History -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-history me-2"></i>Lịch sử trạng thái</h5>
+                </div>
+                <div class="card-body">
+                    @if (Model.StatusHistory?.Any() == true)
+                    {
+                        <div class="timeline">
+                            @foreach (var history in Model.StatusHistory.OrderByDescending(h => h.CreatedAt))
+                            {
+                                <div class="timeline-item mb-3 pb-3 border-bottom">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <span class="badge @GetStatusBadgeClass(history.OldStatus) me-1">
+                                                @GetStatusDisplayName(history.OldStatus)
+                                            </span>
+                                            <i class="fas fa-arrow-right mx-2 text-muted"></i>
+                                            <span class="badge @GetStatusBadgeClass(history.NewStatus)">
+                                                @GetStatusDisplayName(history.NewStatus)
+                                            </span>
+                                            @if (!string.IsNullOrEmpty(history.Notes))
+                                            {
+                                                <p class="text-muted mb-0 mt-2 small">
+                                                    <i class="fas fa-comment me-1"></i>@history.Notes
+                                                </p>
+                                            }
+                                        </div>
+                                        <div class="text-end">
+                                            <small class="text-muted d-block">@TimeZoneInfo.ConvertTimeFromUtc(history.CreatedAt, vnTimeZone).ToString("dd/MM/yyyy HH:mm")</small>
+                                            @if (history.Admin != null)
+                                            {
+                                                <small class="text-muted">bởi @history.Admin.Name</small>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted mb-0">Chưa có lịch sử thay đổi</p>
+                    }
+                </div>
+            </div>
+
+            <!-- Audit Log Timeline - Requirements: 9.2, 9.3 -->
+            <!-- Hiển thị danh sách audit logs, sắp xếp mới nhất lên trên -->
+            @{
+                var auditLogs = ViewBag.AuditLogs as List<OrderStatusAuditLog>;
+            }
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-clipboard-list me-2"></i>Nhật ký thay đổi (Audit Log)</h5>
+                </div>
+                <div class="card-body">
+                    @if (auditLogs?.Any() == true)
+                    {
+                        <div class="audit-timeline">
+                            @foreach (var log in auditLogs)
+                            {
+                                var logTimeVN = TimeZoneInfo.ConvertTimeFromUtc(log.CreatedAt, vnTimeZone);
+                                <div class="audit-timeline-item">
+                                    <div class="audit-timeline-marker"></div>
+                                    <div class="audit-timeline-content">
+                                        <!-- Thời gian và Người thực hiện - Requirement 9.4 -->
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <div>
+                                                <span class="fw-bold text-primary">@log.AdminName</span>
+                                                <small class="text-muted d-block">@log.AdminEmail</small>
+                                            </div>
+                                            <small class="text-muted">
+                                                <i class="fas fa-clock me-1"></i>@logTimeVN.ToString("dd/MM/yyyy HH:mm:ss")
+                                            </small>
+                                        </div>
+                                        
+                                        <!-- Trạng thái cũ → Trạng thái mới (với badges) - Requirement 9.4 -->
+                                        <div class="mb-2">
+                                            <div class="d-flex align-items-center flex-wrap gap-1 mb-1">
+                                                <span class="small text-muted me-1">Đơn hàng:</span>
+                                                <span class="badge @GetStatusBadgeClass(log.OldOrderStatus) badge-sm">
+                                                    @GetStatusDisplayName(log.OldOrderStatus)
+                                                </span>
+                                                <i class="fas fa-arrow-right mx-1 text-muted small"></i>
+                                                <span class="badge @GetStatusBadgeClass(log.NewOrderStatus) badge-sm">
+                                                    @GetStatusDisplayName(log.NewOrderStatus)
+                                                </span>
+                                            </div>
+                                            <div class="d-flex align-items-center flex-wrap gap-1">
+                                                <span class="small text-muted me-1">Thanh toán:</span>
+                                                <span class="badge @GetPaymentStatusBadgeClass(log.OldPaymentStatus) badge-sm">
+                                                    @GetPaymentStatusDisplayName(log.OldPaymentStatus)
+                                                </span>
+                                                <i class="fas fa-arrow-right mx-1 text-muted small"></i>
+                                                <span class="badge @GetPaymentStatusBadgeClass(log.NewPaymentStatus) badge-sm">
+                                                    @GetPaymentStatusDisplayName(log.NewPaymentStatus)
+                                                </span>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Ghi chú (nếu có) - Requirement 9.4 -->
+                                        @if (!string.IsNullOrEmpty(log.Notes))
+                                        {
+                                            <div class="audit-notes mt-2 p-2 bg-light rounded">
+                                                <i class="fas fa-comment-alt me-1 text-muted"></i>
+                                                <span class="small">@log.Notes</span>
+                                            </div>
+                                        }
+                                        
+                                        <!-- Attachments (nếu có) - Requirement 10.4 -->
+                                        <!-- Link/thumbnail cho file đính kèm -->
+                                        @if (log.Attachments?.Any() == true)
+                                        {
+                                            <div class="audit-attachments mt-2">
+                                                <small class="text-muted d-block mb-2">
+                                                    <i class="fas fa-paperclip me-1"></i>Tệp đính kèm (@log.Attachments.Count):
+                                                </small>
+                                                <div class="d-flex flex-wrap gap-2">
+                                                    @foreach (var attachment in log.Attachments)
+                                                    {
+                                                        var isImage = attachment.ContentType.StartsWith("image/");
+                                                        var fileSizeKB = attachment.FileSize / 1024.0;
+                                                        var fileSizeDisplay = fileSizeKB >= 1024 
+                                                            ? $"{(fileSizeKB / 1024):F1} MB" 
+                                                            : $"{fileSizeKB:F0} KB";
+                                                        
+                                                        @if (isImage)
+                                                        {
+                                                            <!-- Image attachment with thumbnail preview -->
+                                                            <a href="@attachment.FilePath" target="_blank" 
+                                                               class="attachment-card text-decoration-none" 
+                                                               title="@attachment.FileName (@fileSizeDisplay) - Nhấn để xem ảnh gốc">
+                                                                <div class="attachment-thumbnail-wrapper">
+                                                                    <img src="@attachment.FilePath" alt="@attachment.FileName" 
+                                                                         class="attachment-thumbnail-img">
+                                                                    <div class="attachment-overlay">
+                                                                        <i class="fas fa-search-plus"></i>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="attachment-info">
+                                                                    <span class="attachment-name text-truncate">@attachment.FileName</span>
+                                                                    <span class="attachment-size">@fileSizeDisplay</span>
+                                                                </div>
+                                                            </a>
+                                                        }
+                                                        else
+                                                        {
+                                                            <!-- PDF/Document attachment -->
+                                                            <a href="@attachment.FilePath" target="_blank" 
+                                                               class="attachment-card attachment-card-pdf text-decoration-none"
+                                                               title="@attachment.FileName (@fileSizeDisplay) - Nhấn để tải xuống">
+                                                                <div class="attachment-icon-wrapper">
+                                                                    <i class="fas fa-file-pdf fa-2x text-danger"></i>
+                                                                </div>
+                                                                <div class="attachment-info">
+                                                                    <span class="attachment-name text-truncate">@attachment.FileName</span>
+                                                                    <span class="attachment-size">@fileSizeDisplay</span>
+                                                                </div>
+                                                            </a>
+                                                        }
+                                                    }
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted mb-0">
+                            <i class="fas fa-info-circle me-1"></i>Chưa có nhật ký thay đổi
+                        </p>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <!-- Customer Info -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-user me-2"></i>Khách hàng</h5>
+                </div>
+                <div class="card-body">
+                    @if (Model.User != null)
+                    {
+                        <p class="mb-1"><strong>@Model.User.Name</strong></p>
+                        <p class="mb-1 text-muted"><i class="fas fa-envelope me-2"></i>@Model.User.Email</p>
+                        @if (!string.IsNullOrEmpty(Model.User.Phone))
+                        {
+                            <p class="mb-0 text-muted"><i class="fas fa-phone me-2"></i>@Model.User.Phone</p>
+                        }
+                    }
+                    else
+                    {
+                        <p class="text-muted mb-0">Khách vãng lai</p>
+                    }
+                </div>
+            </div>
+
+            <!-- Shipping Address -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-map-marker-alt me-2"></i>Địa chỉ giao hàng</h5>
+                </div>
+                <div class="card-body">
+                    @if (shippingAddress != null)
+                    {
+                        <p class="mb-1"><strong>@shippingAddress.FullName</strong></p>
+                        <p class="mb-1 text-muted"><i class="fas fa-phone me-2"></i>@shippingAddress.Phone</p>
+                        <p class="mb-0 text-muted"><i class="fas fa-map-marker-alt me-2"></i>@shippingAddress.FullAddress</p>
+                    }
+                    else if (Model.Address != null)
+                    {
+                        <p class="mb-1"><strong>@Model.Address.FullName</strong></p>
+                        <p class="mb-1 text-muted"><i class="fas fa-phone me-2"></i>@Model.Address.Phone</p>
+                        <p class="mb-0 text-muted"><i class="fas fa-map-marker-alt me-2"></i>@Model.Address.FullAddress</p>
+                    }
+                    else
+                    {
+                        <p class="text-muted mb-0">Không có thông tin địa chỉ</p>
+                    }
+                </div>
+            </div>
+
+            <!-- Payment Info -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-credit-card me-2"></i>Thanh toán</h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-1">
+                        <strong>Phương thức:</strong> @GetPaymentMethodDisplayName(Model.PaymentMethod)
+                    </p>
+                    <p class="mb-1">
+                        <strong>Vận chuyển:</strong> @GetShippingMethodDisplayName(Model.ShippingMethod)
+                    </p>
+                    @if (!string.IsNullOrEmpty(Model.Notes))
+                    {
+                        <hr>
+                        <p class="mb-0 text-muted small">
+                            <strong>Ghi chú:</strong> @Model.Notes
+                        </p>
+                    }
+                </div>
+            </div>
+
+            <!-- Actions - Combined Status Update Form -->
+            <!-- Requirements: 1.1, 1.3, 7.4 - Single form with OrderStatus, PaymentStatus, Notes and one Save button -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-cogs me-2"></i>Cập nhật trạng thái</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Payment Method Display (Read-only) - Requirement 7.4 -->
+                    <div class="mb-3">
+                        <label class="form-label">Phương thức thanh toán</label>
+                        <input type="text" class="form-control" value="@GetPaymentMethodDisplayName(Model.PaymentMethod)" readonly disabled>
+                    </div>
+
+                    <!-- Combined Status Update Form - Requirements: 1.1, 1.3 -->
+                    <form asp-action="UpdateCombinedStatus" method="post" enctype="multipart/form-data" id="statusForm">
+                        <input type="hidden" name="OrderId" value="@Model.Id">
+                        <input type="hidden" id="paymentMethodValue" value="@((int)Model.PaymentMethod)">
+                        <input type="hidden" id="currentOrderStatus" value="@((int)Model.Status)">
+                        <input type="hidden" id="currentPaymentStatus" value="@((int)Model.PaymentStatus)">
+
+                        <!-- Order Status -->
+                        <div class="mb-3">
+                            <label class="form-label">Trạng thái đơn hàng</label>
+                            <select name="NewOrderStatus" class="form-select" id="orderStatusSelect">
+                                @foreach (OrderStatus s in Enum.GetValues(typeof(OrderStatus)))
+                                {
+                                    <option value="@((int)s)" 
+                                            data-status="@s"
+                                            selected="@(Model.Status == s)">
+                                        @GetStatusDisplayName(s)
+                                    </option>
+                                }
+                            </select>
+                        </div>
+
+                        <!-- Payment Status -->
+                        <div class="mb-3">
+                            <label class="form-label">Trạng thái thanh toán</label>
+                            <select name="NewPaymentStatus" class="form-select" id="paymentStatusSelect">
+                                @foreach (PaymentStatus ps in Enum.GetValues(typeof(PaymentStatus)))
+                                {
+                                    <option value="@((int)ps)" 
+                                            data-status="@ps"
+                                            selected="@(Model.PaymentStatus == ps)">
+                                        @GetPaymentStatusDisplayName(ps)
+                                    </option>
+                                }
+                            </select>
+                        </div>
+
+                        <!-- Notes -->
+                        <div class="mb-3">
+                            <label class="form-label">Ghi chú</label>
+                            <textarea name="Notes" class="form-control" rows="2" placeholder="Ghi chú (tùy chọn)"></textarea>
+                        </div>
+
+                        <!-- Attachments - Requirement 10.1: Show when Cancelled or Returned -->
+                        <div class="mb-3" id="attachmentSection" style="display: none;">
+                            <label class="form-label">Đính kèm bằng chứng</label>
+                            <input type="file" name="Attachments" class="form-control" id="attachmentInput"
+                                   multiple accept=".jpg,.jpeg,.png,.pdf">
+                            <small class="text-muted">Chấp nhận: JPG, PNG, PDF. Tối đa 5MB/file</small>
+                        </div>
+
+                        <!-- Single Save Button - Requirement 1.3 -->
+                        <button type="submit" class="btn btn-primary w-100" id="saveStatusBtn">
+                            <i class="fas fa-save me-1"></i> Lưu thay đổi
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@functions {
+    string GetStatusDisplayName(OrderStatus status) => status switch
+    {
+        OrderStatus.Pending => "Chờ xử lý",
+        OrderStatus.Processing => "Đang xử lý",
+        OrderStatus.Shipped => "Đang giao",
+        OrderStatus.Delivered => "Đã giao",
+        OrderStatus.Cancelled => "Đã hủy",
+        OrderStatus.Returned => "Trả hàng",
+        _ => status.ToString()
+    };
+
+    string GetPaymentStatusDisplayName(PaymentStatus status) => status switch
+    {
+        PaymentStatus.Pending => "Chờ thanh toán",
+        PaymentStatus.Paid => "Đã thanh toán",
+        PaymentStatus.Refunded => "Đã hoàn tiền",
+        _ => status.ToString()
+    };
+
+    string GetStatusBadgeClass(OrderStatus status) => status switch
+    {
+        OrderStatus.Pending => "bg-warning text-dark",
+        OrderStatus.Processing => "bg-info",
+        OrderStatus.Shipped => "bg-primary",
+        OrderStatus.Delivered => "bg-success",
+        OrderStatus.Cancelled => "bg-danger",
+        OrderStatus.Returned => "bg-secondary",
+        _ => "bg-secondary"
+    };
+
+    string GetPaymentStatusBadgeClass(PaymentStatus status) => status switch
+    {
+        PaymentStatus.Pending => "bg-warning text-dark",
+        PaymentStatus.Paid => "bg-success",
+        PaymentStatus.Refunded => "bg-info",
+        _ => "bg-secondary"
+    };
+
+    string GetPaymentMethodDisplayName(PaymentMethod method) => method switch
+    {
+        PaymentMethod.BankTransfer => "Chuyển khoản",
+        PaymentMethod.Check => "Séc",
+        PaymentMethod.COD => "Thanh toán khi nhận hàng",
+        PaymentMethod.Paypal => "PayPal",
+        _ => method.ToString()
+    };
+
+    string GetShippingMethodDisplayName(ShippingMethod method) => method switch
+    {
+        ShippingMethod.Free => "Miễn phí",
+        ShippingMethod.FlatRate => "Phí cố định",
+        ShippingMethod.LocalPickup => "Nhận tại cửa hàng",
+        _ => method.ToString()
+    };
+}
+
+<!-- Confirmation Modal - Requirements: 8.1, 8.2 -->
+<!-- Modal với message động và nút Xác nhận/Hủy bỏ -->
+<div class="modal fade" id="confirmationModal" tabindex="-1" aria-labelledby="confirmationModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title" id="confirmationModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Xác nhận thao tác
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="confirmationMessage">
+                <!-- Dynamic message will be inserted here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="cancelConfirmBtn">
+                    <i class="fas fa-times me-1"></i>Hủy bỏ
+                </button>
+                <button type="button" class="btn btn-danger" id="confirmBtn">
+                    <i class="fas fa-check me-1"></i>Xác nhận
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <style>
+        /* Requirement 6.6: Style disabled options with gray color */
+        #orderStatusSelect option:disabled {
+            color: #999;
+            background-color: #f5f5f5;
+        }
+        #orderStatusSelect option.disabled-transition {
+            color: #999 !important;
+            background-color: #f5f5f5 !important;
+        }
+        /* Style for locked payment status field */
+        #paymentStatusSelect:disabled {
+            background-color: #e9ecef;
+            cursor: not-allowed;
+        }
+        #paymentStatusSelect option:disabled {
+            color: #999;
+            background-color: #f5f5f5;
+        }
+        
+        /* ============================================
+           Audit Log Timeline Styles - Requirements: 9.2, 9.4
+           Timeline markers, connectors, and responsive design
+           ============================================ */
+        
+        /* Main Timeline Container */
+        .audit-timeline {
+            position: relative;
+            padding-left: 35px;
+            margin: 0;
+        }
+        
+        /* Timeline Connector Line (vertical line connecting all items) */
+        .audit-timeline::before {
+            content: '';
+            position: absolute;
+            left: 12px;
+            top: 8px;
+            bottom: 8px;
+            width: 3px;
+            background: linear-gradient(180deg, #0d6efd 0%, #81c408 50%, #e9ecef 100%);
+            border-radius: 3px;
+        }
+        
+        /* Timeline Item Container */
+        .audit-timeline-item {
+            position: relative;
+            padding-bottom: 24px;
+            margin-bottom: 0;
+            animation: fadeInUp 0.3s ease-out;
+        }
+        
+        @@keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .audit-timeline-item:last-child {
+            padding-bottom: 0;
+        }
+        
+        /* Timeline Marker (circular dot on the line) */
+        .audit-timeline-marker {
+            position: absolute;
+            left: -27px;
+            top: 8px;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background-color: #81c408;
+            border: 3px solid #fff;
+            box-shadow: 0 0 0 3px #81c408, 0 2px 8px rgba(129, 196, 8, 0.3);
+            z-index: 2;
+            transition: all 0.3s ease;
+        }
+        
+        /* First item marker (most recent) - highlighted in blue */
+        .audit-timeline-item:first-child .audit-timeline-marker {
+            width: 18px;
+            height: 18px;
+            left: -29px;
+            top: 6px;
+            background-color: #0d6efd;
+            box-shadow: 0 0 0 3px #0d6efd, 0 2px 12px rgba(13, 110, 253, 0.4);
+            animation: pulse 2s infinite;
+        }
+        
+        @@keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 3px #0d6efd, 0 2px 12px rgba(13, 110, 253, 0.4);
+            }
+            50% {
+                box-shadow: 0 0 0 5px rgba(13, 110, 253, 0.3), 0 2px 16px rgba(13, 110, 253, 0.5);
+            }
+            100% {
+                box-shadow: 0 0 0 3px #0d6efd, 0 2px 12px rgba(13, 110, 253, 0.4);
+            }
+        }
+        
+        /* Hover effect on marker */
+        .audit-timeline-item:hover .audit-timeline-marker {
+            transform: scale(1.2);
+        }
+        
+        /* Timeline Content Card */
+        .audit-timeline-content {
+            background-color: #fff;
+            border-radius: 10px;
+            padding: 16px;
+            border-left: 4px solid #81c408;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        /* Arrow pointing to the marker */
+        .audit-timeline-content::before {
+            content: '';
+            position: absolute;
+            left: -10px;
+            top: 12px;
+            width: 0;
+            height: 0;
+            border-top: 8px solid transparent;
+            border-bottom: 8px solid transparent;
+            border-right: 10px solid #81c408;
+        }
+        
+        .audit-timeline-content::after {
+            content: '';
+            position: absolute;
+            left: -6px;
+            top: 14px;
+            width: 0;
+            height: 0;
+            border-top: 6px solid transparent;
+            border-bottom: 6px solid transparent;
+            border-right: 6px solid #fff;
+        }
+        
+        /* First item content (most recent) - highlighted */
+        .audit-timeline-item:first-child .audit-timeline-content {
+            border-left-color: #0d6efd;
+            background-color: #f8fbff;
+            box-shadow: 0 4px 12px rgba(13, 110, 253, 0.1);
+        }
+        
+        .audit-timeline-item:first-child .audit-timeline-content::before {
+            border-right-color: #0d6efd;
+        }
+        
+        .audit-timeline-item:first-child .audit-timeline-content::after {
+            border-right-color: #f8fbff;
+        }
+        
+        /* Hover effect on content */
+        .audit-timeline-content:hover {
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            transform: translateX(4px);
+        }
+        
+        /* Connector between items (dashed line segment) */
+        .audit-timeline-item:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            left: -21px;
+            top: 26px;
+            bottom: -4px;
+            width: 1px;
+            border-left: 2px dashed rgba(129, 196, 8, 0.3);
+        }
+        
+        /* Badge styling for status changes */
+        .badge-sm {
+            font-size: 0.7rem;
+            padding: 0.3em 0.6em;
+            font-weight: 500;
+            letter-spacing: 0.02em;
+        }
+        
+        /* Notes section styling */
+        .audit-notes {
+            font-style: italic;
+            border-left: 3px solid #6c757d;
+            background-color: #f8f9fa;
+            color: #495057;
+        }
+        
+        /* ============================================
+           Attachment Card Styles - Requirement 10.4
+           Enhanced styling for file attachments
+           ============================================ */
+        
+        .attachment-link {
+            background-color: #fff;
+            transition: all 0.2s ease;
+        }
+        
+        .attachment-link:hover {
+            background-color: #f8f9fa;
+            border-color: #81c408 !important;
+        }
+        
+        .attachment-thumbnail {
+            border: 1px solid #dee2e6;
+        }
+        
+        /* Attachment Card Container */
+        .attachment-card {
+            display: flex;
+            flex-direction: column;
+            width: 120px;
+            background-color: #fff;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+        
+        .attachment-card:hover {
+            border-color: #81c408;
+            box-shadow: 0 4px 12px rgba(129, 196, 8, 0.25);
+            transform: translateY(-4px);
+        }
+        
+        /* Image Thumbnail Wrapper */
+        .attachment-thumbnail-wrapper {
+            position: relative;
+            width: 100%;
+            height: 80px;
+            overflow: hidden;
+            background-color: #f8f9fa;
+        }
+        
+        .attachment-thumbnail-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+        
+        .attachment-card:hover .attachment-thumbnail-img {
+            transform: scale(1.1);
+        }
+        
+        /* Overlay on hover */
+        .attachment-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(129, 196, 8, 0.8), rgba(13, 110, 253, 0.8));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .attachment-overlay i {
+            color: #fff;
+            font-size: 1.5rem;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        .attachment-card:hover .attachment-overlay {
+            opacity: 1;
+        }
+        
+        /* PDF/Document Icon Wrapper */
+        .attachment-icon-wrapper {
+            width: 100%;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #fff5f5 0%, #ffe8e8 100%);
+            transition: background 0.3s ease;
+        }
+        
+        .attachment-card-pdf:hover .attachment-icon-wrapper {
+            background: linear-gradient(135deg, #ffe0e0 0%, #ffd0d0 100%);
+        }
+        
+        .attachment-card-pdf:hover {
+            border-color: #dc3545;
+            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.25);
+        }
+        
+        /* Attachment Info Section */
+        .attachment-info {
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        .attachment-name {
+            display: block;
+            font-size: 0.75rem;
+            color: #333;
+            font-weight: 500;
+            max-width: 100%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .attachment-size {
+            display: block;
+            font-size: 0.65rem;
+            color: #6c757d;
+            margin-top: 3px;
+        }
+        
+        /* Audit Attachments Container */
+        .audit-attachments {
+            background-color: #fafafa;
+            border-radius: 8px;
+            padding: 12px;
+            border: 1px dashed #dee2e6;
+        }
+        
+        /* ============================================
+           Responsive Design - Requirement 9.2
+           Mobile-first responsive adjustments
+           ============================================ */
+        
+        /* Tablet and below (max-width: 992px) */
+        @@media (max-width: 992px) {
+            .audit-timeline {
+                padding-left: 30px;
+            }
+            
+            .audit-timeline::before {
+                left: 10px;
+            }
+            
+            .audit-timeline-marker {
+                left: -23px;
+                width: 12px;
+                height: 12px;
+            }
+            
+            .audit-timeline-item:first-child .audit-timeline-marker {
+                width: 16px;
+                height: 16px;
+                left: -25px;
+            }
+            
+            .audit-timeline-content {
+                padding: 14px;
+            }
+        }
+        
+        /* Mobile devices (max-width: 768px) */
+        @@media (max-width: 768px) {
+            .audit-timeline {
+                padding-left: 25px;
+            }
+            
+            .audit-timeline::before {
+                left: 8px;
+                width: 2px;
+            }
+            
+            .audit-timeline-marker {
+                left: -20px;
+                width: 10px;
+                height: 10px;
+            }
+            
+            .audit-timeline-item:first-child .audit-timeline-marker {
+                width: 14px;
+                height: 14px;
+                left: -22px;
+            }
+            
+            .audit-timeline-content {
+                padding: 12px;
+                border-radius: 8px;
+            }
+            
+            .audit-timeline-content::before,
+            .audit-timeline-content::after {
+                display: none; /* Hide arrows on mobile for cleaner look */
+            }
+            
+            .audit-timeline-item:not(:last-child)::after {
+                left: -17px;
+            }
+            
+            /* Attachment cards on mobile */
+            .attachment-card {
+                width: 100px;
+            }
+            
+            .attachment-thumbnail-wrapper,
+            .attachment-icon-wrapper {
+                height: 65px;
+            }
+            
+            .attachment-info {
+                padding: 8px;
+            }
+            
+            .attachment-name {
+                font-size: 0.7rem;
+            }
+            
+            .attachment-size {
+                font-size: 0.6rem;
+            }
+            
+            /* Stack status badges vertically on mobile */
+            .audit-timeline-content .d-flex.align-items-center.flex-wrap {
+                flex-direction: column;
+                align-items: flex-start !important;
+            }
+            
+            .badge-sm {
+                font-size: 0.65rem;
+                margin-bottom: 2px;
+            }
+        }
+        
+        /* Small mobile devices (max-width: 576px) */
+        @@media (max-width: 576px) {
+            .audit-timeline {
+                padding-left: 20px;
+            }
+            
+            .audit-timeline::before {
+                left: 6px;
+            }
+            
+            .audit-timeline-marker {
+                left: -17px;
+                width: 8px;
+                height: 8px;
+            }
+            
+            .audit-timeline-item:first-child .audit-timeline-marker {
+                width: 12px;
+                height: 12px;
+                left: -19px;
+            }
+            
+            .audit-timeline-content {
+                padding: 10px;
+                border-left-width: 3px;
+            }
+            
+            .audit-timeline-item:not(:last-child)::after {
+                left: -14px;
+            }
+            
+            /* Full width attachment cards on very small screens */
+            .audit-attachments .d-flex.flex-wrap {
+                flex-direction: column;
+            }
+            
+            .attachment-card {
+                width: 100%;
+                flex-direction: row;
+                height: 60px;
+            }
+            
+            .attachment-thumbnail-wrapper,
+            .attachment-icon-wrapper {
+                width: 60px;
+                height: 60px;
+                flex-shrink: 0;
+            }
+            
+            .attachment-info {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                border-top: none;
+                border-left: 1px solid #e9ecef;
+            }
+        }
+        
+        /* Print styles */
+        @@media print {
+            .audit-timeline::before {
+                background: #333;
+            }
+            
+            .audit-timeline-marker {
+                background-color: #333;
+                box-shadow: none;
+                border: 2px solid #fff;
+            }
+            
+            .audit-timeline-content {
+                box-shadow: none;
+                border: 1px solid #ddd;
+            }
+            
+            .audit-timeline-content:hover {
+                transform: none;
+            }
+            
+            @@keyframes pulse {
+                0%, 50%, 100% {
+                    box-shadow: none;
+                }
+            }
+        }
+    </style>
+    <script>
+        // OrderStatus enum values
+        const OrderStatus = {
+            Pending: 0,
+            Processing: 1,
+            Shipped: 2,
+            Delivered: 3,
+            Cancelled: 4,
+            Returned: 5
+        };
+
+        // PaymentStatus enum values
+        const PaymentStatus = {
+            Pending: 0,
+            Paid: 1,
+            Refunded: 2
+        };
+
+        // PaymentMethod enum values
+        const PaymentMethod = {
+            COD: 0,
+            BankTransfer: 1,
+            Paypal: 2,
+            Check: 3
+        };
+
+        // State Transition Rules - Requirement 6.6
+        // Based on design.md: Ma trận chuyển đổi trạng thái hợp lệ (State Transition)
+        const stateTransitionRules = {
+            // Pending: can go to Processing, Shipped, Delivered, Cancelled
+            [OrderStatus.Pending]: {
+                allowedTransitions: [OrderStatus.Pending, OrderStatus.Processing, OrderStatus.Shipped, OrderStatus.Delivered, OrderStatus.Cancelled],
+                disabledTransitions: [OrderStatus.Returned]
+            },
+            // Processing: can go to Shipped, Delivered, Cancelled (cannot go back to Pending)
+            [OrderStatus.Processing]: {
+                allowedTransitions: [OrderStatus.Processing, OrderStatus.Shipped, OrderStatus.Delivered, OrderStatus.Cancelled],
+                disabledTransitions: [OrderStatus.Pending, OrderStatus.Returned]
+            },
+            // Shipped: can go to Delivered, Cancelled (cannot go back to Pending, Processing)
+            [OrderStatus.Shipped]: {
+                allowedTransitions: [OrderStatus.Shipped, OrderStatus.Delivered, OrderStatus.Cancelled],
+                disabledTransitions: [OrderStatus.Pending, OrderStatus.Processing, OrderStatus.Returned]
+            },
+            // Delivered: can go to Returned, Cancelled (cannot go back to Pending, Processing, Shipped)
+            [OrderStatus.Delivered]: {
+                allowedTransitions: [OrderStatus.Delivered, OrderStatus.Returned, OrderStatus.Cancelled],
+                disabledTransitions: [OrderStatus.Pending, OrderStatus.Processing, OrderStatus.Shipped]
+            },
+            // Cancelled: Terminal state - cannot transition to any other state
+            [OrderStatus.Cancelled]: {
+                allowedTransitions: [OrderStatus.Cancelled],
+                disabledTransitions: [OrderStatus.Pending, OrderStatus.Processing, OrderStatus.Shipped, OrderStatus.Delivered, OrderStatus.Returned]
+            },
+            // Returned: Terminal state - cannot transition to any other state
+            [OrderStatus.Returned]: {
+                allowedTransitions: [OrderStatus.Returned],
+                disabledTransitions: [OrderStatus.Pending, OrderStatus.Processing, OrderStatus.Shipped, OrderStatus.Delivered, OrderStatus.Cancelled]
+            }
+        };
+
+        // Get current order status from hidden field
+        function getCurrentOrderStatus() {
+            return parseInt(document.getElementById('currentOrderStatus').value);
+        }
+
+        // Get payment method from hidden field
+        function getPaymentMethod() {
+            return parseInt(document.getElementById('paymentMethodValue').value);
+        }
+
+        // Get current payment status from hidden field
+        function getCurrentPaymentStatus() {
+            return parseInt(document.getElementById('currentPaymentStatus').value);
+        }
+
+        // Initialize state transition dropdown - Requirement 6.6
+        // Disable invalid options based on current status
+        function initializeStateTransitionDropdown() {
+            const currentStatus = getCurrentOrderStatus();
+            const orderStatusSelect = document.getElementById('orderStatusSelect');
+            const options = orderStatusSelect.querySelectorAll('option');
+            const rule = stateTransitionRules[currentStatus];
+
+            if (!rule) return;
+
+            options.forEach(option => {
+                const statusValue = parseInt(option.value);
+                
+                // Check if this transition is disabled
+                if (rule.disabledTransitions.includes(statusValue)) {
+                    option.disabled = true;
+                    option.classList.add('disabled-transition');
+                } else {
+                    option.disabled = false;
+                    option.classList.remove('disabled-transition');
+                }
+            });
+        }
+
+        // Get Status Combination Rule based on OrderStatus and PaymentMethod
+        // Requirements: 7.1, 7.2, 7.3, 7.4
+        // Based on design.md: Ma trận tổ hợp trạng thái hợp lệ theo Payment Method
+        function getStatusCombinationRule(orderStatus, paymentMethod) {
+            // Terminal states - same for all payment methods
+            
+            // Delivered: Auto-set Paid, Lock - Requirement 2.1
+            if (orderStatus === OrderStatus.Delivered) {
+                return {
+                    allowedPaymentStatuses: [PaymentStatus.Paid],
+                    autoSetPaymentStatus: PaymentStatus.Paid,
+                    isPaymentLocked: true
+                };
+            }
+            
+            // Returned: Auto-set Refunded, Lock - Requirement 2.2
+            if (orderStatus === OrderStatus.Returned) {
+                return {
+                    allowedPaymentStatuses: [PaymentStatus.Refunded],
+                    autoSetPaymentStatus: PaymentStatus.Refunded,
+                    isPaymentLocked: true
+                };
+            }
+            
+            // Cancelled: Allow Pending or Refunded, Not locked - Requirement 2.3
+            if (orderStatus === OrderStatus.Cancelled) {
+                return {
+                    allowedPaymentStatuses: [PaymentStatus.Pending, PaymentStatus.Refunded],
+                    autoSetPaymentStatus: null,
+                    isPaymentLocked: false
+                };
+            }
+            
+            // In-progress states (Pending, Processing, Shipped) - depends on payment method
+            
+            // COD: Auto-set Pending, Lock - Requirement 7.1
+            if (paymentMethod === PaymentMethod.COD) {
+                return {
+                    allowedPaymentStatuses: [PaymentStatus.Pending],
+                    autoSetPaymentStatus: PaymentStatus.Pending,
+                    isPaymentLocked: true
+                };
+            }
+            
+            // Bank Transfer (and other methods): Allow Pending or Paid, Not locked - Requirement 7.2
+            return {
+                allowedPaymentStatuses: [PaymentStatus.Pending, PaymentStatus.Paid],
+                autoSetPaymentStatus: null,
+                isPaymentLocked: false
+            };
+        }
+
+        // Update Payment Status options based on OrderStatus and PaymentMethod
+        // Requirements: 7.1, 7.2, 7.3, 7.4
+        function updatePaymentStatusOptions() {
+            const orderStatusSelect = document.getElementById('orderStatusSelect');
+            const paymentStatusSelect = document.getElementById('paymentStatusSelect');
+            const selectedOrderStatus = parseInt(orderStatusSelect.value);
+            const paymentMethod = getPaymentMethod();
+            const currentPaymentStatus = getCurrentPaymentStatus();
+            
+            // Get the combination rule for this order status and payment method
+            const rule = getStatusCombinationRule(selectedOrderStatus, paymentMethod);
+            
+            // Update payment status options - enable/disable based on allowed statuses
+            const options = paymentStatusSelect.querySelectorAll('option');
+            options.forEach(option => {
+                const statusValue = parseInt(option.value);
+                if (rule.allowedPaymentStatuses.includes(statusValue)) {
+                    option.disabled = false;
+                    option.style.display = '';
+                } else {
+                    option.disabled = true;
+                    option.style.display = 'none';
+                }
+            });
+            
+            // Auto-set payment status if rule specifies
+            if (rule.autoSetPaymentStatus !== null) {
+                paymentStatusSelect.value = rule.autoSetPaymentStatus;
+            } else {
+                // If no auto-set, try to keep current value if it's allowed
+                if (rule.allowedPaymentStatuses.includes(currentPaymentStatus)) {
+                    paymentStatusSelect.value = currentPaymentStatus;
+                } else {
+                    // Otherwise, select the first allowed option
+                    paymentStatusSelect.value = rule.allowedPaymentStatuses[0];
+                }
+            }
+            
+            // Lock/unlock payment status field
+            paymentStatusSelect.disabled = rule.isPaymentLocked;
+        }
+
+        // Show/hide attachment section based on order status - Requirement 10.1
+        function updateAttachmentVisibility() {
+            const orderStatusSelect = document.getElementById('orderStatusSelect');
+            const attachmentSection = document.getElementById('attachmentSection');
+            const selectedStatus = parseInt(orderStatusSelect.value);
+
+            // Show attachment section only for Cancelled or Returned
+            if (selectedStatus === OrderStatus.Cancelled || selectedStatus === OrderStatus.Returned) {
+                attachmentSection.style.display = 'block';
+            } else {
+                attachmentSection.style.display = 'none';
+                // Clear file input when hiding
+                const attachmentInput = document.getElementById('attachmentInput');
+                if (attachmentInput) {
+                    attachmentInput.value = '';
+                }
+            }
+        }
+
+        // Handle order status change - update both payment options and attachment visibility
+        function handleOrderStatusChange() {
+            updatePaymentStatusOptions();
+            updateAttachmentVisibility();
+        }
+
+        // Confirmation Modal Logic - Requirements: 8.1, 8.2, 8.3, 8.4
+        // Track if user has confirmed the action
+        let userConfirmed = false;
+        let confirmationModal = null;
+
+        // Get confirmation message based on order status - Requirements: 8.1, 8.2
+        function getConfirmationMessage(orderStatus) {
+            if (orderStatus === OrderStatus.Cancelled) {
+                // Requirement 8.1: Message for Cancelled status
+                return 'Bạn có chắc chắn muốn hủy đơn hàng này? Thao tác này có thể ảnh hưởng đến báo cáo tài chính.';
+            } else if (orderStatus === OrderStatus.Returned) {
+                // Requirement 8.2: Message for Returned status (with Refund)
+                return 'Bạn có chắc chắn muốn xử lý trả hàng và hoàn tiền? Thao tác này có thể ảnh hưởng đến báo cáo tài chính.';
+            }
+            return null;
+        }
+
+        // Check if confirmation is required for the selected status
+        function requiresConfirmation(orderStatus) {
+            return orderStatus === OrderStatus.Cancelled || orderStatus === OrderStatus.Returned;
+        }
+
+        // Show confirmation modal with appropriate message
+        function showConfirmationModal(message) {
+            const messageElement = document.getElementById('confirmationMessage');
+            messageElement.textContent = message;
+            
+            if (!confirmationModal) {
+                confirmationModal = new bootstrap.Modal(document.getElementById('confirmationModal'));
+            }
+            confirmationModal.show();
+        }
+
+        // Handle form submission with confirmation - Requirements: 8.3, 8.4
+        function handleFormSubmit(event) {
+            const orderStatusSelect = document.getElementById('orderStatusSelect');
+            const selectedStatus = parseInt(orderStatusSelect.value);
+            
+            // Check if confirmation is required and user hasn't confirmed yet
+            if (requiresConfirmation(selectedStatus) && !userConfirmed) {
+                // Prevent form submission
+                event.preventDefault();
+                
+                // Get and show confirmation message
+                const message = getConfirmationMessage(selectedStatus);
+                if (message) {
+                    showConfirmationModal(message);
+                }
+                return false;
+            }
+            
+            // Reset confirmation flag for next submission
+            userConfirmed = false;
+            return true;
+        }
+
+        // Handle confirm button click - Requirement 8.3
+        function handleConfirmClick() {
+            userConfirmed = true;
+            
+            // Hide the modal
+            if (confirmationModal) {
+                confirmationModal.hide();
+            }
+            
+            // Submit the form
+            const form = document.getElementById('statusForm');
+            form.submit();
+        }
+
+        // Handle cancel button click - Requirement 8.4
+        function handleCancelClick() {
+            userConfirmed = false;
+            // Modal will be hidden by Bootstrap's data-bs-dismiss
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const orderStatusSelect = document.getElementById('orderStatusSelect');
+            const statusForm = document.getElementById('statusForm');
+            const confirmBtn = document.getElementById('confirmBtn');
+            const cancelConfirmBtn = document.getElementById('cancelConfirmBtn');
+            
+            // Initialize state transition dropdown (disable invalid options)
+            initializeStateTransitionDropdown();
+            
+            // Add change event listener for order status
+            orderStatusSelect.addEventListener('change', handleOrderStatusChange);
+            
+            // Initialize payment status options and attachment visibility on page load
+            updatePaymentStatusOptions();
+            updateAttachmentVisibility();
+            
+            // Add form submit handler for confirmation - Requirements: 8.3, 8.4
+            statusForm.addEventListener('submit', handleFormSubmit);
+            
+            // Add confirm button click handler - Requirement 8.3
+            confirmBtn.addEventListener('click', handleConfirmClick);
+            
+            // Add cancel button click handler - Requirement 8.4
+            cancelConfirmBtn.addEventListener('click', handleCancelClick);
+            
+            // Reset confirmation flag when modal is hidden
+            document.getElementById('confirmationModal').addEventListener('hidden.bs.modal', function() {
+                // Only reset if not confirmed (user clicked X or outside modal)
+                if (!userConfirmed) {
+                    userConfirmed = false;
+                }
+            });
+        });
+    </script>
+}

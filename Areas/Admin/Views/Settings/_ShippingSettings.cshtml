@@ -1,0 +1,192 @@
+@model Fruitables.ViewModels.ShippingSettingsViewModel
+
+<form asp-action="SaveShipping" method="post">
+    @Html.AntiForgeryToken()
+    
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-light">
+            <h5 class="mb-0"><i class="fas fa-truck me-2"></i>Cài đặt vận chuyển</h5>
+        </div>
+        <div class="card-body">
+            <!-- Phí ship theo khu vực -->
+            <h6 class="text-muted mb-3"><i class="fas fa-map-marker-alt me-1"></i>Phí vận chuyển theo khu vực</h6>
+            
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <label asp-for="FeeZone1" class="form-label">
+                        <span class="badge bg-success me-1">Zone 1</span>Nội thành
+                    </label>
+                    <div class="input-group">
+                        <input asp-for="FeeZone1" class="form-control" type="number" min="0" step="1000" />
+                        <span class="input-group-text">đ</span>
+                    </div>
+                    <span asp-validation-for="FeeZone1" class="text-danger"></span>
+                    <small class="text-muted">Q1, Q3, Q4, Q5, Q10, Q11, Bình Thạnh...</small>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="FeeZone2" class="form-label">
+                        <span class="badge bg-warning text-dark me-1">Zone 2</span>Ngoại thành
+                    </label>
+                    <div class="input-group">
+                        <input asp-for="FeeZone2" class="form-control" type="number" min="0" step="1000" />
+                        <span class="input-group-text">đ</span>
+                    </div>
+                    <span asp-validation-for="FeeZone2" class="text-danger"></span>
+                    <small class="text-muted">Thủ Đức, Q7, Q8, Q12, Bình Tân...</small>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="FeeZone3" class="form-label">
+                        <span class="badge bg-danger me-1">Zone 3</span>Vùng xa
+                    </label>
+                    <div class="input-group">
+                        <input asp-for="FeeZone3" class="form-control" type="number" min="0" step="1000" />
+                        <span class="input-group-text">đ</span>
+                    </div>
+                    <span asp-validation-for="FeeZone3" class="text-danger"></span>
+                    <small class="text-muted">Cần Giờ, Củ Chi và các khu vực khác</small>
+                </div>
+            </div>
+
+            <hr class="my-4" />
+
+            <!-- Ngưỡng miễn phí ship -->
+            <h6 class="text-muted mb-3"><i class="fas fa-gift me-1"></i>Chính sách miễn phí/giảm phí</h6>
+            
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <label asp-for="FreeShippingThreshold" class="form-label">Ngưỡng miễn phí ship</label>
+                    <div class="input-group">
+                        <input asp-for="FreeShippingThreshold" class="form-control" type="number" min="0" step="10000" />
+                        <span class="input-group-text">đ</span>
+                    </div>
+                    <span asp-validation-for="FreeShippingThreshold" class="text-danger"></span>
+                    <small class="text-muted">Đặt = 0 để tắt tính năng miễn phí ship</small>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="ReducedFeeZone3" class="form-label">Phí giảm Vùng xa (khi đạt ngưỡng)</label>
+                    <div class="input-group">
+                        <input asp-for="ReducedFeeZone3" class="form-control" type="number" min="0" step="1000" />
+                        <span class="input-group-text">đ</span>
+                    </div>
+                    <span asp-validation-for="ReducedFeeZone3" class="text-danger"></span>
+                    <small class="text-muted">Phí ship cho Vùng xa khi đơn hàng đạt ngưỡng</small>
+                </div>
+            </div>
+
+            <hr class="my-4" />
+
+            <!-- Cấu hình quận/huyện -->
+            <h6 class="text-muted mb-3"><i class="fas fa-list me-1"></i>Cấu hình quận/huyện theo khu vực</h6>
+            
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <label asp-for="Zone1Districts" class="form-label">
+                        <span class="badge bg-success me-1">Zone 1</span>Quận/huyện Nội thành
+                    </label>
+                    <select asp-for="Zone1Districts" class="form-select" multiple size="8" id="zone1Districts">
+                        @foreach (var district in Model.AllDistricts)
+                        {
+                            <option value="@district" selected="@(Model.Zone1Districts.Contains(district))">@district</option>
+                        }
+                    </select>
+                    <small class="text-muted">Giữ Ctrl để chọn nhiều quận/huyện</small>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="Zone2Districts" class="form-label">
+                        <span class="badge bg-warning text-dark me-1">Zone 2</span>Quận/huyện Ngoại thành
+                    </label>
+                    <select asp-for="Zone2Districts" class="form-select" multiple size="8" id="zone2Districts">
+                        @foreach (var district in Model.AllDistricts)
+                        {
+                            <option value="@district" selected="@(Model.Zone2Districts.Contains(district))">@district</option>
+                        }
+                    </select>
+                    <small class="text-muted">Quận/huyện bỏ chọn từ Zone 1 sẽ tự động chuyển sang Zone 2</small>
+                </div>
+            </div>
+
+            <!-- Info box -->
+            <div class="alert alert-info mb-0">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Lưu ý:</strong>
+                <ul class="mb-0 mt-2">
+                    <li>Khi đơn hàng đạt ngưỡng: Nội thành và Ngoại thành được <strong>miễn phí ship</strong>, Vùng xa được <strong>giảm phí</strong></li>
+                    <li><strong>Bỏ chọn quận/huyện từ Zone 1</strong> sẽ tự động chuyển sang Zone 2</li>
+                    <li>Quận/huyện không thuộc Zone 1 hoặc Zone 2 sẽ tự động áp dụng phí Vùng xa (Zone 3)</li>
+                    <li>Thay đổi cấu hình chỉ áp dụng cho đơn hàng mới, không ảnh hưởng đơn hàng đã tạo</li>
+                </ul>
+            </div>
+        </div>
+        <div class="card-footer bg-light">
+            <button type="submit" class="btn btn-success">
+                <i class="fas fa-save me-1"></i>Lưu cài đặt
+            </button>
+        </div>
+    </div>
+</form>
+
+<script>
+(function() {
+    function initZoneSync() {
+        const zone1Select = document.getElementById('zone1Districts');
+        const zone2Select = document.getElementById('zone2Districts');
+        
+        if (!zone1Select || !zone2Select) return;
+        
+        // Biến cờ để tránh vòng lặp vô hạn khi sync
+        let isSyncing = false;
+        
+        // Sync Zone 2: Chọn tất cả quận/huyện KHÔNG có trong Zone 1
+        function syncZone2FromZone1() {
+            if (isSyncing) return;
+            isSyncing = true;
+            
+            const zone1Selected = new Set(Array.from(zone1Select.selectedOptions).map(o => o.value));
+            
+            Array.from(zone2Select.options).forEach(option => {
+                // Nếu KHÔNG được chọn trong Zone 1 -> chọn trong Zone 2
+                option.selected = !zone1Selected.has(option.value);
+            });
+            
+            isSyncing = false;
+        }
+        
+        // Sync Zone 1: Bỏ chọn những quận/huyện đã được chọn trong Zone 2
+        function syncZone1FromZone2() {
+            if (isSyncing) return;
+            isSyncing = true;
+            
+            const zone2Selected = new Set(Array.from(zone2Select.selectedOptions).map(o => o.value));
+            
+            Array.from(zone1Select.options).forEach(option => {
+                // Nếu được chọn trong Zone 2 -> bỏ chọn trong Zone 1
+                if (zone2Selected.has(option.value)) {
+                    option.selected = false;
+                }
+            });
+            
+            isSyncing = false;
+        }
+        
+        // Khi trang load: Zone 2 = tất cả những gì KHÔNG có trong Zone 1
+        syncZone2FromZone1();
+        
+        // Khi Zone 1 thay đổi -> cập nhật Zone 2
+        zone1Select.addEventListener('change', function() {
+            syncZone2FromZone1();
+        });
+        
+        // Khi Zone 2 thay đổi -> bỏ khỏi Zone 1 nếu được chọn vào Zone 2
+        zone2Select.addEventListener('change', function() {
+            syncZone1FromZone2();
+        });
+    }
+    
+    // Chạy ngay nếu DOM đã sẵn sàng, hoặc đợi DOMContentLoaded
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initZoneSync);
+    } else {
+        initZoneSync();
+    }
+})();
+</script>

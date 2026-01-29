@@ -1,0 +1,153 @@
+@model Fruitables.ViewModels.UpdateProfileRequest
+@{
+    ViewData["Title"] = "Chỉnh sửa thông tin";
+    var profile = ViewBag.Profile as Fruitables.ViewModels.ProfileViewModel;
+}
+
+<!-- Page Header Start -->
+<div class="container-fluid page-header py-5">
+    <h1 class="text-center text-white display-6">Chỉnh sửa thông tin</h1>
+    <ol class="breadcrumb justify-content-center mb-0">
+        <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Trang chủ</a></li>
+        <li class="breadcrumb-item"><a asp-action="Index">Thông tin cá nhân</a></li>
+        <li class="breadcrumb-item active text-white">Chỉnh sửa</li>
+    </ol>
+</div>
+<!-- Page Header End -->
+
+<!-- Toast Container -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
+    @if (!ViewData.ModelState.IsValid && ViewData.ModelState.Values.Any(v => v.Errors.Any()))
+    {
+        <div class="toast show" role="alert" data-bs-autohide="true" data-bs-delay="5000">
+            <div class="toast-header bg-danger text-white">
+                <i class="fa fa-exclamation-circle me-2"></i>
+                <strong class="me-auto">Lỗi</strong>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+            </div>
+            <div class="toast-body">
+                @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                {
+                    <div>@error.ErrorMessage</div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Edit Profile Start -->
+<div class="container-fluid py-5">
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="row g-4">
+                    <!-- Avatar Section -->
+                    <div class="col-md-4">
+                        <div class="card shadow-sm">
+                            <div class="card-body text-center p-4">
+                                <h5 class="mb-3">Ảnh đại diện</h5>
+                                <img src="@(profile?.AvatarUrl ?? "/img/default-avatar.svg")" 
+                                     alt="Avatar" id="avatarPreview"
+                                     class="rounded-circle img-thumbnail mb-3" 
+                                     style="width: 150px; height: 150px; object-fit: cover;">
+
+                                <!-- Upload Avatar Form -->
+                                <form asp-action="UploadAvatar" method="post" enctype="multipart/form-data" class="mb-2">
+                                    @Html.AntiForgeryToken()
+                                    <input type="file" name="avatar" id="avatarInput" 
+                                           accept=".jpg,.jpeg,.png,.gif" class="d-none"
+                                           onchange="previewAvatar(this); this.form.submit();">
+                                    <button type="button" class="btn btn-outline-primary btn-sm w-100"
+                                            onclick="document.getElementById('avatarInput').click();">
+                                        <i class="fa fa-camera me-1"></i>Đổi ảnh
+                                    </button>
+                                </form>
+                                
+                                @if (profile?.AvatarUrl != null && !profile.AvatarUrl.Contains("default-avatar"))
+                                {
+                                    <!-- Delete Avatar Form -->
+                                    <form asp-action="DeleteAvatar" method="post">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-outline-danger btn-sm w-100"
+                                                onclick="return confirm('Bạn có chắc muốn xóa ảnh đại diện?');">
+                                            <i class="fa fa-trash me-1"></i>Xóa ảnh
+                                        </button>
+                                    </form>
+                                }
+                                
+                                <small class="text-muted d-block mt-2">
+                                    Chấp nhận: JPG, PNG, GIF<br>Tối đa: 2MB
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Info Form Section -->
+                    <div class="col-md-8">
+                        <div class="card shadow-sm">
+                            <div class="card-body p-4">
+                                <h5 class="mb-4">Thông tin cá nhân</h5>
+                                
+                                <form asp-action="Edit" method="post">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" asp-for="UserId" />
+                                    
+                                    <div class="mb-3">
+                                        <label asp-for="Name" class="form-label">Họ và tên <span class="text-danger">*</span></label>
+                                        <input asp-for="Name" class="form-control" placeholder="Nhập họ và tên" />
+                                        <span asp-validation-for="Name" class="text-danger small"></span>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">Email</label>
+                                        <input type="email" class="form-control" value="@profile?.Email" disabled />
+                                        <small class="text-muted">Email không thể thay đổi</small>
+                                    </div>
+                                    
+                                    <div class="mb-4">
+                                        <label asp-for="Phone" class="form-label">Số điện thoại</label>
+                                        <input asp-for="Phone" class="form-control" placeholder="Nhập số điện thoại (10-20 số)" />
+                                        <span asp-validation-for="Phone" class="text-danger small"></span>
+                                    </div>
+                                    
+                                    <div class="d-flex gap-2">
+                                        <button type="submit" class="btn btn-primary rounded-pill px-4">
+                                            <i class="fa fa-save me-2"></i>Lưu thay đổi
+                                        </button>
+                                        <a asp-action="Index" class="btn btn-outline-secondary rounded-pill px-4">
+                                            <i class="fa fa-arrow-left me-2"></i>Quay lại
+                                        </a>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Edit Profile End -->
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        function previewAvatar(input) {
+            if (input.files && input.files[0]) {
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('avatarPreview').src = e.target.result;
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+        (function() {
+            document.querySelectorAll('.toast.show').forEach(function(toast) {
+                setTimeout(function() {
+                    var bsToast = bootstrap.Toast.getOrCreateInstance(toast);
+                    bsToast.hide();
+                }, 5000);
+            });
+        })();
+    </script>
+}

@@ -1,0 +1,44 @@
+@model Fruitables.ViewModels.PagedResult<Fruitables.ViewModels.OrderSummaryViewModel>
+@{
+    var filter = ViewBag.Filter as Fruitables.ViewModels.OrderHistoryFilterViewModel;
+}
+
+@if (Model.TotalPages > 1)
+{
+    <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center">
+            <li class="page-item @(Model.HasPreviousPage ? "" : "disabled")">
+                <a class="page-link page-nav" href="#" 
+                   data-page="@(Model.Page - 1)"
+                   data-search="@filter?.SearchTerm"
+                   data-status="@filter?.Status"
+                   data-pagesize="@filter?.PageSize">
+                    <i class="fa fa-chevron-left"></i>
+                </a>
+            </li>
+            @for (int i = 1; i <= Model.TotalPages; i++)
+            {
+                <li class="page-item @(i == Model.Page ? "active" : "")">
+                    <a class="page-link page-nav" href="#"
+                       data-page="@i"
+                       data-search="@filter?.SearchTerm"
+                       data-status="@filter?.Status"
+                       data-pagesize="@filter?.PageSize">@i</a>
+                </li>
+            }
+            <li class="page-item @(Model.HasNextPage ? "" : "disabled")">
+                <a class="page-link page-nav" href="#" 
+                   data-page="@(Model.Page + 1)"
+                   data-search="@filter?.SearchTerm"
+                   data-status="@filter?.Status"
+                   data-pagesize="@filter?.PageSize">
+                    <i class="fa fa-chevron-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <p class="text-center text-muted">
+        Hiển thị @((Model.Page - 1) * Model.PageSize + 1) - @Math.Min(Model.Page * Model.PageSize, Model.TotalCount) 
+        trong tổng số @Model.TotalCount đơn hàng
+    </p>
+}

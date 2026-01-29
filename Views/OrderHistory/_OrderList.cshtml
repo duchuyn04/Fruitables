@@ -1,0 +1,122 @@
+@model Fruitables.ViewModels.PagedResult<Fruitables.ViewModels.OrderSummaryViewModel>
+@using Fruitables.Models
+
+@if (Model.Items.Any())
+{
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead class="table-light">
+                <tr>
+                    <th>Mã đơn hàng</th>
+                    <th>Ngày đặt</th>
+                    <th>Số sản phẩm</th>
+                    <th>Tổng tiền</th>
+                    <th>Trạng thái</th>
+                    <th>Thanh toán</th>
+                    <th class="text-center">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var order in Model.Items)
+                {
+                    <tr>
+                        <td>
+                            <a asp-action="Details" asp-route-id="@order.Id" class="fw-bold text-primary">
+                                @order.OrderNumber
+                            </a>
+                        </td>
+                        <td>@order.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                        <td>@order.ItemCount sản phẩm</td>
+                        <td class="fw-bold text-danger">@order.Total.ToString("N0")₫</td>
+                        <td>
+                            @{
+                                var statusClass = order.Status switch
+                                {
+                                    OrderStatus.Pending => "bg-warning",
+                                    OrderStatus.Processing => "bg-info",
+                                    OrderStatus.Shipped => "bg-primary",
+                                    OrderStatus.Delivered => "bg-success",
+                                    OrderStatus.Cancelled => "bg-danger",
+                                    OrderStatus.Returned => "bg-secondary",
+                                    _ => "bg-secondary"
+                                };
+                                var statusText = order.Status switch
+                                {
+                                    OrderStatus.Pending => "Chờ xử lý",
+                                    OrderStatus.Processing => "Đang xử lý",
+                                    OrderStatus.Shipped => "Đang giao",
+                                    OrderStatus.Delivered => "Đã giao",
+                                    OrderStatus.Cancelled => "Đã hủy",
+                                    OrderStatus.Returned => "Trả hàng",
+                                    _ => "Không xác định"
+                                };
+                            }
+                            <span class="badge @statusClass">@statusText</span>
+                        </td>
+                        <td>
+                            @{
+                                var paymentClass = order.PaymentStatus switch
+                                {
+                                    PaymentStatus.Pending => "text-warning",
+                                    PaymentStatus.Paid => "text-success",
+                                    PaymentStatus.Refunded => "text-info",
+                                    _ => "text-secondary"
+                                };
+                                var paymentText = order.PaymentStatus switch
+                                {
+                                    PaymentStatus.Pending => "Chưa thanh toán",
+                                    PaymentStatus.Paid => "Đã thanh toán",
+                                    PaymentStatus.Refunded => "Đã hoàn tiền",
+                                    _ => "Không xác định"
+                                };
+                            }
+                            <span class="@paymentClass">@paymentText</span>
+                        </td>
+                        <td class="text-center">
+                            <a asp-action="Details" asp-route-id="@order.Id" 
+                               class="btn btn-sm btn-outline-primary">
+                                <i class="fa fa-eye"></i> Chi tiết
+                            </a>
+                            @if (order.CanCancel)
+                            {
+                                <button type="button" class="btn btn-sm btn-outline-danger btn-cancel"
+                                        data-id="@order.Id" data-order="@order.OrderNumber">
+                                    <i class="fa fa-times"></i> Hủy
+                                </button>
+                            }
+                            @if (order.CanReview)
+                            {
+                                <a href="#" class="btn btn-sm btn-outline-success">
+                                    <i class="fa fa-star"></i> Đánh giá
+                                </a>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+else
+{
+    var filter = ViewBag.Filter as Fruitables.ViewModels.OrderHistoryFilterViewModel;
+    <div class="text-center py-5">
+        <i class="fa fa-shopping-bag fa-4x text-muted mb-3"></i>
+        @if (!string.IsNullOrEmpty(filter?.SearchTerm) || filter?.Status != null)
+        {
+            <h5>Không tìm thấy đơn hàng nào</h5>
+            <p class="text-muted">Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm</p>
+            <button type="button" class="btn btn-primary btn-reset-filter">
+                <i class="fa fa-refresh me-2"></i>Xem tất cả đơn hàng
+            </button>
+        }
+        else
+        {
+            <h5>Bạn chưa có đơn hàng nào</h5>
+            <p class="text-muted">Hãy mua sắm để có đơn hàng đầu tiên!</p>
+            <a asp-controller="Shop" asp-action="Index" class="btn btn-primary">
+                <i class="fa fa-shopping-cart me-2"></i>Mua sắm ngay
+            </a>
+        }
+    </div>
+}

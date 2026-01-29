@@ -1,0 +1,299 @@
+@model Fruitables.ViewModels.UserListResult
+@{
+    ViewData["Title"] = "Quản lý người dùng";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminDashboardLayout.cshtml";
+
+    var search = ViewBag.Search as string;
+    var isActive = ViewBag.IsActive as bool?;
+    var sortByVal = ViewBag.SortBy as string ?? "CreatedAt";
+    var sortDescending = (bool)(ViewBag.SortDescending ?? true);
+    var currentUserRole = ViewBag.CurrentUserRole as string;
+    var isSuperAdmin = currentUserRole == "SuperAdmin";
+}
+
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="mb-1">Quản lý người dùng</h4>
+            <p class="text-muted mb-0">Tổng cộng <span id="totalCount">@Model.TotalCount</span> khách hàng</p>
+        </div>
+        <div id="loadingIndicator" class="d-none">
+            <span class="spinner-border spinner-border-sm text-primary" role="status"></span>
+            <span class="text-muted ms-1">Đang tải...</span>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
+        @if (TempData["Success"] != null)
+        {
+            <div class="toast show" role="alert" data-bs-autohide="true" data-bs-delay="5000">
+                <div class="toast-header bg-success text-white">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <strong class="me-auto">Thành công</strong>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+                </div>
+                <div class="toast-body">@TempData["Success"]</div>
+            </div>
+        }
+        @if (TempData["Error"] != null)
+        {
+            <div class="toast show" role="alert" data-bs-autohide="true" data-bs-delay="5000">
+                <div class="toast-header bg-danger text-white">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    <strong class="me-auto">Lỗi</strong>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+                </div>
+                <div class="toast-body">@TempData["Error"]</div>
+            </div>
+        }
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Tìm kiếm</label>
+                    <input type="text" id="filterSearch" class="form-control" placeholder="Tên hoặc email..." value="@search">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Trạng thái</label>
+                    <select id="filterIsActive" class="form-select">
+                        <option value="">Tất cả</option>
+                        <option value="true" selected="@(isActive == true)">Hoạt động</option>
+                        <option value="false" selected="@(isActive == false)">Bị khóa</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Sắp xếp theo</label>
+                    <select id="filterSortBy" class="form-select">
+                        <option value="CreatedAt" selected="@(sortByVal == "CreatedAt")">Ngày đăng ký</option>
+                        <option value="Name" selected="@(sortByVal == "Name")">Tên</option>
+                        <option value="TotalOrders" selected="@(sortByVal == "TotalOrders")">Tổng đơn hàng</option>
+                        <option value="TotalSpent" selected="@(sortByVal == "TotalSpent")">Tổng chi tiêu</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Thứ tự</label>
+                    <select id="filterSortDescending" class="form-select">
+                        <option value="true" selected="@sortDescending">Giảm dần</option>
+                        <option value="false" selected="@(!sortDescending)">Tăng dần</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Users Table -->
+    <div class="card">
+        <div class="card-body p-0">
+            @if (Model.Customers.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 25%">Khách hàng</th>
+                                <th>Email</th>
+                                <th>Số điện thoại</th>
+                                <th class="text-center">Trạng thái</th>
+                                <th class="text-center">Tổng đơn</th>
+                                <th class="text-end">Tổng chi tiêu</th>
+                                <th class="text-center">Ngày đăng ký</th>
+                                <th class="text-center">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var customer in Model.Customers)
+                            {
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            @if (!string.IsNullOrEmpty(customer.Avatar) && !customer.Avatar.Contains("default-avatar"))
+                                            {
+                                                <img src="@customer.Avatar" alt="@customer.Name" class="rounded-circle me-2" style="width: 40px; height: 40px; object-fit: cover;">
+                                            }
+                                            else
+                                            {
+                                                <img src="/img/default-avatar.svg" alt="@customer.Name" class="rounded-circle me-2" style="width: 40px; height: 40px; background-color: #e4e6eb;">
+                                            }
+                                            <div>
+                                                <div class="fw-semibold">
+                                                    @customer.Name
+                                                    @if (customer.IsVip)
+                                                    {
+                                                        <span class="badge bg-warning text-dark ms-1">
+                                                            <i class="fas fa-crown"></i> VIP
+                                                        </span>
+                                                    }
+                                                </div>
+                                                @if (customer.LastLoginAt.HasValue)
+                                                {
+                                                    <small class="text-muted">Đăng nhập: @customer.LastLoginAt.Value.ToString("dd/MM/yyyy HH:mm")</small>
+                                                }
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="align-middle">@customer.Email</td>
+                                    <td class="align-middle">@(customer.Phone ?? "—")</td>
+                                    <td class="text-center align-middle">
+                                        @if (customer.IsActive)
+                                        {
+                                            <span class="badge bg-success">Hoạt động</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger">Bị khóa</span>
+                                        }
+                                    </td>
+                                    <td class="text-center align-middle">
+                                        <span class="badge bg-info">@customer.TotalOrders</span>
+                                    </td>
+                                    <td class="text-end align-middle">
+                                        <strong>@customer.TotalSpent.ToString("N0") ₫</strong>
+                                    </td>
+                                    <td class="text-center align-middle">
+                                        <small>@customer.CreatedAt.ToString("dd/MM/yyyy")</small>
+                                    </td>
+                                    <td class="text-center align-middle">
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="@Url.Action("Detail", "User", new { area = "Admin", id = customer.Id })" class="btn btn-outline-primary" title="Chi tiết">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            @if (isSuperAdmin)
+                                            {
+                                                @if (customer.IsActive)
+                                                {
+                                                    <button type="button" class="btn btn-outline-danger" onclick="showLockModal(@customer.Id, '@Html.Raw(customer.Name.Replace("'", "\\'"))', @customer.IsVip.ToString().ToLower())" title="Khóa tài khoản">
+                                                        <i class="fas fa-lock"></i>
+                                                    </button>
+                                                }
+                                                else
+                                                {
+                                                    <button type="button" class="btn btn-outline-success" onclick="showUnlockModal(@customer.Id, '@Html.Raw(customer.Name.Replace("'", "\\'"))')" title="Mở khóa tài khoản">
+                                                        <i class="fas fa-unlock"></i>
+                                                    </button>
+                                                }
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                @if (Model.TotalPages > 1)
+                {
+                    <div class="card-footer">
+                        <nav>
+                            <ul class="pagination pagination-sm mb-0 justify-content-center">
+                                <li class="page-item @(Model.CurrentPage == 1 ? "disabled" : "")">
+                                    <a class="page-link" href="javascript:void(0)" onclick="loadPage(@(Model.CurrentPage - 1))">
+                                        <i class="fas fa-chevron-left"></i>
+                                    </a>
+                                </li>
+
+                                @for (int i = 1; i <= Model.TotalPages; i++)
+                                {
+                                    if (i == 1 || i == Model.TotalPages || (i >= Model.CurrentPage - 2 && i <= Model.CurrentPage + 2))
+                                    {
+                                        <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
+                                            <a class="page-link" href="javascript:void(0)" onclick="loadPage(@i)">@i</a>
+                                        </li>
+                                    }
+                                    else if (i == Model.CurrentPage - 3 || i == Model.CurrentPage + 3)
+                                    {
+                                        <li class="page-item disabled">
+                                            <span class="page-link">...</span>
+                                        </li>
+                                    }
+                                }
+
+                                <li class="page-item @(Model.CurrentPage == Model.TotalPages ? "disabled" : "")">
+                                    <a class="page-link" href="javascript:void(0)" onclick="loadPage(@(Model.CurrentPage + 1))">
+                                        <i class="fas fa-chevron-right"></i>
+                                    </a>
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="text-center py-5">
+                    <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">Không tìm thấy khách hàng nào</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Lock Account Modal -->
+@await Html.PartialAsync("_LockAccountModal")
+
+<!-- Unlock Account Modal -->
+@await Html.PartialAsync("_UnlockAccountModal")
+
+@section Scripts {
+<script src="~/js/userManagement.js"></script>
+<script>
+    let debounceTimer;
+
+    function debounce(func, delay) {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(func, delay);
+    }
+
+    function loadPage(page) {
+        if (page < 1 || page > @Model.TotalPages) return;
+        
+        const search = document.getElementById('filterSearch').value;
+        const isActive = document.getElementById('filterIsActive').value;
+        const sortBy = document.getElementById('filterSortBy').value;
+        const sortDescending = document.getElementById('filterSortDescending').value;
+
+        const params = new URLSearchParams();
+        if (search) params.append('search', search);
+        if (isActive) params.append('isActive', isActive);
+        params.append('sortBy', sortBy);
+        params.append('sortDescending', sortDescending);
+        params.append('page', page);
+
+        document.getElementById('loadingIndicator').classList.remove('d-none');
+
+        const newUrl = `@Url.Action("Index", "User", new { area = "Admin" })?${params.toString()}`;
+        window.location.href = newUrl;
+    }
+
+    // Real-time filter with 300ms debounce
+    document.getElementById('filterSearch').addEventListener('input', function() {
+        debounce(() => loadPage(1), 300);
+    });
+
+    document.getElementById('filterIsActive').addEventListener('change', function() {
+        loadPage(1);
+    });
+
+    document.getElementById('filterSortBy').addEventListener('change', function() {
+        loadPage(1);
+    });
+
+    document.getElementById('filterSortDescending').addEventListener('change', function() {
+        loadPage(1);
+    });
+
+    // Initialize toasts
+    document.addEventListener('DOMContentLoaded', function() {
+        const toastElList = [].slice.call(document.querySelectorAll('.toast'));
+        toastElList.map(function(toastEl) {
+            return new bootstrap.Toast(toastEl);
+        });
+    });
+</script>
+}

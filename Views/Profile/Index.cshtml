@@ -1,0 +1,87 @@
+@model Fruitables.ViewModels.ProfileViewModel
+@{
+    ViewData["Title"] = "Thông tin cá nhân";
+}
+
+<!-- Page Header Start -->
+<div class="container-fluid page-header py-5">
+    <h1 class="text-center text-white display-6">Thông tin cá nhân</h1>
+    <ol class="breadcrumb justify-content-center mb-0">
+        <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Trang chủ</a></li>
+        <li class="breadcrumb-item active text-white">Thông tin cá nhân</li>
+    </ol>
+</div>
+<!-- Page Header End -->
+
+<!-- Profile Start -->
+<div class="container-fluid py-5">
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="card shadow-sm">
+                    <div class="card-body p-4">
+                        <div class="row">
+                            <!-- Avatar Section -->
+                            <div class="col-md-4 text-center mb-4 mb-md-0">
+                                <img src="@(Model.AvatarUrl ?? "/img/default-avatar.svg")" alt="Avatar" 
+                                     class="rounded-circle img-thumbnail mb-3" 
+                                     style="width: 150px; height: 150px; object-fit: cover; background-color: #e4e6eb;">
+                                <h5 class="mb-1">@Model.Name</h5>
+                                <p class="text-muted small">Thành viên từ @Model.CreatedAt.ToString("dd/MM/yyyy")</p>
+                            </div>
+
+                            <!-- Info Section -->
+                            <div class="col-md-8">
+                                <h4 class="mb-4">Thông tin tài khoản</h4>
+                                <div class="mb-3">
+                                    <label class="text-muted small">Họ và tên</label>
+                                    <p class="mb-0 fw-medium">@Model.Name</p>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="text-muted small">Email</label>
+                                    <p class="mb-0 fw-medium">@Model.Email</p>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="text-muted small">Số điện thoại</label>
+                                    <p class="mb-0 fw-medium">@(string.IsNullOrEmpty(Model.Phone) ? "Chưa cập nhật" : Model.Phone)</p>
+                                </div>
+                                <div class="mt-4">
+                                    <a asp-action="Edit" class="btn btn-primary rounded-pill px-4">
+                                        <i class="fa fa-edit me-2"></i>Chỉnh sửa thông tin
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Links -->
+                <div class="row mt-4 g-3">
+                    <div class="col-md-6">
+                        <a asp-controller="Address" asp-action="Index" class="card text-decoration-none h-100">
+                            <div class="card-body d-flex align-items-center">
+                                <i class="fa fa-map-marker-alt fa-2x text-primary me-3"></i>
+                                <div>
+                                    <h6 class="mb-1 text-dark">Địa chỉ của tôi</h6>
+                                    <small class="text-muted">Quản lý địa chỉ giao hàng</small>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-md-6">
+                        <a asp-controller="OrderHistory" asp-action="Index" class="card text-decoration-none h-100">
+                            <div class="card-body d-flex align-items-center">
+                                <i class="fa fa-shopping-bag fa-2x text-primary me-3"></i>
+                                <div>
+                                    <h6 class="mb-1 text-dark">Đơn hàng của tôi</h6>
+                                    <small class="text-muted">Xem lịch sử đơn hàng</small>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Profile End -->

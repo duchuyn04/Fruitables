@@ -1,0 +1,176 @@
+@using Fruitables.Models
+
+<!-- Lock Account Modal -->
+<div class="modal fade" id="lockAccountModal" tabindex="-1" aria-labelledby="lockAccountModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="lockAccountModalLabel">
+                    <i class="fas fa-lock me-2"></i>Khóa tài khoản
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="lockAccountForm">
+                    <input type="hidden" id="lockCustomerId" name="CustomerId">
+                    <input type="hidden" id="lockConfirmWithPendingOrders" name="ConfirmLockWithPendingOrders" value="false">
+
+                    <!-- Customer Name Display -->
+                    <div class="alert alert-warning mb-3">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Bạn đang khóa tài khoản: <strong id="lockCustomerName"></strong>
+                    </div>
+
+                    <!-- VIP Warning (hidden by default) -->
+                    <div class="alert alert-danger d-none" id="vipWarning">
+                        <i class="fas fa-crown me-2"></i>
+                        <strong>Cảnh báo:</strong> Đây là khách hàng VIP (tổng chi tiêu > 50 triệu VNĐ). 
+                        Việc khóa tài khoản này cần được xem xét kỹ lưỡng.
+                    </div>
+
+                    <!-- Pending Orders Warning (hidden by default) -->
+                    <div class="alert alert-info d-none" id="pendingOrdersWarning">
+                        <i class="fas fa-shopping-cart me-2"></i>
+                        <strong>Lưu ý:</strong> Khách hàng này có <span id="pendingOrderCount">0</span> đơn hàng đang xử lý:
+                        <ul id="pendingOrdersList" class="mb-0 mt-2"></ul>
+                    </div>
+
+                    <!-- Violation Type -->
+                    <div class="mb-3">
+                        <label for="violationType" class="form-label">
+                            Loại vi phạm <span class="text-danger">*</span>
+                        </label>
+                        <select class="form-select" id="violationType" name="ViolationType" required>
+                            <option value="">-- Chọn loại vi phạm --</option>
+                            @foreach (var type in ViolationTypes.All)
+                            {
+                                <option value="@type">@type</option>
+                            }
+                        </select>
+                        <div class="invalid-feedback">Vui lòng chọn loại vi phạm</div>
+                    </div>
+
+                    <!-- Lock Reason -->
+                    <div class="mb-3">
+                        <label for="lockReason" class="form-label">
+                            Lý do chi tiết <span class="text-danger">*</span>
+                        </label>
+                        <textarea class="form-control" id="lockReason" name="Reason" rows="3" 
+                                  minlength="20" required
+                                  placeholder="Nhập lý do khóa tài khoản (tối thiểu 20 ký tự)"></textarea>
+                        <div class="form-text">
+                            <span id="lockReasonCount">0</span>/20 ký tự (tối thiểu 20 ký tự)
+                        </div>
+                        <div class="invalid-feedback">Lý do khóa phải có ít nhất 20 ký tự</div>
+                    </div>
+
+                    <!-- Lock Type -->
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Loại khóa <span class="text-danger">*</span>
+                        </label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="LockType" id="lockTypeTemporary" value="0" checked>
+                            <label class="form-check-label" for="lockTypeTemporary">
+                                <i class="fas fa-clock me-1"></i>Tạm thời
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="LockType" id="lockTypePermanent" value="1">
+                            <label class="form-check-label" for="lockTypePermanent">
+                                <i class="fas fa-ban me-1"></i>Vĩnh viễn
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Lock Duration (for temporary lock) -->
+                    <div class="mb-3" id="lockDurationContainer">
+                        <label for="lockDurationDays" class="form-label">
+                            Số ngày khóa <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" id="lockDurationDays" name="LockDurationDays" 
+                                   min="1" max="365" value="7" required>
+                            <span class="input-group-text">ngày</span>
+                        </div>
+                        <div class="form-text">Từ 1 đến 365 ngày</div>
+                        <div class="invalid-feedback">Số ngày khóa phải từ 1 đến 365</div>
+                    </div>
+
+                    <!-- Permanent Lock Warning -->
+                    <div class="alert alert-danger d-none" id="permanentLockWarning">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        <strong>Cảnh báo:</strong> Khóa vĩnh viễn sẽ ngăn khách hàng đăng nhập vĩnh viễn 
+                        cho đến khi được mở khóa thủ công bởi SuperAdmin.
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Hủy bỏ
+                </button>
+                <button type="button" class="btn btn-danger" id="lockAccountBtn" onclick="submitLockAccount()">
+                    <i class="fas fa-lock me-1"></i>Khóa tài khoản
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Lock Confirmation Modal -->
+<div class="modal fade" id="lockConfirmModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Xác nhận khóa tài khoản
+                </h5>
+            </div>
+            <div class="modal-body">
+                <p>Bạn có chắc chắn muốn khóa tài khoản này?</p>
+                <div class="bg-light p-3 rounded">
+                    <p class="mb-1"><strong>Khách hàng:</strong> <span id="confirmCustomerName"></span></p>
+                    <p class="mb-1"><strong>Loại vi phạm:</strong> <span id="confirmViolationType"></span></p>
+                    <p class="mb-1"><strong>Loại khóa:</strong> <span id="confirmLockType"></span></p>
+                    <p class="mb-0"><strong>Lý do:</strong> <span id="confirmReason"></span></p>
+                </div>
+                
+                <!-- VIP Double Confirmation (hidden by default) -->
+                <div class="mt-3 d-none" id="vipDoubleConfirm">
+                    <div class="alert alert-danger mb-2">
+                        <i class="fas fa-crown me-2"></i>
+                        <strong>Đây là khách hàng VIP!</strong> Vui lòng xác nhận lần nữa.
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="vipConfirmCheckbox">
+                        <label class="form-check-label" for="vipConfirmCheckbox">
+                            Tôi xác nhận muốn khóa tài khoản khách hàng VIP này
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Pending Orders Confirmation (hidden by default) -->
+                <div class="mt-3 d-none" id="pendingOrdersConfirm">
+                    <div class="alert alert-warning mb-2">
+                        <i class="fas fa-shopping-cart me-2"></i>
+                        Khách hàng có đơn hàng đang xử lý. Bạn có muốn tiếp tục?
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="pendingOrdersConfirmCheckbox">
+                        <label class="form-check-label" for="pendingOrdersConfirmCheckbox">
+                            Tôi xác nhận muốn khóa dù có đơn hàng đang xử lý
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="cancelLockConfirmation()">
+                    <i class="fas fa-arrow-left me-1"></i>Quay lại
+                </button>
+                <button type="button" class="btn btn-danger" id="confirmLockBtn" onclick="confirmLockAccount()">
+                    <i class="fas fa-check me-1"></i>Xác nhận khóa
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

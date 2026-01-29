@@ -1,0 +1,112 @@
+html {
+  font-size: 14px;
+}
+
+@media (min-width: 768px) {
+  html {
+    font-size: 16px;
+  }
+}
+
+.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
+  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+}
+
+html {
+  position: relative;
+  min-height: 100%;
+}
+
+body {
+  margin-bottom: 60px;
+}
+
+
+/* ==================== Address Search Dropdown Styles ==================== */
+/* Validates: Requirements 7.1, 7.2, 7.3 */
+
+.address-search-wrapper {
+    position: relative;
+}
+
+.address-search-wrapper .form-select {
+    cursor: pointer;
+}
+
+.address-search-wrapper .form-select:not(:disabled):hover {
+    border-color: #81c408;
+}
+
+.address-search-wrapper .form-select.search-active {
+    border-color: #81c408;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    /* Hide native dropdown when custom search is active */
+    pointer-events: none;
+}
+
+/* Hide native select dropdown arrow when search is active */
+.address-search-wrapper .form-select.search-active::-ms-expand {
+    display: none;
+}
+
+.address-search-input {
+    border-color: #81c408 !important;
+}
+
+.address-search-input:focus {
+    border-color: #81c408 !important;
+    box-shadow: none !important;
+}
+
+.address-search-dropdown {
+    scrollbar-width: thin;
+    scrollbar-color: #81c408 #f8f9fa;
+}
+
+.address-search-dropdown::-webkit-scrollbar {
+    width: 6px;
+}
+
+.address-search-dropdown::-webkit-scrollbar-track {
+    background: #f8f9fa;
+    border-radius: 3px;
+}
+
+.address-search-dropdown::-webkit-scrollbar-thumb {
+    background: #81c408;
+    border-radius: 3px;
+}
+
+.address-search-dropdown::-webkit-scrollbar-thumb:hover {
+    background: #6ba106;
+}
+
+.address-search-item:focus {
+    outline: none;
+    background-color: #f0f7e6 !important;
+    color: #81c408 !important;
+}
+
+.address-search-item:last-child {
+    border-bottom: none !important;
+}
+
+/* Loading state for dropdowns */
+.form-select.loading {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24'%3e%3cstyle%3e.spinner%7banimation:spin 1s linear infinite;transform-origin:center%7d@keyframes spin%7bfrom%7btransform:rotate(0deg)%7dto%7btransform:rotate(360deg)%7d%7d%3c/style%3e%3ccircle class='spinner' cx='12' cy='12' r='10' stroke='%2381c408' stroke-width='2' fill='none' stroke-dasharray='31.4 31.4'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1rem 1rem;
+}
+
+/* Disabled state styling */
+.form-select:disabled {
+    background-color: #f8f9fa;
+    cursor: not-allowed;
+}
+
+/* Search icon indicator */
+.address-search-icon {
+    font-size: 12px;
+}

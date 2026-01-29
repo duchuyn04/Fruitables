@@ -1,0 +1,83 @@
+@model Fruitables.ViewModels.SeoSettingsViewModel
+
+<form asp-action="SaveSeo" method="post">
+    @Html.AntiForgeryToken()
+    
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-light">
+            <h5 class="mb-0"><i class="fas fa-search me-2"></i>Cài đặt SEO</h5>
+        </div>
+        <div class="card-body">
+            <!-- Meta Title -->
+            <div class="mb-4">
+                <label asp-for="MetaTitle" class="form-label">Meta Title</label>
+                <input asp-for="MetaTitle" class="form-control" placeholder="Nhập tiêu đề SEO" maxlength="60" id="metaTitle" />
+                <span asp-validation-for="MetaTitle" class="text-danger"></span>
+                <div class="d-flex justify-content-between">
+                    <small class="text-muted">Tiêu đề hiển thị trên kết quả tìm kiếm</small>
+                    <span class="char-counter" id="metaTitleCounter">0/60</span>
+                </div>
+            </div>
+
+            <!-- Meta Description -->
+            <div class="mb-4">
+                <label asp-for="MetaDescription" class="form-label">Meta Description</label>
+                <textarea asp-for="MetaDescription" class="form-control" rows="3" placeholder="Nhập mô tả SEO" maxlength="160" id="metaDescription"></textarea>
+                <span asp-validation-for="MetaDescription" class="text-danger"></span>
+                <div class="d-flex justify-content-between">
+                    <small class="text-muted">Mô tả ngắn hiển thị trên kết quả tìm kiếm</small>
+                    <span class="char-counter" id="metaDescCounter">0/160</span>
+                </div>
+            </div>
+
+            <!-- Meta Keywords -->
+            <div class="mb-4">
+                <label asp-for="MetaKeywords" class="form-label">Meta Keywords</label>
+                <input asp-for="MetaKeywords" class="form-control" placeholder="từ khóa 1, từ khóa 2, từ khóa 3" />
+                <span asp-validation-for="MetaKeywords" class="text-danger"></span>
+                <small class="text-muted">Các từ khóa cách nhau bởi dấu phẩy</small>
+            </div>
+
+            <!-- Google Analytics ID -->
+            <div class="mb-4">
+                <label asp-for="GoogleAnalyticsId" class="form-label">Google Analytics ID</label>
+                <input asp-for="GoogleAnalyticsId" class="form-control" placeholder="UA-XXXXXXXXX-X hoặc G-XXXXXXXXXX" />
+                <span asp-validation-for="GoogleAnalyticsId" class="text-danger"></span>
+                <small class="text-muted">ID theo dõi Google Analytics (Universal hoặc GA4)</small>
+            </div>
+        </div>
+        <div class="card-footer bg-light">
+            <button type="submit" class="btn btn-success">
+                <i class="fas fa-save me-1"></i>Lưu cài đặt
+            </button>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+<script>
+    // Character counter for Meta Title
+    const metaTitle = document.getElementById('metaTitle');
+    const metaTitleCounter = document.getElementById('metaTitleCounter');
+    
+    function updateTitleCounter() {
+        const len = metaTitle.value.length;
+        metaTitleCounter.textContent = len + '/60';
+        metaTitleCounter.className = 'char-counter' + (len > 55 ? (len >= 60 ? ' danger' : ' warning') : '');
+    }
+    metaTitle.addEventListener('input', updateTitleCounter);
+    updateTitleCounter();
+
+    // Character counter for Meta Description
+    const metaDesc = document.getElementById('metaDescription');
+    const metaDescCounter = document.getElementById('metaDescCounter');
+    
+    function updateDescCounter() {
+        const len = metaDesc.value.length;
+        metaDescCounter.textContent = len + '/160';
+        metaDescCounter.className = 'char-counter' + (len > 150 ? (len >= 160 ? ' danger' : ' warning') : '');
+    }
+    metaDesc.addEventListener('input', updateDescCounter);
+    updateDescCounter();
+</script>
+}

@@ -1,0 +1,129 @@
+﻿@inject Fruitables.Services.Interfaces.ISettingsService SettingsService
+@{
+    var siteName = await SettingsService.GetSettingAsync(Fruitables.Constants.SettingKeys.SiteName, "Fruitables");
+    var metaTitle = await SettingsService.GetSettingAsync(Fruitables.Constants.SettingKeys.MetaTitle);
+    var metaDescription = await SettingsService.GetSettingAsync(Fruitables.Constants.SettingKeys.MetaDescription);
+    var metaKeywords = await SettingsService.GetSettingAsync(Fruitables.Constants.SettingKeys.MetaKeywords);
+    var logoPath = await SettingsService.GetSettingAsync(Fruitables.Constants.SettingKeys.Logo);
+    var faviconPath = await SettingsService.GetSettingAsync(Fruitables.Constants.SettingKeys.Favicon);
+    var gaId = await SettingsService.GetSettingAsync(Fruitables.Constants.SettingKeys.GoogleAnalyticsId);
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>@(ViewData["Title"] ?? metaTitle) - @siteName</title>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <meta content="@metaKeywords" name="keywords">
+    <meta content="@metaDescription" name="description">
+    @if (!string.IsNullOrEmpty(faviconPath))
+    {
+        <link rel="icon" type="image/x-icon" href="@faviconPath">
+    }
+
+    <!-- Google Web Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&family=Raleway:wght@600;800&display=swap" rel="stylesheet">
+
+    <!-- Icon Font Stylesheet -->
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/all.css" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.1/font/bootstrap-icons.css" rel="stylesheet">
+
+    <!-- Libraries Stylesheet -->
+    <link href="~/lib/custom/lightbox/css/lightbox.min.css" rel="stylesheet">
+    <link href="~/lib/custom/owlcarousel/assets/owl.carousel.min.css" rel="stylesheet">
+
+    <!-- Customized Bootstrap Stylesheet -->
+    <link href="~/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Template Stylesheet -->
+    <link href="~/css/style.css" rel="stylesheet">
+    @await RenderSectionAsync("Styles", required: false)
+    
+    @if (!string.IsNullOrEmpty(gaId))
+    {
+        <!-- Google Analytics -->
+        <script async src="https://www.googletagmanager.com/gtag/js?id=@gaId"></script>
+        <script>
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', '@gaId');
+        </script>
+    }
+</head>
+<body>
+    <!-- Spinner Start -->
+    <div id="spinner" class="show w-100 vh-100 bg-white position-fixed translate-middle top-50 start-50 d-flex align-items-center justify-content-center">
+        <div class="spinner-grow text-primary" role="status"></div>
+    </div>
+    <!-- Spinner End -->
+
+    <!-- Navbar start -->
+    <partial name="_Navbar" />
+    <!-- Navbar End -->
+
+    <!-- Modal Search Start -->
+    <partial name="_SearchModal" />
+    <!-- Modal Search End -->
+
+    @RenderBody()
+
+    <!-- Footer Start -->
+    <partial name="_Footer" />
+    <!-- Footer End -->
+
+    <!-- Toast Container -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="toast align-items-center text-white border-0 show" role="alert" aria-live="assertive" aria-atomic="true" data-bs-autohide="true" data-bs-delay="3000" style="background-color: #81c408;">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="fas fa-check-circle me-2"></i>@TempData["SuccessMessage"]
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            </div>
+        }
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="toast align-items-center text-bg-danger border-0 show" role="alert" aria-live="assertive" aria-atomic="true" data-bs-autohide="true" data-bs-delay="3000">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="fas fa-exclamation-circle me-2"></i>@TempData["ErrorMessage"]
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Back to Top -->
+    <a href="#" class="btn btn-primary border-3 border-primary rounded-circle back-to-top"><i class="fa fa-arrow-up"></i></a>
+
+    <!-- JavaScript Libraries -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/lib/custom/easing/easing.min.js"></script>
+    <script src="~/lib/custom/waypoints/waypoints.min.js"></script>
+    <script src="~/lib/custom/lightbox/js/lightbox.min.js"></script>
+    <script src="~/lib/custom/owlcarousel/owl.carousel.min.js"></script>
+
+    <!-- Template Javascript -->
+    <script src="~/js/main.js"></script>
+    
+    <!-- Initialize Toasts -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var toastElList = [].slice.call(document.querySelectorAll('.toast'));
+            toastElList.forEach(function(toastEl) {
+                var toast = new bootstrap.Toast(toastEl);
+                toast.show();
+            });
+        });
+    </script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

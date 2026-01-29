@@ -1,0 +1,47 @@
+@model Fruitables.ViewModels.BannerSettingsViewModel
+
+<div class="container-fluid service py-5">
+    <div class="container py-5">
+        <div class="row g-4 justify-content-center">
+            <div class="col-md-6 col-lg-4">
+                <a href="@(string.IsNullOrEmpty(Model.Banner1.Link) ? "#" : Model.Banner1.Link)">
+                    <div class="service-item bg-secondary rounded border border-secondary">
+                        <img src="@Model.Banner1.ImagePath" class="img-fluid rounded-top w-100" alt="@Model.Banner1.Title">
+                        <div class="px-4 rounded-bottom">
+                            <div class="service-content bg-primary text-center p-4 rounded">
+                                <h5 class="text-white">@Model.Banner1.Title</h5>
+                                <h3 class="mb-0">@Model.Banner1.Subtitle</h3>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-6 col-lg-4">
+                <a href="@(string.IsNullOrEmpty(Model.Banner2.Link) ? "#" : Model.Banner2.Link)">
+                    <div class="service-item bg-dark rounded border border-dark">
+                        <img src="@Model.Banner2.ImagePath" class="img-fluid rounded-top w-100" alt="@Model.Banner2.Title">
+                        <div class="px-4 rounded-bottom">
+                            <div class="service-content bg-light text-center p-4 rounded">
+                                <h5 class="text-primary">@Model.Banner2.Title</h5>
+                                <h3 class="mb-0">@Model.Banner2.Subtitle</h3>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-6 col-lg-4">
+                <a href="@(string.IsNullOrEmpty(Model.Banner3.Link) ? "#" : Model.Banner3.Link)">
+                    <div class="service-item bg-primary rounded border border-primary">
+                        <img src="@Model.Banner3.ImagePath" class="img-fluid rounded-top w-100" alt="@Model.Banner3.Title">
+                        <div class="px-4 rounded-bottom">
+                            <div class="service-content bg-secondary text-center p-4 rounded">
+                                <h5 class="text-white">@Model.Banner3.Title</h5>
+                                <h3 class="mb-0">@Model.Banner3.Subtitle</h3>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>

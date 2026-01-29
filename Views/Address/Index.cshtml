@@ -1,0 +1,279 @@
+@model List<Address>
+@{
+    ViewData["Title"] = "Quản lý Địa chỉ";
+}
+
+<!-- Page Header Start -->
+<div class="container-fluid page-header py-5">
+    <h1 class="text-center text-white display-6">Địa chỉ của tôi</h1>
+    <ol class="breadcrumb justify-content-center mb-0">
+        <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Trang chủ</a></li>
+        <li class="breadcrumb-item active text-white">Địa chỉ</li>
+    </ol>
+</div>
+<!-- Page Header End -->
+
+<!-- Address List Start -->
+<div class="container-fluid py-5">
+    <div class="container py-5">
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h4 class="mb-0">Danh sách địa chỉ</h4>
+                    <a asp-action="Create" class="btn btn-primary rounded-pill px-4">
+                        <i class="fa fa-plus me-2"></i>Thêm địa chỉ mới
+                    </a>
+                </div>
+
+                <div id="addressList">
+                    @if (Model.Any())
+                    {
+                        <div class="row g-4">
+                            @foreach (var address in Model)
+                            {
+                                <div class="col-md-6" id="address-card-@address.Id">
+                                    <div class="card h-100 @(address.IsDefault ? "border-primary" : "")" id="address-@address.Id">
+                                        <div class="card-body">
+                                            <span class="badge bg-primary mb-2 default-badge" style="@(address.IsDefault ? "" : "display:none")">Mặc định</span>
+                                            <h5 class="card-title">@address.FullName</h5>
+                                            <p class="card-text mb-2">
+                                                <i class="fa fa-phone text-primary me-2"></i>@address.Phone
+                                            </p>
+                                            <p class="card-text mb-3">
+                                                <i class="fa fa-map-marker-alt text-primary me-2"></i>@address.FullAddress
+                                            </p>
+                                            <div class="d-flex gap-2">
+                                                <a asp-action="Edit" asp-route-id="@address.Id" 
+                                                   class="btn btn-sm btn-outline-primary">
+                                                    <i class="fa fa-edit me-1"></i>Sửa
+                                                </a>
+                                                <button type="button" 
+                                                        class="btn btn-sm btn-outline-success btn-set-default"
+                                                        data-id="@address.Id"
+                                                        style="@(address.IsDefault ? "display:none" : "")">
+                                                    <i class="fa fa-check me-1"></i>Đặt mặc định
+                                                </button>
+                                                <button type="button" 
+                                                        class="btn btn-sm btn-outline-danger btn-delete"
+                                                        data-id="@address.Id"
+                                                        data-name="@address.FullName"
+                                                        data-address="@address.FullAddress">
+                                                    <i class="fa fa-trash me-1"></i>Xóa
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info" id="empty-message">
+                            <i class="fa fa-info-circle me-2"></i>
+                            Bạn chưa có địa chỉ nào. 
+                            <a asp-action="Create" class="alert-link">Thêm địa chỉ mới</a>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Address List End -->
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Xác nhận xóa</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Bạn có chắc chắn muốn xóa địa chỉ này?</p>
+                <p class="mb-0"><strong id="delete-name"></strong><br><span id="delete-address"></span></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-danger" id="confirmDelete">
+                    <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+                    Xóa
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const antiForgeryToken = '@Html.AntiForgeryToken()'.match(/value="([^"]+)"/)[1];
+        let deleteAddressId = null;
+        const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+
+        // Show toast notification
+        function showToast(message, isSuccess = true) {
+            const toastContainer = document.querySelector('.toast-container');
+            const toastHtml = `
+                <div class="toast align-items-center text-white border-0 show" role="alert" 
+                     style="background-color: ${isSuccess ? '#81c408' : '#dc3545'};">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <i class="fas fa-${isSuccess ? 'check-circle' : 'exclamation-circle'} me-2"></i>${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `;
+            toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+            const toast = toastContainer.lastElementChild;
+            const bsToast = new bootstrap.Toast(toast, { delay: 3000 });
+            bsToast.show();
+            toast.addEventListener('hidden.bs.toast', () => toast.remove());
+        }
+
+        // Set Default Address
+        const defaultBtnHtml = '<i class="fa fa-check me-1"></i>Đặt mặc định';
+        
+        document.querySelectorAll('.btn-set-default').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const id = this.dataset.id;
+                const button = this;
+                
+                // Prevent double click
+                if (button.disabled) return;
+                
+                button.disabled = true;
+                button.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+                
+                try {
+                    const response = await fetch(`/Address/SetDefault/${id}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'RequestVerificationToken': antiForgeryToken
+                        }
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        // Remove default from all cards and restore buttons
+                        document.querySelectorAll('.card').forEach(card => {
+                            card.classList.remove('border-primary');
+                        });
+                        document.querySelectorAll('.default-badge').forEach(badge => {
+                            badge.style.display = 'none';
+                        });
+                        document.querySelectorAll('.btn-set-default').forEach(b => {
+                            b.innerHTML = defaultBtnHtml;
+                            b.disabled = false;
+                            b.style.display = '';
+                        });
+                        
+                        // Set new default
+                        const card = document.getElementById(`address-${id}`);
+                        card.classList.add('border-primary');
+                        card.querySelector('.default-badge').style.display = '';
+                        button.style.display = 'none';
+                        
+                        showToast(result.message);
+                    } else {
+                        showToast(result.message, false);
+                        button.innerHTML = defaultBtnHtml;
+                        button.disabled = false;
+                    }
+                } catch (error) {
+                    showToast('Có lỗi xảy ra', false);
+                    button.innerHTML = defaultBtnHtml;
+                    button.disabled = false;
+                }
+            });
+        });
+
+        // Delete Address - Show Modal
+        document.querySelectorAll('.btn-delete').forEach(btn => {
+            btn.addEventListener('click', function() {
+                deleteAddressId = this.dataset.id;
+                document.getElementById('delete-name').textContent = this.dataset.name;
+                document.getElementById('delete-address').textContent = this.dataset.address;
+                deleteModal.show();
+            });
+        });
+
+        // Confirm Delete
+        document.getElementById('confirmDelete').addEventListener('click', async function() {
+            if (!deleteAddressId) return;
+            
+            const button = this;
+            const spinner = button.querySelector('.spinner-border');
+            
+            button.disabled = true;
+            spinner.classList.remove('d-none');
+            
+            try {
+                const response = await fetch(`/Address/DeleteAjax/${deleteAddressId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'RequestVerificationToken': antiForgeryToken
+                    }
+                });
+                
+                const result = await response.json();
+                
+                deleteModal.hide();
+                
+                if (result.success) {
+                    // Remove card with animation
+                    const card = document.getElementById(`address-card-${deleteAddressId}`);
+                    card.style.transition = 'opacity 0.3s, transform 0.3s';
+                    card.style.opacity = '0';
+                    card.style.transform = 'scale(0.9)';
+                    
+                    setTimeout(() => {
+                        card.remove();
+                        
+                        // Check if list is empty
+                        const remainingCards = document.querySelectorAll('[id^="address-card-"]');
+                        if (remainingCards.length === 0) {
+                            document.querySelector('.row.g-4').innerHTML = `
+                                <div class="col-12">
+                                    <div class="alert alert-info">
+                                        <i class="fa fa-info-circle me-2"></i>
+                                        Bạn chưa có địa chỉ nào. 
+                                        <a href="/Address/Create" class="alert-link">Thêm địa chỉ mới</a>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        
+                        // Update new default if needed
+                        if (result.newDefaultId) {
+                            const newDefaultCard = document.getElementById(`address-${result.newDefaultId}`);
+                            if (newDefaultCard) {
+                                newDefaultCard.classList.add('border-primary');
+                                newDefaultCard.querySelector('.default-badge').style.display = '';
+                                const setDefaultBtn = newDefaultCard.querySelector('.btn-set-default');
+                                if (setDefaultBtn) setDefaultBtn.style.display = 'none';
+                            }
+                        }
+                    }, 300);
+                    
+                    showToast(result.message);
+                } else {
+                    showToast(result.message, false);
+                }
+            } catch (error) {
+                deleteModal.hide();
+                showToast('Có lỗi xảy ra', false);
+            } finally {
+                button.disabled = false;
+                spinner.classList.add('d-none');
+                deleteAddressId = null;
+            }
+        });
+    </script>
+}

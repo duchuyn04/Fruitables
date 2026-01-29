@@ -1,0 +1,375 @@
+@model Fruitables.ViewModels.PagedResult<Fruitables.ViewModels.OrderSummaryViewModel>
+@using Fruitables.Models
+@{
+    ViewData["Title"] = "Lịch sử đơn hàng";
+    var filter = ViewBag.Filter as Fruitables.ViewModels.OrderHistoryFilterViewModel;
+    var statuses = ViewBag.Statuses as List<Fruitables.Controllers.SelectListItem>;
+}
+
+<!-- Page Header Start -->
+<div class="container-fluid page-header py-5">
+    <h1 class="text-center text-white display-6">Lịch sử đơn hàng</h1>
+    <ol class="breadcrumb justify-content-center mb-0">
+        <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Trang chủ</a></li>
+        <li class="breadcrumb-item active text-white">Lịch sử đơn hàng</li>
+    </ol>
+</div>
+<!-- Page Header End -->
+
+<!-- Toast Container -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;" id="toastContainer">
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="toast show" role="alert" data-bs-autohide="true" data-bs-delay="5000">
+            <div class="toast-header bg-success text-white">
+                <i class="fa fa-check-circle me-2"></i>
+                <strong class="me-auto">Thành công</strong>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+            </div>
+            <div class="toast-body">
+                @TempData["SuccessMessage"]
+            </div>
+        </div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="toast show" role="alert" data-bs-autohide="true" data-bs-delay="5000">
+            <div class="toast-header bg-danger text-white">
+                <i class="fa fa-exclamation-circle me-2"></i>
+                <strong class="me-auto">Lỗi</strong>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+            </div>
+            <div class="toast-body">
+                @TempData["ErrorMessage"]
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Custom Styles -->
+<style>
+    #statusTabs {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 5px;
+    }
+    #statusTabs .nav-link {
+        color: #6c757d;
+        border-radius: 8px;
+        padding: 10px 16px;
+        font-weight: 500;
+        white-space: nowrap;
+        transition: all 0.2s ease;
+    }
+    #statusTabs .nav-link:hover {
+        background: #e9ecef;
+        color: #495057;
+    }
+    #statusTabs .nav-link.active {
+        background: #81c408;
+        color: white;
+    }
+    #statusTabs .nav-link i {
+        font-size: 0.9em;
+    }
+    .loading-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255, 255, 255, 0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+    }
+    .loading-overlay.d-none {
+        display: none !important;
+    }
+    #orderListContainer {
+        position: relative;
+        min-height: 200px;
+    }
+</style>
+
+<!-- Order History Start -->
+<div class="container-fluid py-5">
+    <div class="container py-5">
+        <!-- Status Tabs -->
+        <div class="mb-4">
+            <ul class="nav nav-pills nav-fill flex-nowrap overflow-auto" id="statusTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link status-tab @(filter?.Status == null ? "active" : "")" 
+                            type="button" data-status="">
+                        <i class="fa fa-list-ul me-1"></i>Tất cả
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link status-tab @(filter?.Status == OrderStatus.Pending ? "active" : "")" 
+                            type="button" data-status="Pending">
+                        <i class="fa fa-clock me-1"></i>Chờ xử lý
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link status-tab @(filter?.Status == OrderStatus.Processing ? "active" : "")" 
+                            type="button" data-status="Processing">
+                        <i class="fa fa-cog me-1"></i>Đang xử lý
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link status-tab @(filter?.Status == OrderStatus.Shipped ? "active" : "")" 
+                            type="button" data-status="Shipped">
+                        <i class="fa fa-truck me-1"></i>Đang giao
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link status-tab @(filter?.Status == OrderStatus.Delivered ? "active" : "")" 
+                            type="button" data-status="Delivered">
+                        <i class="fa fa-check-circle me-1"></i>Đã giao
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link status-tab @(filter?.Status == OrderStatus.Cancelled ? "active" : "")" 
+                            type="button" data-status="Cancelled">
+                        <i class="fa fa-times-circle me-1"></i>Đã hủy
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link status-tab @(filter?.Status == OrderStatus.Returned ? "active" : "")" 
+                            type="button" data-status="Returned">
+                        <i class="fa fa-undo me-1"></i>Trả hàng
+                    </button>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Search & PageSize Filter -->
+        <div class="card mb-4">
+            <div class="card-body py-3">
+                <div class="row g-3 align-items-center">
+                    <input type="hidden" id="statusInput" value="@filter?.Status">
+                    <input type="hidden" id="pageInput" value="@filter?.Page">
+                    <div class="col-md-8">
+                        <div class="position-relative">
+                            <input type="text" id="searchInput" class="form-control" 
+                                   placeholder="Tìm kiếm theo mã đơn hàng..." value="@filter?.SearchTerm">
+                            <span id="searchSpinner" class="position-absolute top-50 end-0 translate-middle-y me-3 d-none">
+                                <i class="fa fa-spinner fa-spin text-muted"></i>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="d-flex align-items-center gap-2">
+                            <label class="form-label mb-0 text-nowrap">Hiển thị:</label>
+                            @{
+                                var pageSize = filter?.PageSize ?? 10;
+                            }
+                            <select id="pageSizeSelect" class="form-select form-select-sm" style="width: auto;">
+                                @if (pageSize == 10)
+                                {
+                                    <option value="10" selected>10</option>
+                                }
+                                else
+                                {
+                                    <option value="10">10</option>
+                                }
+                                @if (pageSize == 20)
+                                {
+                                    <option value="20" selected>20</option>
+                                }
+                                else
+                                {
+                                    <option value="20">20</option>
+                                }
+                                @if (pageSize == 50)
+                                {
+                                    <option value="50" selected>50</option>
+                                }
+                                else
+                                {
+                                    <option value="50">50</option>
+                                }
+                            </select>
+                            <span class="text-muted">đơn/trang</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Order List Container with Loading Overlay -->
+        <div id="orderListContainer">
+            <!-- Loading Overlay -->
+            <div class="loading-overlay d-none" id="loadingOverlay">
+                <div class="text-center">
+                    <i class="fa fa-spinner fa-spin fa-3x text-primary"></i>
+                    <p class="mt-2 text-muted">Đang tải...</p>
+                </div>
+            </div>
+            
+            <!-- Order List Content -->
+            <div id="orderListContent">
+                <partial name="_OrderListContainer" model="Model" />
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Order History End -->
+
+<!-- Cancel Modal -->
+<div class="modal fade" id="cancelModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-action="Cancel" method="post" id="cancelForm">
+                <div class="modal-header">
+                    <h5 class="modal-title">Hủy đơn hàng <span id="cancelOrderNumber"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Bạn có chắc chắn muốn hủy đơn hàng này?</p>
+                    <input type="hidden" name="id" id="cancelOrderId">
+                    <div class="mb-3">
+                        <label class="form-label">Lý do hủy <span class="text-danger">*</span></label>
+                        <div class="cancel-reasons">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input cancel-reason-radio" type="radio" name="cancelReasonOption" 
+                                       id="indexReason1" value="Tôi muốn thay đổi địa chỉ giao hàng">
+                                <label class="form-check-label" for="indexReason1">Tôi muốn thay đổi địa chỉ giao hàng</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input cancel-reason-radio" type="radio" name="cancelReasonOption" 
+                                       id="indexReason2" value="Tôi muốn thay đổi sản phẩm trong đơn hàng">
+                                <label class="form-check-label" for="indexReason2">Tôi muốn thay đổi sản phẩm trong đơn hàng</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input cancel-reason-radio" type="radio" name="cancelReasonOption" 
+                                       id="indexReason3" value="Tôi tìm thấy giá rẻ hơn ở nơi khác">
+                                <label class="form-check-label" for="indexReason3">Tôi tìm thấy giá rẻ hơn ở nơi khác</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input cancel-reason-radio" type="radio" name="cancelReasonOption" 
+                                       id="indexReason4" value="Tôi không còn nhu cầu mua nữa">
+                                <label class="form-check-label" for="indexReason4">Tôi không còn nhu cầu mua nữa</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input cancel-reason-radio" type="radio" name="cancelReasonOption" 
+                                       id="indexReason5" value="Thời gian giao hàng quá lâu">
+                                <label class="form-check-label" for="indexReason5">Thời gian giao hàng quá lâu</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input cancel-reason-radio" type="radio" name="cancelReasonOption" 
+                                       id="indexReasonOther" value="other">
+                                <label class="form-check-label" for="indexReasonOther">Lý do khác</label>
+                            </div>
+                        </div>
+                        <div id="indexOtherReasonContainer" class="mt-2" style="display: none;">
+                            <textarea id="indexOtherReasonText" class="form-control" rows="3" 
+                                      placeholder="Vui lòng nhập lý do hủy đơn hàng..."></textarea>
+                        </div>
+                        <input type="hidden" name="cancelReason" id="indexCancelReasonInput">
+                        <div id="indexCancelReasonError" class="text-danger small mt-2" style="display: none;">
+                            Vui lòng chọn hoặc nhập lý do hủy đơn hàng
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fa fa-times me-2"></i>Xác nhận hủy
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/orderHistoryFilter.js"></script>
+    <script>
+        (function() {
+            // Auto-hide toasts after 5 seconds
+            document.querySelectorAll('.toast.show').forEach(function(toast) {
+                setTimeout(function() {
+                    var bsToast = bootstrap.Toast.getOrCreateInstance(toast);
+                    bsToast.hide();
+                }, 5000);
+            });
+
+            // Cancel order modal
+            var cancelForm = document.getElementById('cancelForm');
+            var radioButtons = document.querySelectorAll('.cancel-reason-radio');
+            var otherReasonContainer = document.getElementById('indexOtherReasonContainer');
+            var otherReasonText = document.getElementById('indexOtherReasonText');
+            var cancelReasonInput = document.getElementById('indexCancelReasonInput');
+            var cancelReasonError = document.getElementById('indexCancelReasonError');
+
+            // Use event delegation for cancel buttons (they may be replaced by AJAX)
+            document.addEventListener('click', function(e) {
+                if (e.target.closest('.btn-cancel')) {
+                    var btn = e.target.closest('.btn-cancel');
+                    var orderId = btn.dataset.id;
+                    var orderNumber = btn.dataset.order;
+                    
+                    document.getElementById('cancelOrderId').value = orderId;
+                    document.getElementById('cancelOrderNumber').textContent = orderNumber;
+                    cancelForm.action = '/OrderHistory/Cancel/' + orderId;
+                    
+                    // Reset form
+                    radioButtons.forEach(function(r) { r.checked = false; });
+                    otherReasonContainer.style.display = 'none';
+                    otherReasonText.value = '';
+                    cancelReasonInput.value = '';
+                    cancelReasonError.style.display = 'none';
+                    
+                    new bootstrap.Modal(document.getElementById('cancelModal')).show();
+                }
+            });
+
+            // Show/hide other reason textarea
+            radioButtons.forEach(function(radio) {
+                radio.addEventListener('change', function() {
+                    if (this.value === 'other') {
+                        otherReasonContainer.style.display = 'block';
+                        otherReasonText.focus();
+                    } else {
+                        otherReasonContainer.style.display = 'none';
+                        otherReasonText.value = '';
+                    }
+                    cancelReasonError.style.display = 'none';
+                });
+            });
+
+            // Form validation
+            if (cancelForm) {
+                cancelForm.addEventListener('submit', function(e) {
+                    var selectedRadio = document.querySelector('.cancel-reason-radio:checked');
+                    
+                    if (!selectedRadio) {
+                        e.preventDefault();
+                        cancelReasonError.textContent = 'Vui lòng chọn lý do hủy đơn hàng';
+                        cancelReasonError.style.display = 'block';
+                        return false;
+                    }
+
+                    if (selectedRadio.value === 'other') {
+                        var otherReason = otherReasonText.value.trim();
+                        if (!otherReason || otherReason.length < 5) {
+                            e.preventDefault();
+                            cancelReasonError.textContent = 'Vui lòng nhập lý do hủy (tối thiểu 5 ký tự)';
+                            cancelReasonError.style.display = 'block';
+                            otherReasonText.focus();
+                            return false;
+                        }
+                        cancelReasonInput.value = otherReason;
+                    } else {
+                        cancelReasonInput.value = selectedRadio.value;
+                    }
+
+                    cancelReasonError.style.display = 'none';
+                    return true;
+                });
+            }
+        })();
+    </script>
+}

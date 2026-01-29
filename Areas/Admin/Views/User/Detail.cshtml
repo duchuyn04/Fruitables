@@ -1,0 +1,499 @@
+@model Fruitables.ViewModels.CustomerDetailViewModel
+@using Fruitables.Helpers
+@{
+    ViewData["Title"] = $"Chi tiết khách hàng - {Model.Name}";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminDashboardLayout.cshtml";
+
+    var currentUserRole = ViewBag.CurrentUserRole as string;
+    var isSuperAdmin = currentUserRole == "SuperAdmin";
+}
+
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <a href="@Url.Action("Index", "User", new { area = "Admin" })" class="text-muted text-decoration-none mb-2 d-inline-block">
+                <i class="fas fa-arrow-left me-1"></i> Quay lại danh sách
+            </a>
+            <h4 class="mb-1">
+                Chi tiết khách hàng
+                @if (Model.IsVip)
+                {
+                    <span class="badge bg-warning text-dark ms-2">
+                        <i class="fas fa-crown"></i> VIP
+                    </span>
+                }
+            </h4>
+            <p class="text-muted mb-0">Thông tin chi tiết và lịch sử mua hàng</p>
+        </div>
+        <div>
+            @if (Model.IsActive)
+            {
+                <span class="badge bg-success fs-6">Hoạt động</span>
+            }
+            else
+            {
+                <span class="badge bg-danger fs-6">Bị khóa</span>
+            }
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
+        @if (TempData["Success"] != null)
+        {
+            <div class="toast show" role="alert" data-bs-autohide="true" data-bs-delay="5000">
+                <div class="toast-header bg-success text-white">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <strong class="me-auto">Thành công</strong>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+                </div>
+                <div class="toast-body">@TempData["Success"]</div>
+            </div>
+        }
+        @if (TempData["Error"] != null)
+        {
+            <div class="toast show" role="alert" data-bs-autohide="true" data-bs-delay="5000">
+                <div class="toast-header bg-danger text-white">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    <strong class="me-auto">Lỗi</strong>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+                </div>
+                <div class="toast-body">@TempData["Error"]</div>
+            </div>
+        }
+    </div>
+
+    <div class="row">
+        <!-- Left Column -->
+        <div class="col-lg-8">
+            <!-- Customer Info Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-user me-2"></i>Thông tin cá nhân</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 text-center mb-3 mb-md-0">
+                            @if (!string.IsNullOrEmpty(Model.Avatar) && !Model.Avatar.Contains("default-avatar"))
+                            {
+                                <img src="@Model.Avatar" alt="@Model.Name" class="rounded-circle img-thumbnail" style="width: 120px; height: 120px; object-fit: cover;">
+                            }
+                            else
+                            {
+                                <img src="/img/default-avatar.svg" alt="@Model.Name" class="rounded-circle img-thumbnail mx-auto" style="width: 120px; height: 120px; background-color: #e4e6eb;">
+                            }
+                        </div>
+                        <div class="col-md-9">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="text-muted small">Họ và tên</label>
+                                    <p class="mb-0 fw-semibold">@Model.Name</p>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="text-muted small">Email</label>
+                                    <p class="mb-0">@Model.Email</p>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="text-muted small">Số điện thoại</label>
+                                    <p class="mb-0">@(Model.Phone ?? "—")</p>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="text-muted small">Loại tài khoản</label>
+                                    <p class="mb-0">
+                                        @if (Model.IsGoogleAccount)
+                                        {
+                                            <span class="badge bg-info">
+                                                <i class="fab fa-google me-1"></i>Google
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">
+                                                <i class="fas fa-envelope me-1"></i>Email
+                                            </span>
+                                        }
+                                    </p>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="text-muted small">Ngày đăng ký</label>
+                                    <p class="mb-0">@Model.CreatedAt.ToVietnamTimeString()</p>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="text-muted small">Đăng nhập lần cuối</label>
+                                    <p class="mb-0">
+                                        @if (Model.LastLoginAt.HasValue)
+                                        {
+                                            @Model.LastLoginAt.ToVietnamTimeString()
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Chưa đăng nhập</span>
+                                        }
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lock Info Card (if locked) -->
+            @if (Model.LockInfo != null)
+            {
+                <div class="card mb-4 border-danger">
+                    <div class="card-header bg-danger text-white">
+                        <h5 class="mb-0"><i class="fas fa-lock me-2"></i>Thông tin khóa tài khoản</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="text-muted small">Loại khóa</label>
+                                <p class="mb-0">
+                                    @if (Model.LockInfo.LockType == Fruitables.Models.LockType.Temporary)
+                                    {
+                                        <span class="badge bg-warning text-dark">Tạm thời</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger">Vĩnh viễn</span>
+                                    }
+                                </p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="text-muted small">Loại vi phạm</label>
+                                <p class="mb-0">@Model.LockInfo.ViolationType</p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="text-muted small">Thời gian khóa</label>
+                                <p class="mb-0">@Model.LockInfo.LockedAt.ToVietnamTimeString()</p>
+                            </div>
+                            @if (Model.LockInfo.ExpiresAt.HasValue)
+                            {
+                                <div class="col-md-6 mb-3">
+                                    <label class="text-muted small">Hết hạn</label>
+                                    <p class="mb-0">@Model.LockInfo.ExpiresAt.ToVietnamTimeString()</p>
+                                </div>
+                            }
+                            <div class="col-md-6 mb-3">
+                                <label class="text-muted small">Người khóa</label>
+                                <p class="mb-0">@Model.LockInfo.LockedByAdminName</p>
+                            </div>
+                            <div class="col-12">
+                                <label class="text-muted small">Lý do</label>
+                                <p class="mb-0">@Model.LockInfo.Reason</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Statistics Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Thống kê mua hàng</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-3 mb-3 mb-md-0">
+                            <div class="p-3 bg-light rounded">
+                                <h3 class="mb-1 text-primary">@Model.Statistics.TotalOrders</h3>
+                                <small class="text-muted">Tổng đơn hàng</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3 mb-md-0">
+                            <div class="p-3 bg-light rounded">
+                                <h3 class="mb-1 text-success">@Model.Statistics.CompletedOrders</h3>
+                                <small class="text-muted">Đã hoàn thành</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3 mb-md-0">
+                            <div class="p-3 bg-light rounded">
+                                <h3 class="mb-1 text-danger">@Model.Statistics.CancelledOrders</h3>
+                                <small class="text-muted">Đã hủy</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="p-3 bg-light rounded">
+                                <h3 class="mb-1 text-info">@Model.Statistics.TotalSpent.ToString("N0") ₫</h3>
+                                <small class="text-muted">Tổng chi tiêu</small>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="text-center">
+                        <p class="mb-0">
+                            <strong>Giá trị đơn hàng trung bình:</strong>
+                            <span class="text-primary fs-5 ms-2">@Model.Statistics.AverageOrderValue.ToString("N0") ₫</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Purchase History -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-shopping-cart me-2"></i>Lịch sử mua hàng</h5>
+                </div>
+                <div class="card-body" id="purchaseHistoryContainer">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Đang tải...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column -->
+        <div class="col-lg-4">
+            <!-- Actions Card -->
+            @if (isSuperAdmin)
+            {
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-cogs me-2"></i>Thao tác</h5>
+                    </div>
+                    <div class="card-body">
+                        @if (Model.IsActive)
+                        {
+                            <button type="button" class="btn btn-danger w-100 mb-2" onclick="showLockModal(@Model.Id, '@Html.Raw(Model.Name.Replace("'", "\\'"))', @Model.IsVip.ToString().ToLower())">
+                                <i class="fas fa-lock me-2"></i>Khóa tài khoản
+                            </button>
+                        }
+                        else
+                        {
+                            var isPermanentLock = Model.LockInfo?.LockType == Fruitables.Models.LockType.Permanent;
+                            <button type="button" class="btn btn-success w-100 mb-2" onclick="showUnlockModal(@Model.Id, '@Html.Raw(Model.Name.Replace("'", "\\'"))', @isPermanentLock.ToString().ToLower())">
+                                <i class="fas fa-unlock me-2"></i>Mở khóa tài khoản
+                            </button>
+                        }
+                        <button type="button" class="btn btn-outline-secondary w-100" onclick="loadAccountLogs()">
+                            <i class="fas fa-history me-2"></i>Xem lịch sử khóa/mở
+                        </button>
+                    </div>
+                </div>
+            }
+
+            <!-- Addresses Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-map-marker-alt me-2"></i>Địa chỉ giao hàng</h5>
+                </div>
+                <div class="card-body">
+                    @if (Model.Addresses.Any())
+                    {
+                        @foreach (var address in Model.Addresses)
+                        {
+                            <div class="mb-3 pb-3 @(address != Model.Addresses.Last() ? "border-bottom" : "")">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <strong>@address.FullName</strong>
+                                    @if (address.IsDefault)
+                                    {
+                                        <span class="badge bg-primary">Mặc định</span>
+                                    }
+                                </div>
+                                <p class="mb-1 text-muted small">
+                                    <i class="fas fa-phone me-1"></i>@address.Phone
+                                </p>
+                                <p class="mb-0 text-muted small">
+                                    <i class="fas fa-map-marker-alt me-1"></i>@address.FullAddress
+                                </p>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <p class="text-muted mb-0">Chưa có địa chỉ nào</p>
+                    }
+                </div>
+            </div>
+
+            <!-- Account Logs Card (hidden by default) -->
+            <div class="card d-none" id="accountLogsCard">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-clipboard-list me-2"></i>Lịch sử khóa/mở</h5>
+                    <button type="button" class="btn-close" onclick="hideAccountLogs()"></button>
+                </div>
+                <div class="card-body" id="accountLogsContainer">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Đang tải...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Lock Account Modal -->
+@await Html.PartialAsync("_LockAccountModal")
+
+<!-- Unlock Account Modal -->
+@await Html.PartialAsync("_UnlockAccountModal")
+
+@section Scripts {
+<script src="~/js/userManagement.js"></script>
+<script>
+    const customerId = @Model.Id;
+
+    // Load purchase history on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        loadPurchaseHistory(1);
+
+        // Initialize toasts
+        const toastElList = [].slice.call(document.querySelectorAll('.toast'));
+        toastElList.map(function(toastEl) {
+            return new bootstrap.Toast(toastEl);
+        });
+    });
+
+    function loadPurchaseHistory(page = 1, status = null, startDate = null, endDate = null) {
+        const params = new URLSearchParams();
+        params.append('customerId', customerId);
+        params.append('page', page);
+        if (status) params.append('status', status);
+        if (startDate) params.append('startDate', startDate);
+        if (endDate) params.append('endDate', endDate);
+
+        fetch(`@Url.Action("PurchaseHistory", "User", new { area = "Admin" })?${params.toString()}`)
+            .then(response => response.json())
+            .then(result => {
+                if (result.isValid && result.data) {
+                    renderPurchaseHistory(result.data);
+                } else {
+                    document.getElementById('purchaseHistoryContainer').innerHTML = 
+                        '<p class="text-danger mb-0">Không thể tải lịch sử mua hàng</p>';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('purchaseHistoryContainer').innerHTML = 
+                    '<p class="text-danger mb-0">Đã xảy ra lỗi khi tải dữ liệu</p>';
+            });
+    }
+
+    function renderPurchaseHistory(data) {
+        if (!data.orders || data.orders.length === 0) {
+            document.getElementById('purchaseHistoryContainer').innerHTML = 
+                '<p class="text-muted mb-0">Chưa có đơn hàng nào</p>';
+            return;
+        }
+
+        let html = '<div class="table-responsive"><table class="table table-sm mb-0">';
+        html += '<thead class="table-light"><tr>';
+        html += '<th>Mã đơn</th><th>Ngày</th><th>Trạng thái</th><th class="text-end">Tổng tiền</th>';
+        html += '</tr></thead><tbody>';
+
+        data.orders.forEach(order => {
+            html += '<tr>';
+            html += `<td><a href="/Admin/Order/Detail/${order.id}" class="text-decoration-none">${order.orderNumber}</a></td>`;
+            html += `<td><small>${new Date(order.createdAt).toLocaleDateString('vi-VN')}</small></td>`;
+            html += `<td><span class="badge ${getStatusBadgeClass(order.status)}">${getStatusDisplayName(order.status)}</span></td>`;
+            html += `<td class="text-end"><strong>${order.total.toLocaleString('vi-VN')} ₫</strong></td>`;
+            html += '</tr>';
+        });
+
+        html += '</tbody></table></div>';
+
+        // Add pagination if needed
+        if (data.totalPages > 1) {
+            html += '<div class="mt-3"><nav><ul class="pagination pagination-sm justify-content-center mb-0">';
+            for (let i = 1; i <= data.totalPages; i++) {
+                html += `<li class="page-item ${i === data.currentPage ? 'active' : ''}">`;
+                html += `<a class="page-link" href="javascript:void(0)" onclick="loadPurchaseHistory(${i})">${i}</a>`;
+                html += '</li>';
+            }
+            html += '</ul></nav></div>';
+        }
+
+        document.getElementById('purchaseHistoryContainer').innerHTML = html;
+    }
+
+    function getStatusBadgeClass(status) {
+        const classes = {
+            0: 'bg-warning text-dark',  // Pending
+            1: 'bg-info',                // Processing
+            2: 'bg-primary',             // Shipped
+            3: 'bg-success',             // Delivered
+            4: 'bg-danger',              // Cancelled
+            5: 'bg-secondary'            // Returned
+        };
+        return classes[status] || 'bg-secondary';
+    }
+
+    function getStatusDisplayName(status) {
+        const names = {
+            0: 'Chờ xử lý',
+            1: 'Đang xử lý',
+            2: 'Đang giao',
+            3: 'Đã giao',
+            4: 'Đã hủy',
+            5: 'Trả hàng'
+        };
+        return names[status] || 'Không xác định';
+    }
+
+    function loadAccountLogs() {
+        document.getElementById('accountLogsCard').classList.remove('d-none');
+        
+        fetch(`@Url.Action("AccountLogs", "User", new { area = "Admin" })?customerId=${customerId}`)
+            .then(response => response.json())
+            .then(result => {
+                if (result.isValid && result.data) {
+                    renderAccountLogs(result.data);
+                } else {
+                    document.getElementById('accountLogsContainer').innerHTML = 
+                        '<p class="text-danger mb-0">Không thể tải lịch sử</p>';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('accountLogsContainer').innerHTML = 
+                    '<p class="text-danger mb-0">Đã xảy ra lỗi khi tải dữ liệu</p>';
+            });
+    }
+
+    function renderAccountLogs(logs) {
+        if (!logs || logs.length === 0) {
+            document.getElementById('accountLogsContainer').innerHTML = 
+                '<p class="text-muted mb-0">Chưa có lịch sử khóa/mở</p>';
+            return;
+        }
+
+        let html = '<div class="timeline">';
+        logs.forEach(log => {
+            const actionClass = log.action === 'Lock' ? 'danger' : 'success';
+            const actionIcon = log.action === 'Lock' ? 'lock' : 'unlock';
+            const actionText = log.action === 'Lock' ? 'Khóa' : 'Mở khóa';
+
+            html += '<div class="timeline-item mb-3 pb-3 border-bottom">';
+            html += '<div class="d-flex justify-content-between align-items-start">';
+            html += '<div>';
+            html += `<span class="badge bg-${actionClass}"><i class="fas fa-${actionIcon} me-1"></i>${actionText}</span>`;
+            if (log.lockType) {
+                html += ` <span class="badge bg-secondary">${log.lockType === 0 ? 'Tạm thời' : 'Vĩnh viễn'}</span>`;
+            }
+            if (log.violationType) {
+                html += `<p class="text-muted mb-1 mt-2 small"><strong>Vi phạm:</strong> ${log.violationType}</p>`;
+            }
+            if (log.reason) {
+                html += `<p class="text-muted mb-0 small"><strong>Lý do:</strong> ${log.reason}</p>`;
+            }
+            html += '</div>';
+            html += '<div class="text-end">';
+            html += `<small class="text-muted d-block">${new Date(log.createdAt).toLocaleString('vi-VN')}</small>`;
+            html += `<small class="text-muted">bởi ${log.adminName}</small>`;
+            html += '</div></div></div>';
+        });
+        html += '</div>';
+
+        document.getElementById('accountLogsContainer').innerHTML = html;
+    }
+
+    function hideAccountLogs() {
+        document.getElementById('accountLogsCard').classList.add('d-none');
+    }
+</script>
+}

@@ -1,0 +1,81 @@
+@model Fruitables.ViewModels.GeneralSettingsViewModel
+
+<form asp-action="SaveGeneral" method="post" enctype="multipart/form-data">
+    @Html.AntiForgeryToken()
+    
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-light">
+            <h5 class="mb-0"><i class="fas fa-home me-2"></i>Cài đặt chung</h5>
+        </div>
+        <div class="card-body">
+            <!-- Site Name -->
+            <div class="mb-4">
+                <label asp-for="SiteName" class="form-label">Tên website</label>
+                <input asp-for="SiteName" class="form-control" placeholder="Nhập tên website" />
+                <span asp-validation-for="SiteName" class="text-danger"></span>
+                <small class="text-muted">Tên này sẽ hiển thị trên tiêu đề trang và các vị trí khác</small>
+            </div>
+
+            <!-- Logo Upload -->
+            <div class="mb-4">
+                <label asp-for="LogoFile" class="form-label">Logo</label>
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <input asp-for="LogoFile" class="form-control" accept=".jpg,.jpeg,.png,.gif,.webp" />
+                        <span asp-validation-for="LogoFile" class="text-danger"></span>
+                        <small class="text-muted">Định dạng: JPG, PNG, GIF, WebP. Kích thước tối đa: 2MB</small>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        @if (!string.IsNullOrEmpty(Model?.LogoPath))
+                        {
+                            <div class="mb-2">
+                                <span class="text-muted small">Logo hiện tại:</span>
+                            </div>
+                            <img src="@Model.LogoPath" alt="Current Logo" class="preview-image" />
+                        }
+                        else
+                        {
+                            <div class="text-muted">
+                                <i class="fas fa-image fa-3x"></i>
+                                <p class="small mb-0">Chưa có logo</p>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Favicon Upload -->
+            <div class="mb-4">
+                <label asp-for="FaviconFile" class="form-label">Favicon</label>
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <input asp-for="FaviconFile" class="form-control" accept=".ico,.png,.jpg,.jpeg" />
+                        <span asp-validation-for="FaviconFile" class="text-danger"></span>
+                        <small class="text-muted">Định dạng: ICO, PNG, JPG. Kích thước khuyến nghị: 32x32 hoặc 16x16</small>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        @if (!string.IsNullOrEmpty(Model?.FaviconPath))
+                        {
+                            <div class="mb-2">
+                                <span class="text-muted small">Favicon hiện tại:</span>
+                            </div>
+                            <img src="@Model.FaviconPath" alt="Current Favicon" class="preview-image" style="max-width: 64px;" />
+                        }
+                        else
+                        {
+                            <div class="text-muted">
+                                <i class="fas fa-star fa-2x"></i>
+                                <p class="small mb-0">Chưa có favicon</p>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-footer bg-light">
+            <button type="submit" class="btn btn-success">
+                <i class="fas fa-save me-1"></i>Lưu cài đặt
+            </button>
+        </div>
+    </div>
+</form>

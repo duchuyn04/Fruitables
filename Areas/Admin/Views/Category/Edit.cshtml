@@ -1,0 +1,89 @@
+@model Fruitables.ViewModels.EditCategoryViewModel
+@{
+    ViewData["Title"] = "Sửa danh mục";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminDashboardLayout.cshtml";
+}
+
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="mb-1">Sửa danh mục</h4>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a asp-action="Index">Danh mục</a></li>
+                <li class="breadcrumb-item active">@Model.Name</li>
+            </ol>
+        </nav>
+    </div>
+    <div>
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Quay lại
+        </a>
+    </div>
+</div>
+
+<div class="admin-card">
+    <div class="card-header">
+        <i class="fas fa-edit me-2"></i>Thông tin danh mục
+    </div>
+    <div class="card-body">
+        <form asp-action="Edit" method="post">
+            <input type="hidden" asp-for="Id" />
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="Name" class="form-label">Tên danh mục <span class="text-danger">*</span></label>
+                    <input asp-for="Name" class="form-control" placeholder="Nhập tên danh mục" />
+                    <span asp-validation-for="Name" class="text-danger"></span>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label asp-for="Slug" class="form-label">Slug</label>
+                    <input asp-for="Slug" class="form-control" placeholder="Tự động tạo nếu để trống" />
+                    <span asp-validation-for="Slug" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="ParentId" class="form-label">Danh mục cha</label>
+                    <select asp-for="ParentId" class="form-select">
+                        <option value="">-- Danh mục gốc --</option>
+                        @await Html.PartialAsync("_CategorySelectOptionsEdit", new Tuple<List<Fruitables.Models.CategoryTreeNode>, int>(Model.ParentCategories, Model.Id))
+                    </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label asp-for="Image" class="form-label">Hình ảnh (URL)</label>
+                    <input asp-for="Image" class="form-control" placeholder="URL hình ảnh danh mục" />
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="Description" class="form-label">Mô tả</label>
+                    <textarea asp-for="Description" class="form-control" rows="2" placeholder="Mô tả ngắn về danh mục"></textarea>
+                    <span asp-validation-for="Description" class="text-danger"></span>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Trạng thái</label>
+                    <div class="form-check form-switch mt-2">
+                        <input asp-for="IsActive" class="form-check-input" type="checkbox" />
+                        <label asp-for="IsActive" class="form-check-label">Kích hoạt danh mục</label>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="my-3" />
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-2"></i>Cập nhật
+                </button>
+                <a asp-action="Index" class="btn btn-outline-secondary">Hủy</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,0 +1,166 @@
+using Microsoft.EntityFrameworkCore;
+using Fruitables.Models;
+using Fruitables.Repositories.Interfaces;
+using Fruitables.Services.Interfaces;
+using Fruitables.ViewModels;
+
+namespace Fruitables.Services;
+
+public class CartService : ICartService
+{
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly IShippingService _shippingService;
+
+    public CartService(IUnitOfWork unitOfWork, IShippingService shippingService)
+    {
+        _unitOfWork = unitOfWork;
+        _shippingService = shippingService;
+    }
+
+    public async Task<CartViewModel> GetCartAsync(string sessionId, string? district = null)
+    {
+        var cart = await GetOrCreateCartAsync(sessionId);
+        var items = await _unitOfWork.CartItems.Query()
+            .Where(ci => ci.CartId == cart.Id)
+            .Include(ci => ci.Product)
+            .ThenInclude(p => p.Images)
+            .ToListAsync();
+
+        var cartViewModel = new CartViewModel
+        {
+            Items = items.Select(ci => new CartItemViewModel
+            {
+                ProductId = ci.ProductId,
+                ProductName = ci.Product.Name,
+                ProductImage = ci.Product.Images.FirstOrDefault(i => i.IsPrimary)?.ImageUrl 
+                    ?? ci.Product.Images.FirstOrDefault()?.ImageUrl ?? "",
+                Price = ci.Price,
+                Quantity = ci.Quantity,
+                StockQuantity = ci.Product.StockQuantity
+            }).ToList()
+        };
+
+        cartViewModel.Subtotal = cartViewModel.Items.Sum(i => i.Total);
+        
+        // Calculate shipping using ShippingService
+        var shippingInfo = await _shippingService.CalculateShippingAsync(cartViewModel.Subtotal, district ?? string.Empty);
+        cartViewModel.ShippingInfo = shippingInfo;
+        cartViewModel.ShippingFee = shippingInfo.ShippingFee;
+        
+        cartViewModel.Total = cartViewModel.Subtotal + cartViewModel.ShippingFee - cartViewModel.Discount;
+
+        return cartViewModel;
+    }
+
+    public async Task AddToCartAsync(string sessionId, int productId, int quantity = 1)
+    {
+        var cart = await GetOrCreateCartAsync(sessionId);
+        var product = await _unitOfWork.Products.GetByIdAsync(productId);
+        if (product == null) return;
+
+        var existingItem = await _unitOfWork.CartItems.Query()
+            .FirstOrDefaultAsync(ci => ci.CartId == cart.Id && ci.ProductId == productId);
+
+        if (existingItem != null)
+        {
+            existingItem.Quantity += quantity;
+        }
+        else
+        {
+            var cartItem = new CartItem
+            {
+                CartId = cart.Id,
+                ProductId = productId,
+                Quantity = quantity,
+                Price = product.SalePrice ?? product.Price
+            };
+            await _unitOfWork.CartItems.AddAsync(cartItem);
+        }
+
+        cart.UpdatedAt = DateTime.UtcNow;
+        await _unitOfWork.SaveChangesAsync();
+    }
+
+    public async Task UpdateQuantityAsync(string sessionId, int productId, int quantity)
+    {
+        var cart = await GetOrCreateCartAsync(sessionId);
+        var item = await _unitOfWork.CartItems.Query()
+            .Include(ci => ci.Product)
+            .FirstOrDefaultAsync(ci => ci.CartId == cart.Id && ci.ProductId == productId);
+
+        if (item != null)
+        {
+            if (quantity <= 0)
+            {
+                _unitOfWork.CartItems.Remove(item);
+            }
+            else
+            {
+                // Limit quantity to stock available
+                item.Quantity = Math.Min(quantity, item.Product.StockQuantity);
+            }
+            cart.UpdatedAt = DateTime.UtcNow;
+            await _unitOfWork.SaveChangesAsync();
+        }
+    }
+
+    public async Task RemoveFromCartAsync(string sessionId, int productId)
+    {
+        var cart = await GetOrCreateCartAsync(sessionId);
+        var item = await _unitOfWork.CartItems.Query()
+            .FirstOrDefaultAsync(ci => ci.CartId == cart.Id && ci.ProductId == productId);
+
+        if (item != null)
+        {
+            _unitOfWork.CartItems.Remove(item);
+            cart.UpdatedAt = DateTime.UtcNow;
+            await _unitOfWork.SaveChangesAsync();
+        }
+    }
+
+    public async Task ClearCartAsync(string sessionId)
+    {
+        var cart = await _unitOfWork.Carts.Query()
+            .Include(c => c.Items)
+            .FirstOrDefaultAsync(c => c.SessionId == sessionId);
+
+        if (cart != null)
+        {
+            _unitOfWork.CartItems.RemoveRange(cart.Items);
+            await _unitOfWork.SaveChangesAsync();
+        }
+    }
+
+    public async Task<int> GetCartCountAsync(string sessionId)
+    {
+        var cart = await _unitOfWork.Carts.Query()
+            .FirstOrDefaultAsync(c => c.SessionId == sessionId);
+
+        if (cart == null) return 0;
+
+        return await _unitOfWork.CartItems.Query()
+            .Where(ci => ci.CartId == cart.Id)
+            .SumAsync(ci => ci.Quantity);
+    }
+
+    public async Task ApplyCouponAsync(string sessionId, string couponCode)
+    {
+        // TODO: Implement coupon logic
+        await Task.CompletedTask;
+    }
+
+    private async Task<Cart> GetOrCreateCartAsync(string sessionId)
+    {
+        var cart = await _unitOfWork.Carts.Query()
+            .FirstOrDefaultAsync(c => c.SessionId == sessionId);
+
+        if (cart == null)
+        {
+            cart = new Cart { SessionId = sessionId };
+            await _unitOfWork.Carts.AddAsync(cart);
+            await _unitOfWork.SaveChangesAsync();
+        }
+
+        return cart;
+    }
+}

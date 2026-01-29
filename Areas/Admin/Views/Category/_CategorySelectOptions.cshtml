@@ -1,0 +1,13 @@
+@model List<Fruitables.Models.CategoryTreeNode>
+
+@foreach (var category in Model)
+{
+    var indent = new string('\u00A0', category.Level * 4); // Non-breaking spaces for indentation
+    var prefix = category.Level > 0 ? "└─ " : "";
+    <option value="@category.Id">@indent@prefix@category.Name</option>
+    
+    @if (category.Children.Any())
+    {
+        @await Html.PartialAsync("_CategorySelectOptions", category.Children)
+    }
+}

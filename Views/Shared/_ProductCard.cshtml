@@ -1,0 +1,161 @@
+@model Fruitables.Models.Product
+@{
+    var isFeatured = Model.IsFeatured;
+    var isSale = Model.SalePrice.HasValue && Model.SalePrice < Model.Price;
+    var showCategoryBadge = ViewData["ShowCategoryBadge"] as bool? ?? true;
+    var discountPercent = isSale ? (int)Math.Round((1 - (Model.SalePrice!.Value / Model.Price)) * 100) : 0;
+}
+
+<div class="col-md-6 col-lg-4 col-xl-3 product-card-wrapper" data-featured="@isFeatured.ToString().ToLower()" data-sale="@isSale.ToString().ToLower()">
+    <div class="rounded position-relative fruite-item">
+        <div class="fruite-img">
+            @{
+                var primaryImage = Model.Images?.FirstOrDefault(i => i.IsPrimary)?.ImageUrl 
+                    ?? Model.Images?.FirstOrDefault()?.ImageUrl 
+                    ?? "~/img/fruite-item-5.jpg";
+            }
+            <a asp-controller="Shop" asp-action="Detail" asp-route-id="@Model.Id">
+                <img src="@primaryImage" class="img-fluid w-100 rounded-top" alt="@Model.Name">
+            </a>
+        </div>
+        @if (isFeatured)
+        {
+            <div class="featured-ribbon">
+                <i class="fas fa-star me-1"></i>Nổi bật
+            </div>
+        }
+        @if (isSale)
+        {
+            <div class="sale-badge">
+                -@discountPercent%
+            </div>
+        }
+        @if (showCategoryBadge && Model.Category != null)
+        {
+            <div class="text-white bg-secondary px-3 py-1 rounded position-absolute category-badge">
+                @Model.Category.Name
+            </div>
+        }
+        <div class="p-4 border border-secondary border-top-0 rounded-bottom">
+            <h4>
+                <a asp-controller="Shop" asp-action="Detail" asp-route-id="@Model.Id" class="text-dark">
+                    @Model.Name
+                </a>
+            </h4>
+            <p>@(Model.ShortDescription ?? Model.Description?.Substring(0, Math.Min(Model.Description?.Length ?? 0, 60)) ?? "")</p>
+            <div class="d-flex justify-content-between flex-lg-wrap">
+                @if (isSale)
+                {
+                    <div class="price-wrapper">
+                        <span class="sale-price">@Model.SalePrice!.Value.ToString("N0")đ</span>
+                        <span class="unit-text">/ @Model.Unit</span>
+                        <div class="original-price">@Model.Price.ToString("N0")đ</div>
+                    </div>
+                }
+                else
+                {
+                    <div class="price-wrapper">
+                        <span class="regular-price">@Model.Price.ToString("N0")đ</span>
+                        <span class="unit-text">/ @Model.Unit</span>
+                    </div>
+                }
+                <form asp-controller="Cart" asp-action="AddToCart" method="post" class="d-inline">
+                    <input type="hidden" name="productId" value="@Model.Id" />
+                    <button type="submit" class="btn border border-secondary rounded-pill px-3 text-primary">
+                        <i class="fa fa-shopping-bag me-2 text-primary"></i> Thêm vào giỏ
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Featured ribbon */
+.featured-ribbon {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: linear-gradient(135deg, #81c408 0%, #5a9a00 100%);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    z-index: 10;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* Sale badge - % giảm */
+.sale-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+    color: white;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    z-index: 10;
+    box-shadow: 0 2px 6px rgba(231, 76, 60, 0.4);
+}
+
+/* Khi có cả featured và sale, đẩy featured sang phải */
+.fruite-item:has(.sale-badge) .featured-ribbon {
+    left: auto;
+    right: 10px;
+    top: 10px;
+}
+
+/* Category badge */
+.category-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 10;
+}
+
+/* Khi có featured ribbon, đẩy category xuống */
+.fruite-item:has(.featured-ribbon) .category-badge {
+    top: 45px;
+}
+
+/* Khi có cả sale badge và featured ribbon */
+.fruite-item:has(.sale-badge):has(.featured-ribbon) .category-badge {
+    top: 45px;
+}
+
+/* Price styling */
+.price-wrapper {
+    margin-bottom: 8px;
+}
+
+/* Giá sale - nổi bật màu đỏ */
+.sale-price {
+    color: #e74c3c;
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+/* Giá gốc khi có sale - mờ và gạch ngang */
+.original-price {
+    color: #999;
+    font-size: 0.85rem;
+    text-decoration: line-through;
+    opacity: 0.7;
+}
+
+/* Giá thường - màu trung tính */
+.regular-price {
+    color: #333;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+/* Đơn vị */
+.unit-text {
+    color: #666;
+    font-size: 0.9rem;
+}
+</style>

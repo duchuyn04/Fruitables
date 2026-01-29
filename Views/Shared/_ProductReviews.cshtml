@@ -1,0 +1,64 @@
+@using Fruitables.Models
+@{
+    var product = Model as Product;
+    var reviews = product?.Reviews?.ToList() ?? new List<Review>();
+}
+
+@if (reviews.Any())
+{
+    @foreach (var review in reviews)
+    {
+        <div class="d-flex mb-4">
+            @if (!string.IsNullOrEmpty(review.User?.Avatar) && !review.User.Avatar.Contains("default-avatar"))
+            {
+                <img src="@review.User.Avatar" class="img-fluid rounded-circle p-3" style="width: 100px; height: 100px; object-fit: cover;" alt="@review.User?.Name">
+            }
+            else
+            {
+                <img src="/img/default-avatar.svg" class="img-fluid rounded-circle p-3" style="width: 100px; height: 100px; background-color: #e4e6eb;" alt="@review.User?.Name">
+            }
+            <div class="">
+                <p class="mb-2" style="font-size: 14px;">@review.CreatedAt.ToString("MMMM dd, yyyy")</p>
+                <div class="d-flex justify-content-between">
+                    <h5>@review.User?.Name</h5>
+                    <div class="d-flex mb-3">
+                        @for (int i = 0; i < 5; i++)
+                        {
+                            <i class="fa fa-star @(i < review.Rating ? "text-secondary" : "")"></i>
+                        }
+                    </div>
+                </div>
+                <p>@review.Comment</p>
+            </div>
+        </div>
+    }
+}
+else
+{
+    <div class="text-center py-4">
+        <p>No reviews yet. Be the first to review this product!</p>
+    </div>
+}
+
+<!-- Review Form (for logged in users) -->
+<div class="mt-4">
+    <h5>Leave a Review</h5>
+    <form asp-controller="Shop" asp-action="AddReview" method="post">
+        <input type="hidden" name="productId" value="@product?.Id" />
+        <div class="mb-3">
+            <label class="form-label">Rating</label>
+            <select name="rating" class="form-select" style="width: 100px;">
+                <option value="5">5 Stars</option>
+                <option value="4">4 Stars</option>
+                <option value="3">3 Stars</option>
+                <option value="2">2 Stars</option>
+                <option value="1">1 Star</option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Comment</label>
+            <textarea name="comment" class="form-control" rows="3" placeholder="Write your review..."></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Submit Review</button>
+    </form>
+</div>

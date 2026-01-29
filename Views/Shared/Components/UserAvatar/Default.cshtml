@@ -1,0 +1,14 @@
+@model string
+@{
+    var avatarUrl = Model ?? "/img/default-avatar.svg";
+    var isDefaultAvatar = string.IsNullOrEmpty(Model) || Model.Contains("default-avatar");
+}
+
+@if (!isDefaultAvatar)
+{
+    <img src="@avatarUrl" alt="Avatar" class="rounded-circle me-2" style="width: 32px; height: 32px; object-fit: cover;">
+}
+else
+{
+    <img src="/img/default-avatar.svg" alt="Avatar" class="rounded-circle me-2" style="width: 32px; height: 32px; background-color: #e4e6eb;">
+}

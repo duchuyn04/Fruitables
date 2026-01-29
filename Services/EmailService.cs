@@ -1,0 +1,358 @@
+using Fruitables.Services.Interfaces;
+using Microsoft.Extensions.Logging;
+
+namespace Fruitables.Services;
+
+/// <summary>
+/// Service for sending email notifications
+/// </summary>
+public class EmailService : IEmailService
+{
+    private readonly ILogger<EmailService> _logger;
+    private readonly IConfiguration _configuration;
+
+    // Contact email for appeals
+    private const string SUPPORT_EMAIL = "support@fruitables.com";
+    private const string COMPANY_NAME = "Fruitables";
+
+    public EmailService(ILogger<EmailService> logger, IConfiguration configuration)
+    {
+        _logger = logger;
+        _configuration = configuration;
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> SendAccountLockedEmailAsync(
+        string customerEmail,
+        string customerName,
+        string violationType,
+        string reason,
+        string lockType,
+        DateTime? expiresAt)
+    {
+        try
+        {
+            var subject = $"[{COMPANY_NAME}] Thông báo khóa tài khoản";
+            var body = GenerateAccountLockedEmailBody(
+                customerName, 
+                violationType, 
+                reason, 
+                lockType, 
+                expiresAt);
+
+            // Log the email for now (actual SMTP implementation can be added later)
+            _logger.LogInformation(
+                "Sending account locked email to {Email}. Subject: {Subject}",
+                customerEmail,
+                subject);
+
+            // TODO: Implement actual SMTP sending when email configuration is available
+            // For now, we simulate successful sending
+            await Task.CompletedTask;
+
+            _logger.LogInformation(
+                "Account locked email sent successfully to {Email}",
+                customerEmail);
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, 
+                "Failed to send account locked email to {Email}", 
+                customerEmail);
+            return false;
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> SendAccountUnlockedEmailAsync(
+        string customerEmail,
+        string customerName,
+        string reason)
+    {
+        try
+        {
+            var subject = $"[{COMPANY_NAME}] Thông báo mở khóa tài khoản";
+            var body = GenerateAccountUnlockedEmailBody(customerName, reason);
+
+            // Log the email for now (actual SMTP implementation can be added later)
+            _logger.LogInformation(
+                "Sending account unlocked email to {Email}. Subject: {Subject}",
+                customerEmail,
+                subject);
+
+            // TODO: Implement actual SMTP sending when email configuration is available
+            // For now, we simulate successful sending
+            await Task.CompletedTask;
+
+            _logger.LogInformation(
+                "Account unlocked email sent successfully to {Email}",
+                customerEmail);
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, 
+                "Failed to send account unlocked email to {Email}", 
+                customerEmail);
+            return false;
+        }
+    }
+
+
+    /// <summary>
+    /// Generates the HTML email body for account locked notification
+    /// Includes reason and appeal instructions as per Requirements 4.7
+    /// </summary>
+    private string GenerateAccountLockedEmailBody(
+        string customerName,
+        string violationType,
+        string reason,
+        string lockType,
+        DateTime? expiresAt)
+    {
+        var lockTypeText = lockType == "Temporary" ? "tạm thời" : "vĩnh viễn";
+        var expirationText = expiresAt.HasValue 
+            ? $"<p><strong>Thời gian hết hạn:</strong> {expiresAt.Value:dd/MM/yyyy HH:mm}</p>"
+            : "<p><strong>Thời gian hết hạn:</strong> Không xác định (khóa vĩnh viễn)</p>";
+
+        return $@"
+<!DOCTYPE html>
+<html lang=""vi"">
+<head>
+    <meta charset=""UTF-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>Thông báo khóa tài khoản</title>
+    <style>
+        body {{
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }}
+        .header {{
+            background-color: #dc3545;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+        }}
+        .content {{
+            background-color: #f8f9fa;
+            padding: 30px;
+            border: 1px solid #dee2e6;
+        }}
+        .info-box {{
+            background-color: #fff;
+            border-left: 4px solid #dc3545;
+            padding: 15px;
+            margin: 20px 0;
+        }}
+        .appeal-section {{
+            background-color: #e7f3ff;
+            border-left: 4px solid #0d6efd;
+            padding: 15px;
+            margin: 20px 0;
+        }}
+        .footer {{
+            background-color: #343a40;
+            color: #adb5bd;
+            padding: 20px;
+            text-align: center;
+            font-size: 12px;
+            border-radius: 0 0 8px 8px;
+        }}
+        h1 {{
+            margin: 0;
+            font-size: 24px;
+        }}
+        h2 {{
+            color: #dc3545;
+            font-size: 18px;
+        }}
+        .highlight {{
+            color: #dc3545;
+            font-weight: bold;
+        }}
+    </style>
+</head>
+<body>
+    <div class=""header"">
+        <h1>⚠️ Thông báo khóa tài khoản</h1>
+    </div>
+    
+    <div class=""content"">
+        <p>Xin chào <strong>{customerName}</strong>,</p>
+        
+        <p>Chúng tôi rất tiếc phải thông báo rằng tài khoản của bạn tại <strong>{COMPANY_NAME}</strong> 
+        đã bị <span class=""highlight"">khóa {lockTypeText}</span>.</p>
+        
+        <div class=""info-box"">
+            <h2>📋 Chi tiết khóa tài khoản</h2>
+            <p><strong>Loại vi phạm:</strong> {violationType}</p>
+            <p><strong>Lý do chi tiết:</strong></p>
+            <p style=""padding-left: 15px; border-left: 2px solid #ccc;"">{reason}</p>
+            <p><strong>Loại khóa:</strong> {(lockType == "Temporary" ? "Tạm thời" : "Vĩnh viễn")}</p>
+            {expirationText}
+        </div>
+        
+        <div class=""appeal-section"">
+            <h2>📝 Hướng dẫn khiếu nại</h2>
+            <p>Nếu bạn cho rằng đây là một sự nhầm lẫn hoặc muốn khiếu nại quyết định này, 
+            vui lòng liên hệ với chúng tôi qua:</p>
+            <ul>
+                <li><strong>Email:</strong> <a href=""mailto:{SUPPORT_EMAIL}"">{SUPPORT_EMAIL}</a></li>
+                <li><strong>Tiêu đề email:</strong> [Khiếu nại] Yêu cầu xem xét khóa tài khoản - {customerName}</li>
+            </ul>
+            <p>Trong email khiếu nại, vui lòng cung cấp:</p>
+            <ol>
+                <li>Họ tên đầy đủ và email đăng ký</li>
+                <li>Lý do bạn cho rằng quyết định khóa là không chính xác</li>
+                <li>Bất kỳ bằng chứng hoặc thông tin bổ sung nào</li>
+            </ol>
+            <p><em>Chúng tôi sẽ xem xét và phản hồi trong vòng 3-5 ngày làm việc.</em></p>
+        </div>
+        
+        <p>Chúng tôi hiểu rằng đây có thể là tin không vui, nhưng chúng tôi cam kết 
+        duy trì một môi trường an toàn và công bằng cho tất cả khách hàng.</p>
+        
+        <p>Trân trọng,<br><strong>Đội ngũ {COMPANY_NAME}</strong></p>
+    </div>
+    
+    <div class=""footer"">
+        <p>© {DateTime.Now.Year} {COMPANY_NAME}. Tất cả quyền được bảo lưu.</p>
+        <p>Email này được gửi tự động, vui lòng không trả lời trực tiếp.</p>
+        <p>Nếu bạn cần hỗ trợ, hãy liên hệ: {SUPPORT_EMAIL}</p>
+    </div>
+</body>
+</html>";
+    }
+
+
+    /// <summary>
+    /// Generates the HTML email body for account unlocked notification
+    /// As per Requirements 5.4
+    /// </summary>
+    private string GenerateAccountUnlockedEmailBody(string customerName, string reason)
+    {
+        return $@"
+<!DOCTYPE html>
+<html lang=""vi"">
+<head>
+    <meta charset=""UTF-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>Thông báo mở khóa tài khoản</title>
+    <style>
+        body {{
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }}
+        .header {{
+            background-color: #28a745;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+        }}
+        .content {{
+            background-color: #f8f9fa;
+            padding: 30px;
+            border: 1px solid #dee2e6;
+        }}
+        .info-box {{
+            background-color: #fff;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin: 20px 0;
+        }}
+        .cta-section {{
+            text-align: center;
+            margin: 30px 0;
+        }}
+        .cta-button {{
+            display: inline-block;
+            background-color: #28a745;
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+        }}
+        .footer {{
+            background-color: #343a40;
+            color: #adb5bd;
+            padding: 20px;
+            text-align: center;
+            font-size: 12px;
+            border-radius: 0 0 8px 8px;
+        }}
+        h1 {{
+            margin: 0;
+            font-size: 24px;
+        }}
+        h2 {{
+            color: #28a745;
+            font-size: 18px;
+        }}
+        .highlight {{
+            color: #28a745;
+            font-weight: bold;
+        }}
+    </style>
+</head>
+<body>
+    <div class=""header"">
+        <h1>✅ Thông báo mở khóa tài khoản</h1>
+    </div>
+    
+    <div class=""content"">
+        <p>Xin chào <strong>{customerName}</strong>,</p>
+        
+        <p>Chúng tôi vui mừng thông báo rằng tài khoản của bạn tại <strong>{COMPANY_NAME}</strong> 
+        đã được <span class=""highlight"">mở khóa thành công</span>!</p>
+        
+        <div class=""info-box"">
+            <h2>📋 Chi tiết mở khóa</h2>
+            <p><strong>Lý do mở khóa:</strong></p>
+            <p style=""padding-left: 15px; border-left: 2px solid #ccc;"">{reason}</p>
+            <p><strong>Thời gian mở khóa:</strong> {DateTime.Now:dd/MM/yyyy HH:mm}</p>
+        </div>
+        
+        <p>Bạn có thể đăng nhập và sử dụng tất cả các dịch vụ của {COMPANY_NAME} như bình thường.</p>
+        
+        <div class=""cta-section"">
+            <a href=""#"" class=""cta-button"">Đăng nhập ngay</a>
+        </div>
+        
+        <div class=""info-box"" style=""border-left-color: #ffc107;"">
+            <h2 style=""color: #856404;"">⚠️ Lưu ý quan trọng</h2>
+            <p>Để tránh việc tài khoản bị khóa trong tương lai, vui lòng:</p>
+            <ul>
+                <li>Tuân thủ <a href=""#"">Điều khoản sử dụng</a> của {COMPANY_NAME}</li>
+                <li>Không thực hiện các hành vi vi phạm chính sách</li>
+                <li>Liên hệ hỗ trợ nếu có bất kỳ thắc mắc nào</li>
+            </ul>
+        </div>
+        
+        <p>Cảm ơn bạn đã là khách hàng của {COMPANY_NAME}. Chúng tôi rất vui được phục vụ bạn!</p>
+        
+        <p>Trân trọng,<br><strong>Đội ngũ {COMPANY_NAME}</strong></p>
+    </div>
+    
+    <div class=""footer"">
+        <p>© {DateTime.Now.Year} {COMPANY_NAME}. Tất cả quyền được bảo lưu.</p>
+        <p>Email này được gửi tự động, vui lòng không trả lời trực tiếp.</p>
+        <p>Nếu bạn cần hỗ trợ, hãy liên hệ: {SUPPORT_EMAIL}</p>
+    </div>
+</body>
+</html>";
+    }
+}

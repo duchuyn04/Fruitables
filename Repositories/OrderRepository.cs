@@ -1,0 +1,257 @@
+using Microsoft.EntityFrameworkCore;
+using Fruitables.Data;
+using Fruitables.Models;
+using Fruitables.Repositories.Interfaces;
+using Fruitables.ViewModels;
+
+namespace Fruitables.Repositories;
+
+public class OrderRepository : Repository<Order>, IOrderRepository
+{
+    public OrderRepository(ApplicationDbContext context) : base(context)
+    {
+    }
+
+    /// <summary>
+    /// Lấy danh sách đơn hàng của khách hàng với phân trang và lọc
+    /// </summary>
+    public async Task<PagedResult<Order>> GetOrdersByUserIdAsync(int userId, OrderHistoryFilter filter)
+    {
+        var query = _dbSet
+            .Where(o => o.UserId == userId)
+            .Include(o => o.Items)
+            .ThenInclude(oi => oi.Product)
+            .AsQueryable();
+
+        // Áp dụng bộ lọc tìm kiếm theo mã đơn hàng
+        if (!string.IsNullOrEmpty(filter.SearchTerm))
+        {
+            query = query.Where(o => o.OrderNumber.Contains(filter.SearchTerm));
+        }
+
+        // Áp dụng bộ lọc theo trạng thái
+        if (filter.Status.HasValue)
+        {
+            query = query.Where(o => o.Status == filter.Status.Value);
+        }
+
+        // Áp dụng bộ lọc theo ngày
+        if (filter.FromDate.HasValue)
+        {
+            query = query.Where(o => o.CreatedAt >= filter.FromDate.Value);
+        }
+
+        if (filter.ToDate.HasValue)
+        {
+            query = query.Where(o => o.CreatedAt <= filter.ToDate.Value);
+        }
+
+        // Sắp xếp theo thời gian tạo mới nhất
+        query = query.OrderByDescending(o => o.CreatedAt);
+
+        // Đếm tổng số bản ghi
+        var totalCount = await query.CountAsync();
+
+        // Áp dụng phân trang
+        var orders = await query
+            .Skip((filter.Page - 1) * filter.PageSize)
+            .Take(filter.PageSize)
+            .ToListAsync();
+
+        return new PagedResult<Order>
+        {
+            Items = orders,
+            TotalCount = totalCount,
+            Page = filter.Page,
+            PageSize = filter.PageSize
+        };
+    }
+
+    /// <summary>
+    /// Lấy đơn hàng với đầy đủ thông tin chi tiết
+    /// </summary>
+    public async Task<Order?> GetOrderWithDetailsAsync(int orderId, int userId)
+    {
+        return await _dbSet
+            .Where(o => o.Id == orderId && o.UserId == userId)
+            .Include(o => o.Items)
+            .ThenInclude(oi => oi.Product)
+            .ThenInclude(p => p.Images)
+            .Include(o => o.StatusHistory)
+            .ThenInclude(sh => sh.Admin)
+            .Include(o => o.Address)
+            .FirstOrDefaultAsync();
+    }
+
+    /// <summary>
+    /// Lấy lịch sử thay đổi trạng thái của đơn hàng
+    /// </summary>
+    public async Task<List<OrderStatusHistory>> GetOrderStatusHistoryAsync(int orderId)
+    {
+        return await _context.Set<OrderStatusHistory>()
+            .Where(osh => osh.OrderId == orderId)
+            .Include(osh => osh.Admin)
+            .OrderByDescending(osh => osh.CreatedAt)
+            .ToListAsync();
+    }
+
+    /// <summary>
+    /// Cập nhật đơn hàng với lý do hủy
+    /// </summary>
+    public async Task<bool> UpdateOrderStatusWithReasonAsync(int orderId, OrderStatus status, string? cancelReason = null, int? userId = null)
+    {
+        var order = await _dbSet.FindAsync(orderId);
+        if (order == null)
+        {
+            return false;
+        }
+
+        var oldStatus = order.Status;
+        order.Status = status;
+
+        // Nếu là hủy đơn hàng, lưu lý do hủy
+        if (status == OrderStatus.Cancelled && !string.IsNullOrEmpty(cancelReason))
+        {
+            order.CancelReason = cancelReason;
+        }
+
+        // Tạo lịch sử thay đổi trạng thái
+        var statusHistory = new OrderStatusHistory
+        {
+            OrderId = orderId,
+            OldStatus = oldStatus,
+            NewStatus = status,
+            AdminId = userId ?? order.UserId ?? 1, // Sử dụng userId được truyền vào hoặc userId của order
+            Notes = status == OrderStatus.Cancelled ? cancelReason : null,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _context.Set<OrderStatusHistory>().Add(statusHistory);
+
+        try
+        {
+            await _context.SaveChangesAsync();
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Kiểm tra xem đơn hàng có thuộc về user không
+    /// </summary>
+    public async Task<bool> IsOrderOwnedByUserAsync(int orderId, int userId)
+    {
+        return await _dbSet.AnyAsync(o => o.Id == orderId && o.UserId == userId);
+    }
+
+    /// <summary>
+    /// Lấy số lượng đơn hàng theo trạng thái của user
+    /// </summary>
+    public async Task<Dictionary<OrderStatus, int>> GetOrderCountByStatusAsync(int userId)
+    {
+        var counts = await _dbSet
+            .Where(o => o.UserId == userId)
+            .GroupBy(o => o.Status)
+            .Select(g => new { Status = g.Key, Count = g.Count() })
+            .ToListAsync();
+
+        return counts.ToDictionary(x => x.Status, x => x.Count);
+    }
+
+    /// <summary>
+    /// Hủy đơn hàng và hoàn trả stock trong một transaction
+    /// </summary>
+    public async Task<StockRestoreResult> CancelOrderWithStockRestoreAsync(int orderId, string cancelReason, int? userId = null)
+    {
+        // Check if database supports transactions (InMemory doesn't)
+        var providerName = _context.Database.ProviderName ?? "";
+        var supportsTransactions = !providerName.Contains("InMemory");
+        Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction? transaction = null;
+        
+        if (supportsTransactions)
+        {
+            transaction = await _context.Database.BeginTransactionAsync();
+        }
+        
+        try
+        {
+            // 1. Get order with items
+            var order = await _dbSet
+                .Include(o => o.Items)
+                .FirstOrDefaultAsync(o => o.Id == orderId);
+
+            if (order == null)
+            {
+                return StockRestoreResult.Fail("Đơn hàng không tồn tại");
+            }
+
+            if (order.Status != OrderStatus.Pending)
+            {
+                return StockRestoreResult.Fail("Chỉ có thể hủy đơn hàng ở trạng thái Chờ xử lý");
+            }
+
+            // 2. Update order status
+            var oldStatus = order.Status;
+            order.Status = OrderStatus.Cancelled;
+            order.CancelReason = cancelReason;
+
+            // 3. Restore stock for each product
+            var restoredItems = new List<StockRestoreItem>();
+            foreach (var item in order.Items)
+            {
+                var product = await _context.Products.FindAsync(item.ProductId);
+                if (product != null)
+                {
+                    product.StockQuantity += item.Quantity;
+                    restoredItems.Add(new StockRestoreItem
+                    {
+                        ProductId = item.ProductId,
+                        ProductName = product.Name,
+                        QuantityRestored = item.Quantity
+                    });
+                }
+            }
+
+            // 4. Create status history with stock info
+            var stockInfo = string.Join(", ", restoredItems.Select(r => $"{r.ProductName}: +{r.QuantityRestored}"));
+            var notes = $"{cancelReason}. Hoàn trả stock: {stockInfo}";
+
+            var statusHistory = new OrderStatusHistory
+            {
+                OrderId = orderId,
+                OldStatus = oldStatus,
+                NewStatus = OrderStatus.Cancelled,
+                AdminId = userId ?? order.UserId ?? 1,
+                Notes = notes,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.Set<OrderStatusHistory>().Add(statusHistory);
+
+            // 5. Save and commit
+            await _context.SaveChangesAsync();
+            
+            if (transaction != null)
+            {
+                await transaction.CommitAsync();
+            }
+
+            return StockRestoreResult.Success(restoredItems);
+        }
+        catch (Exception ex)
+        {
+            if (transaction != null)
+            {
+                await transaction.RollbackAsync();
+            }
+            return StockRestoreResult.Fail($"Lỗi khi hủy đơn hàng: {ex.Message}");
+        }
+        finally
+        {
+            transaction?.Dispose();
+        }
+    }
+}

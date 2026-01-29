@@ -1,0 +1,25 @@
+@model Tuple<List<Fruitables.Models.CategoryTreeNode>, int>
+@{
+    var categories = Model.Item1;
+    var currentId = Model.Item2;
+    
+    bool IsDescendantOrSelf(Fruitables.Models.CategoryTreeNode node, int id)
+    {
+        if (node.Id == id) return true;
+        return node.Children.Any(c => IsDescendantOrSelf(c, id));
+    }
+}
+
+@foreach (var category in categories)
+{
+    var isDisabled = IsDescendantOrSelf(category, currentId);
+    var indent = new string('\u00A0', category.Level * 4);
+    var prefix = category.Level > 0 ? "└─ " : "";
+    
+    <option value="@category.Id" disabled="@isDisabled">@indent@prefix@category.Name @(isDisabled ? "(không khả dụng)" : "")</option>
+    
+    @if (category.Children.Any())
+    {
+        @await Html.PartialAsync("_CategorySelectOptionsEdit", new Tuple<List<Fruitables.Models.CategoryTreeNode>, int>(category.Children, currentId))
+    }
+}

@@ -1,0 +1,66 @@
+@model Fruitables.ViewModels.ContactSettingsViewModel
+
+<form asp-action="SaveContact" method="post">
+    @Html.AntiForgeryToken()
+    
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-light">
+            <h5 class="mb-0"><i class="fas fa-envelope me-2"></i>Cài đặt liên hệ</h5>
+        </div>
+        <div class="card-body">
+            <!-- Address -->
+            <div class="mb-4">
+                <label asp-for="Address" class="form-label">Địa chỉ</label>
+                <textarea asp-for="Address" class="form-control" rows="2" placeholder="Nhập địa chỉ cửa hàng"></textarea>
+                <span asp-validation-for="Address" class="text-danger"></span>
+            </div>
+
+            <div class="row">
+                <!-- Phone -->
+                <div class="col-md-6 mb-4">
+                    <label asp-for="Phone" class="form-label">Số điện thoại</label>
+                    <input asp-for="Phone" class="form-control" placeholder="Ví dụ: 0123 456 789" />
+                    <span asp-validation-for="Phone" class="text-danger"></span>
+                </div>
+
+                <!-- Email -->
+                <div class="col-md-6 mb-4">
+                    <label asp-for="Email" class="form-label">Email</label>
+                    <input asp-for="Email" class="form-control" type="email" placeholder="contact@example.com" />
+                    <span asp-validation-for="Email" class="text-danger"></span>
+                </div>
+            </div>
+
+            <!-- Working Hours -->
+            <div class="mb-4">
+                <label asp-for="WorkingHours" class="form-label">Giờ làm việc</label>
+                <input asp-for="WorkingHours" class="form-control" placeholder="Ví dụ: Thứ 2 - Thứ 7: 8:00 - 18:00" />
+                <span asp-validation-for="WorkingHours" class="text-danger"></span>
+            </div>
+
+            <!-- Map Embed Code -->
+            <div class="mb-4">
+                <label asp-for="MapEmbedCode" class="form-label">Mã nhúng Google Maps</label>
+                <textarea asp-for="MapEmbedCode" class="form-control" rows="4" placeholder="Dán mã iframe từ Google Maps"></textarea>
+                <span asp-validation-for="MapEmbedCode" class="text-danger"></span>
+                <small class="text-muted">Lấy mã nhúng từ Google Maps: Chia sẻ → Nhúng bản đồ → Sao chép HTML</small>
+            </div>
+
+            <!-- Map Preview -->
+            @if (!string.IsNullOrEmpty(Model?.MapEmbedCode))
+            {
+                <div class="mb-4">
+                    <label class="form-label">Xem trước bản đồ</label>
+                    <div class="border rounded p-2">
+                        @Html.Raw(Model.MapEmbedCode)
+                    </div>
+                </div>
+            }
+        </div>
+        <div class="card-footer bg-light">
+            <button type="submit" class="btn btn-success">
+                <i class="fas fa-save me-1"></i>Lưu cài đặt
+            </button>
+        </div>
+    </div>
+</form>

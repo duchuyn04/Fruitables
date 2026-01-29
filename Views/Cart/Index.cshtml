@@ -1,0 +1,388 @@
+@using Fruitables.ViewModels
+@model CartViewModel
+@{
+    ViewData["Title"] = "Giỏ hàng";
+}
+
+<!-- Single Page Header start -->
+<div class="container-fluid page-header py-5">
+    <h1 class="text-center text-white display-6">Giỏ hàng</h1>
+    <ol class="breadcrumb justify-content-center mb-0">
+        <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Trang chủ</a></li>
+        <li class="breadcrumb-item active text-white">Giỏ hàng</li>
+    </ol>
+</div>
+<!-- Single Page Header End -->
+
+<!-- Toast Container -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
+    @if (TempData["Success"] != null)
+    {
+        <div class="toast show" role="alert" data-bs-autohide="true" data-bs-delay="5000">
+            <div class="toast-header bg-success text-white">
+                <i class="fa fa-check-circle me-2"></i>
+                <strong class="me-auto">Thành công</strong>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+            </div>
+            <div class="toast-body">@TempData["Success"]</div>
+        </div>
+    }
+</div>
+
+<!-- Cart Page Start -->
+<div class="container-fluid py-5">
+    <div class="container py-5">
+        @if (Model.Items.Any())
+        {
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Sản phẩm</th>
+                            <th scope="col">Tên</th>
+                            <th scope="col">Giá</th>
+                            <th scope="col">Số lượng</th>
+                            <th scope="col">Tổng</th>
+                            <th scope="col">Xóa</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cart-items">
+                        @foreach (var item in Model.Items)
+                        {
+                            <tr data-product-id="@item.ProductId" data-stock="@item.StockQuantity">
+                                <th scope="row">
+                                    <div class="d-flex align-items-center">
+                                        <img src="@(string.IsNullOrEmpty(item.ProductImage) ? "~/img/vegetable-item-3.png" : item.ProductImage)" 
+                                             class="img-fluid me-5 rounded-circle" style="width: 80px; height: 80px;" alt="@item.ProductName">
+                                    </div>
+                                </th>
+                                <td>
+                                    <p class="mb-0 mt-4">
+                                        <a asp-controller="Shop" asp-action="Detail" asp-route-id="@item.ProductId">@item.ProductName</a>
+                                    </p>
+                                    <small class="text-muted stock-info">Còn @item.StockQuantity sản phẩm</small>
+                                </td>
+                                <td><p class="mb-0 mt-4 item-price">@item.Price.ToString("N0")đ</p></td>
+                                <td>
+                                    <div class="input-group quantity mt-4" style="width: 100px;">
+                                        <div class="input-group-btn">
+                                            <button type="button" class="btn btn-sm btn-minus rounded-circle bg-light border" 
+                                                    onclick="updateQuantity(@item.ProductId, @(item.Quantity - 1))">
+                                                <i class="fa fa-minus"></i>
+                                            </button>
+                                        </div>
+                                        <input type="text" class="form-control form-control-sm text-center border-0 item-quantity" 
+                                               value="@item.Quantity" readonly data-price="@item.Price">
+                                        <div class="input-group-btn">
+                                            <button type="button" class="btn btn-sm btn-plus rounded-circle bg-light border @(item.Quantity >= item.StockQuantity ? "disabled" : "")"
+                                                    onclick="updateQuantity(@item.ProductId, @(item.Quantity + 1))" @(item.Quantity >= item.StockQuantity ? "disabled" : "")>
+                                                <i class="fa fa-plus"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    @if (item.Quantity >= item.StockQuantity)
+                                    {
+                                        <small class="text-danger d-block mt-1">Đã đạt tối đa</small>
+                                    }
+                                </td>
+                                <td><p class="mb-0 mt-4 item-total">@item.Total.ToString("N0")đ</p></td>
+                                <td>
+                                    <button type="button" class="btn btn-md rounded-circle bg-light border mt-4"
+                                            onclick="removeFromCart(@item.ProductId)">
+                                        <i class="fa fa-times text-danger"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="mt-5">
+                <form asp-controller="Cart" asp-action="ApplyCoupon" method="post" class="d-inline">
+                    <input type="text" name="couponCode" class="border-0 border-bottom rounded me-5 py-3 mb-4" placeholder="Mã giảm giá" value="@Model.CouponCode">
+                    <button type="submit" class="btn border-secondary rounded-pill px-4 py-3 text-primary">Áp dụng</button>
+                </form>
+            </div>
+            <div class="row g-4 justify-content-end">
+                <div class="col-8"></div>
+                <div class="col-sm-8 col-md-7 col-lg-6 col-xl-4">
+                    <div class="bg-light rounded">
+                        <div class="p-4">
+                            <h1 class="display-6 mb-4">Tổng <span class="fw-normal">giỏ hàng</span></h1>
+                            <div class="d-flex justify-content-between mb-4">
+                                <h5 class="mb-0 me-4">Tạm tính:</h5>
+                                <p class="mb-0" id="cart-subtotal">@Model.Subtotal.ToString("N0")đ</p>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <h5 class="mb-0 me-4">Phí vận chuyển</h5>
+                                <div class="">
+                                    @if (Model.ShippingInfo != null)
+                                    {
+                                        @if (Model.ShippingInfo.IsFreeShipping)
+                                        {
+                                            <p class="mb-0 text-success" id="cart-shipping">
+                                                <i class="fas fa-check-circle me-1"></i>Miễn phí
+                                            </p>
+                                        }
+                                        else
+                                        {
+                                            <p class="mb-0" id="cart-shipping">@Model.ShippingInfo.ShippingFee.ToString("N0")đ</p>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <p class="mb-0" id="cart-shipping">@Model.ShippingFee.ToString("N0")đ</p>
+                                    }
+                                </div>
+                            </div>
+                            @if (Model.ShippingInfo != null && !string.IsNullOrEmpty(Model.ShippingInfo.Message))
+                            {
+                                <div class="mt-2" id="shipping-message-row">
+                                    @if (Model.ShippingInfo.IsFreeShipping || Model.ShippingInfo.IsReducedShipping)
+                                    {
+                                        <small class="text-success">
+                                            <i class="fas fa-gift me-1"></i>@Model.ShippingInfo.Message
+                                        </small>
+                                    }
+                                    else if (Model.ShippingInfo.AmountToFreeShipping > 0)
+                                    {
+                                        <small class="text-info">
+                                            <i class="fas fa-info-circle me-1"></i>@Model.ShippingInfo.Message
+                                        </small>
+                                    }
+                                </div>
+                            }
+                            @if (Model.ShippingInfo != null)
+                            {
+                                <div class="mt-2">
+                                    <small class="text-muted">
+                                        Khu vực: @(Model.ShippingInfo.Zone == Fruitables.Models.ShippingZone.Zone1_InnerCity ? "Nội thành" : 
+                                                   Model.ShippingInfo.Zone == Fruitables.Models.ShippingZone.Zone2_OuterCity ? "Ngoại thành" : "Vùng xa")
+                                    </small>
+                                </div>
+                            }
+                            <div class="d-flex justify-content-between mt-2" id="discount-row" style="@(Model.Discount > 0 ? "" : "display: none;")">
+                                <h5 class="mb-0 me-4">Giảm giá:</h5>
+                                <p class="mb-0 text-success" id="cart-discount">-@Model.Discount.ToString("N0")đ</p>
+                            </div>
+                        </div>
+                        <div class="py-4 mb-4 border-top border-bottom d-flex justify-content-between">
+                            <h5 class="mb-0 ps-4 me-4">Tổng cộng</h5>
+                            <p class="mb-0 pe-4" id="cart-total">@Model.Total.ToString("N0")đ</p>
+                        </div>
+                        <a asp-controller="Checkout" asp-action="Index" class="btn border-secondary rounded-pill px-4 py-3 text-primary text-uppercase mb-4 ms-4">Thanh toán</a>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-5">
+                <i class="fas fa-shopping-cart fa-5x text-muted mb-4"></i>
+                <h3>Giỏ hàng trống</h3>
+                <p class="text-muted">Bạn chưa thêm sản phẩm nào vào giỏ hàng.</p>
+                <a asp-controller="Shop" asp-action="Index" class="btn border-secondary rounded-pill px-4 py-3 text-primary mt-3">Tiếp tục mua sắm</a>
+            </div>
+        }
+    </div>
+</div>
+<!-- Cart Page End -->
+
+
+@section Scripts {
+    <script>
+        function formatCurrency(amount) {
+            return amount.toLocaleString('vi-VN') + 'đ';
+        }
+
+        function updateCartDisplay(data) {
+            document.getElementById('cart-subtotal').textContent = formatCurrency(data.subtotal);
+            
+            // Update shipping display with ShippingInfo (Requirements 4.1, 5.1, 5.2, 5.3, 5.4)
+            var shippingEl = document.getElementById('cart-shipping');
+            if (data.shippingInfo && data.shippingInfo.isFreeShipping) {
+                shippingEl.innerHTML = '<i class="fas fa-check-circle me-1"></i>Miễn phí';
+                shippingEl.className = 'mb-0 text-success';
+            } else {
+                shippingEl.textContent = formatCurrency(data.shippingFee);
+                shippingEl.className = 'mb-0';
+            }
+            
+            // Update shipping message
+            var messageRow = document.getElementById('shipping-message-row');
+            if (data.shippingInfo && data.shippingInfo.message) {
+                if (!messageRow) {
+                    // Create message row if it doesn't exist
+                    var shippingSection = shippingEl.closest('.d-flex').parentElement;
+                    messageRow = document.createElement('div');
+                    messageRow.id = 'shipping-message-row';
+                    messageRow.className = 'mt-2';
+                    shippingSection.insertBefore(messageRow, shippingSection.querySelector('.d-flex.justify-content-between.mt-2'));
+                }
+                
+                var iconClass = '';
+                var textClass = '';
+                if (data.shippingInfo.isFreeShipping || data.shippingInfo.isReducedShipping) {
+                    iconClass = 'fas fa-gift me-1';
+                    textClass = 'text-success';
+                } else if (data.shippingInfo.amountToFreeShipping > 0) {
+                    iconClass = 'fas fa-info-circle me-1';
+                    textClass = 'text-info';
+                }
+                
+                messageRow.innerHTML = '<small class="' + textClass + '"><i class="' + iconClass + '"></i>' + data.shippingInfo.message + '</small>';
+                messageRow.style.display = '';
+            } else if (messageRow) {
+                messageRow.style.display = 'none';
+            }
+            
+            document.getElementById('cart-total').textContent = formatCurrency(data.total);
+            
+            // Update discount
+            var discountRow = document.getElementById('discount-row');
+            if (data.discount > 0) {
+                discountRow.style.display = '';
+                document.getElementById('cart-discount').textContent = '-' + formatCurrency(data.discount);
+            } else {
+                discountRow.style.display = 'none';
+            }
+            
+            // Update navbar cart count
+            var cartCountBadge = document.querySelector('.fa-shopping-bag + span');
+            if (cartCountBadge) {
+                cartCountBadge.textContent = data.cartCount;
+            }
+        }
+
+        function updateQuantity(productId, quantity) {
+            if (quantity < 1) {
+                removeFromCart(productId);
+                return;
+            }
+
+            // Check stock limit before sending request
+            var row = document.querySelector('tr[data-product-id="' + productId + '"]');
+            var stock = parseInt(row.getAttribute('data-stock'));
+            if (quantity > stock) {
+                showToast('Số lượng không thể vượt quá ' + stock + ' sản phẩm', 'warning');
+                return;
+            }
+
+            fetch('/Cart/UpdateQuantityAjax', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ productId: productId, quantity: quantity })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    if (data.itemRemoved) {
+                        // Remove row if quantity became 0
+                        var row = document.querySelector('tr[data-product-id="' + productId + '"]');
+                        if (row) row.remove();
+                        
+                        if (data.cartCount === 0) {
+                            location.reload();
+                        }
+                    } else {
+                        // Update item row with actual quantity from server
+                        var row = document.querySelector('tr[data-product-id="' + productId + '"]');
+                        if (row) {
+                            var actualQty = data.actualQuantity;
+                            var stockQty = data.stockQuantity;
+                            
+                            row.querySelector('.item-quantity').value = actualQty;
+                            row.querySelector('.item-total').textContent = formatCurrency(data.itemTotal);
+                            row.setAttribute('data-stock', stockQty);
+                            
+                            // Update button onclick values
+                            var minusBtn = row.querySelector('.btn-minus');
+                            var plusBtn = row.querySelector('.btn-plus');
+                            minusBtn.setAttribute('onclick', 'updateQuantity(' + productId + ', ' + (actualQty - 1) + ')');
+                            plusBtn.setAttribute('onclick', 'updateQuantity(' + productId + ', ' + (actualQty + 1) + ')');
+                            
+                            // Update plus button state
+                            if (data.maxReached) {
+                                plusBtn.classList.add('disabled');
+                                plusBtn.setAttribute('disabled', 'disabled');
+                                // Add or update max reached message
+                                var maxMsg = row.querySelector('small.text-danger');
+                                if (!maxMsg) {
+                                    var quantityDiv = row.querySelector('.input-group.quantity').parentElement;
+                                    var msg = document.createElement('small');
+                                    msg.className = 'text-danger d-block mt-1';
+                                    msg.textContent = 'Đã đạt tối đa';
+                                    quantityDiv.appendChild(msg);
+                                }
+                            } else {
+                                plusBtn.classList.remove('disabled');
+                                plusBtn.removeAttribute('disabled');
+                                // Remove max reached message if exists
+                                var maxMsg = row.querySelector('small.text-danger');
+                                if (maxMsg) maxMsg.remove();
+                            }
+                        }
+                    }
+                    updateCartDisplay(data);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        function showToast(message, type) {
+            var toastContainer = document.querySelector('.toast-container');
+            var bgClass = type === 'warning' ? 'bg-warning' : 'bg-success';
+            var toast = document.createElement('div');
+            toast.className = 'toast show';
+            toast.setAttribute('role', 'alert');
+            toast.innerHTML = '<div class="toast-header ' + bgClass + ' text-white">' +
+                '<i class="fa fa-exclamation-circle me-2"></i>' +
+                '<strong class="me-auto">Thông báo</strong>' +
+                '<button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>' +
+                '</div><div class="toast-body">' + message + '</div>';
+            toastContainer.appendChild(toast);
+            setTimeout(function() {
+                toast.remove();
+            }, 3000);
+        }
+
+        function removeFromCart(productId) {
+            fetch('/Cart/RemoveFromCartAjax', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ productId: productId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Remove row
+                    var row = document.querySelector('tr[data-product-id="' + productId + '"]');
+                    if (row) {
+                        row.style.transition = 'opacity 0.3s';
+                        row.style.opacity = '0';
+                        setTimeout(function() {
+                            row.remove();
+                            if (data.isEmpty) {
+                                location.reload();
+                            }
+                        }, 300);
+                    }
+                    updateCartDisplay(data);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        // Toast auto-hide
+        document.querySelectorAll('.toast.show').forEach(function(toast) {
+            setTimeout(function() {
+                var bsToast = bootstrap.Toast.getOrCreateInstance(toast);
+                bsToast.hide();
+            }, 5000);
+        });
+    </script>
+}

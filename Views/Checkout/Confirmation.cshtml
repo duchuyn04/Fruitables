@@ -1,0 +1,156 @@
+@using Fruitables.Models
+@using Fruitables.Helpers
+@{
+    ViewData["Title"] = "Xác nhận đơn hàng";
+    var order = ViewBag.Order as Order;
+    
+    // Get shipping address from snapshot
+    Address? shippingAddress = null;
+    if (!string.IsNullOrEmpty(order?.ShippingSnapshot))
+    {
+        shippingAddress = AddressSnapshotHelper.FromSnapshot(order.ShippingSnapshot);
+    }
+}
+
+<!-- Single Page Header start -->
+<div class="container-fluid page-header py-5">
+    <h1 class="text-center text-white display-6">Xác nhận đơn hàng</h1>
+    <ol class="breadcrumb justify-content-center mb-0">
+        <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Trang chủ</a></li>
+        <li class="breadcrumb-item active text-white">Xác nhận đơn hàng</li>
+    </ol>
+</div>
+<!-- Single Page Header End -->
+
+<!-- Confirmation Start -->
+<div class="container-fluid py-5">
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="text-center mb-5">
+                    <i class="fas fa-check-circle fa-5x text-success mb-4"></i>
+                    <h1 class="text-primary">Cảm ơn bạn!</h1>
+                    <h4 class="mb-4">Đơn hàng của bạn đã được đặt thành công</h4>
+                    <p class="text-muted">Mã đơn hàng: <strong>@order?.OrderNumber</strong></p>
+                </div>
+
+                <div class="bg-light rounded p-4 mb-4">
+                    <h4 class="mb-4">Chi tiết đơn hàng</h4>
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Sản phẩm</th>
+                                    <th>Số lượng</th>
+                                    <th>Giá</th>
+                                    <th>Tổng</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (order?.Items != null)
+                                {
+                                    @foreach (var item in order.Items)
+                                    {
+                                        <tr>
+                                            <td>@item.ProductName</td>
+                                            <td>@item.Quantity</td>
+                                            <td>@item.Price.ToString("N0")đ</td>
+                                            <td>@item.Total.ToString("N0")đ</td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="3" class="text-end"><strong>Tạm tính:</strong></td>
+                                    <td>@order?.Subtotal.ToString("N0")đ</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="3" class="text-end"><strong>Phí vận chuyển:</strong></td>
+                                    <td>@order?.ShippingFee.ToString("N0")đ</td>
+                                </tr>
+                                @if (order?.Discount > 0)
+                                {
+                                    <tr>
+                                        <td colspan="3" class="text-end"><strong>Giảm giá:</strong></td>
+                                        <td class="text-success">-@order?.Discount.ToString("N0")đ</td>
+                                    </tr>
+                                }
+                                <tr>
+                                    <td colspan="3" class="text-end"><strong>Tổng cộng:</strong></td>
+                                    <td><strong class="text-primary">@order?.Total.ToString("N0")đ</strong></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <div class="bg-light rounded p-4">
+                            <h5 class="mb-3"><i class="fas fa-shipping-fast me-2"></i>Địa chỉ giao hàng</h5>
+                            @if (shippingAddress != null)
+                            {
+                                <p class="mb-1"><strong>@shippingAddress.FullName</strong></p>
+                                <p class="mb-1"><i class="fas fa-phone me-2"></i>@shippingAddress.Phone</p>
+                                <p class="mb-0"><i class="fas fa-map-marker-alt me-2"></i>@shippingAddress.FullAddress</p>
+                            }
+                            else
+                            {
+                                <p class="text-muted">Không có thông tin địa chỉ</p>
+                            }
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="bg-light rounded p-4">
+                            <h5 class="mb-3"><i class="fas fa-credit-card me-2"></i>Phương thức thanh toán</h5>
+                            <p class="mb-1"><strong>
+                                @(order?.PaymentMethod switch
+                                {
+                                    PaymentMethod.COD => "Thanh toán khi nhận hàng (COD)",
+                                    PaymentMethod.BankTransfer => "Chuyển khoản ngân hàng",
+                                    PaymentMethod.Paypal => "Paypal",
+                                    PaymentMethod.Check => "Thanh toán bằng séc",
+                                    _ => order?.PaymentMethod.ToString()
+                                })
+                            </strong></p>
+                            <p class="mb-0 text-muted">Trạng thái thanh toán: 
+                                <span class="badge @(order?.PaymentStatus == PaymentStatus.Paid ? "bg-success" : "bg-warning text-dark")">
+                                    @(order?.PaymentStatus == PaymentStatus.Paid ? "Đã thanh toán" : "Chưa thanh toán")
+                                </span>
+                            </p>
+                            <hr>
+                            <h5 class="mb-3"><i class="fas fa-box me-2"></i>Trạng thái đơn hàng</h5>
+                            @{
+                                var statusClass = order?.Status switch
+                                {
+                                    OrderStatus.Pending => "bg-warning text-dark",
+                                    OrderStatus.Processing => "bg-info",
+                                    OrderStatus.Shipped => "bg-primary",
+                                    OrderStatus.Delivered => "bg-success",
+                                    OrderStatus.Cancelled => "bg-danger",
+                                    _ => "bg-secondary"
+                                };
+                                var statusText = order?.Status switch
+                                {
+                                    OrderStatus.Pending => "Chờ xử lý",
+                                    OrderStatus.Processing => "Đang xử lý",
+                                    OrderStatus.Shipped => "Đang giao hàng",
+                                    OrderStatus.Delivered => "Đã giao hàng",
+                                    OrderStatus.Cancelled => "Đã hủy",
+                                    _ => order?.Status.ToString()
+                                };
+                            }
+                            <span class="badge @statusClass">@statusText</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-center mt-5">
+                    <a asp-controller="Shop" asp-action="Index" class="btn border-secondary rounded-pill px-4 py-3 text-primary">Tiếp tục mua sắm</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Confirmation End -->

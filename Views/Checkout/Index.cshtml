@@ -1,0 +1,874 @@
+@using Fruitables.ViewModels
+@using Fruitables.Models
+@model CheckoutViewModel
+@{
+    ViewData["Title"] = "Thanh toán";
+    var cart = ViewBag.Cart as CartViewModel ?? new CartViewModel();
+    var savedAddresses = ViewBag.SavedAddresses as List<AddressViewModel> ?? new List<AddressViewModel>();
+}
+
+<!-- Single Page Header start -->
+<div class="container-fluid page-header py-5">
+    <h1 class="text-center text-white display-6">Thanh toán</h1>
+    <ol class="breadcrumb justify-content-center mb-0">
+        <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Trang chủ</a></li>
+        <li class="breadcrumb-item active text-white">Thanh toán</li>
+    </ol>
+</div>
+<!-- Single Page Header End -->
+
+<!-- Toast Container for validation errors -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;"></div>
+
+<!-- Custom styles for address validation -->
+<!-- **Feature: checkout-address-split, Task 21.3: Cập nhật validation messages** -->
+<!-- **Validates: Requirements 4.2, 5.3** -->
+<style>
+    /* Invalid field styling */
+    .form-select.is-invalid,
+    .form-control.is-invalid {
+        border-color: #dc3545 !important;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
+        background-repeat: no-repeat;
+        background-position: right calc(0.375em + 0.1875rem) center;
+        background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+    }
+    .form-select.is-invalid:focus,
+    .form-control.is-invalid:focus {
+        border-color: #dc3545 !important;
+        box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25) !important;
+    }
+    
+    /* Search wrapper invalid state */
+    .address-search-wrapper.is-invalid .form-select,
+    .address-search-wrapper .is-invalid {
+        border-color: #dc3545 !important;
+    }
+    .address-search-wrapper .is-invalid + .address-search-input {
+        border-color: #dc3545;
+    }
+    
+    /* Validation feedback styling */
+    .invalid-feedback,
+    .address-field-error {
+        display: block;
+        width: 100%;
+        margin-top: 0.25rem;
+        font-size: 0.875em;
+        color: #dc3545;
+    }
+    
+    /* Field-specific error message styling */
+    .field-validation-error {
+        display: block;
+        color: #dc3545;
+        font-size: 0.875em;
+        margin-top: 0.25rem;
+    }
+    
+    /* Character counter styling */
+    .char-counter {
+        font-size: 0.75em;
+        color: #6c757d;
+        text-align: right;
+        margin-top: 0.25rem;
+    }
+    .char-counter.warning {
+        color: #ffc107;
+    }
+    .char-counter.danger {
+        color: #dc3545;
+    }
+    
+    /* Validation summary styling */
+    .validation-summary {
+        background-color: #f8d7da;
+        border: 1px solid #f5c6cb;
+        border-radius: 0.375rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    .validation-summary ul {
+        margin-bottom: 0;
+        padding-left: 1.25rem;
+    }
+    .validation-summary li {
+        color: #721c24;
+        margin-bottom: 0.25rem;
+    }
+    .validation-summary li:last-child {
+        margin-bottom: 0;
+    }
+</style>
+
+<!-- Checkout Page Start -->
+<div class="container-fluid py-5">
+    <div class="container py-5">
+        <h1 class="mb-4">Thông tin thanh toán</h1>
+        <form asp-controller="Checkout" asp-action="PlaceOrder" method="post">
+            @Html.AntiForgeryToken()
+            <div class="row g-5">
+                <div class="col-md-12 col-lg-6 col-xl-7">
+                    @if (savedAddresses.Any())
+                    {
+                        <div class="mb-4">
+                            <h5 class="mb-3">Chọn địa chỉ giao hàng</h5>
+                            <select id="addressSelect" class="form-control form-select mb-3" asp-for="SelectedAddressId">
+                                <option value="">-- Chọn địa chỉ hoặc nhập mới --</option>
+                                @foreach (var addr in savedAddresses)
+                                {
+                                    <option value="@addr.Id" 
+                                            data-fullname="@addr.FullName"
+                                            data-phone="@addr.Phone"
+                                            data-address="@addr.FullAddress"
+                                            data-provincecode="@addr.ProvinceCode"
+                                            data-provincename="@addr.ProvinceName"
+                                            data-districtcode="@addr.DistrictCode"
+                                            data-districtname="@addr.DistrictName"
+                                            data-wardcode="@addr.WardCode"
+                                            data-wardname="@addr.WardName"
+                                            data-streetaddress="@addr.StreetAddress"
+                                            selected="@addr.IsDefault">
+                                        @addr.DisplayText @(addr.IsDefault ? "(Mặc định)" : "")
+                                    </option>
+                                }
+                                <option value="new">+ Thêm địa chỉ mới</option>
+                            </select>
+                            
+                            <div id="selectedAddressDisplay" class="alert alert-info" style="display: none;">
+                                <h6 class="mb-2"><i class="fas fa-map-marker-alt me-2"></i>Địa chỉ đã chọn:</h6>
+                                <div id="addressDetails"></div>
+                            </div>
+                            <hr class="my-4">
+                        </div>
+                    }
+                    
+                    <div id="addressFormSection">
+                        <h5 class="mb-3" id="addressFormTitle">@(savedAddresses.Any() ? "Hoặc nhập địa chỉ mới" : "Thông tin giao hàng")</h5>
+                        
+                        <div class="form-item">
+                            <label class="form-label my-3">Họ tên<sup>*</sup></label>
+                            <input asp-for="FirstName" class="form-control" placeholder="Nhập họ tên đầy đủ" id="FullNameInput" />
+                            <span asp-validation-for="FirstName" class="text-danger"></span>
+                        </div>
+                    <div class="form-item">
+                        <label asp-for="Mobile" class="form-label my-3">Số điện thoại<sup>*</sup></label>
+                        <input asp-for="Mobile" type="tel" class="form-control" placeholder="Nhập số điện thoại" />
+                        <span asp-validation-for="Mobile" class="text-danger"></span>
+                    </div>
+                    <div class="form-item">
+                        <label asp-for="StreetAddress" class="form-label my-3">Số nhà, Tên đường<sup>*</sup></label>
+                        <input asp-for="StreetAddress" class="form-control" placeholder="Nhập số nhà, tên đường" maxlength="200" id="StreetAddressInput" />
+                        <div class="char-counter" id="streetAddressCounter">0/200 ký tự</div>
+                        <span asp-validation-for="StreetAddress" class="text-danger"></span>
+                        <div class="address-field-error invalid-feedback" id="streetAddressError" style="display: none;"></div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 form-item">
+                            <label class="form-label my-3">Tỉnh/Thành phố<sup>*</sup></label>
+                            <select asp-for="ProvinceCode" class="form-control form-select" id="provinceSelect" disabled>
+                                <option value="">-- Đang tải --</option>
+                            </select>
+                            <input type="hidden" asp-for="ProvinceName" id="provinceName" />
+                            <span asp-validation-for="ProvinceCode" class="text-danger"></span>
+                            <div class="address-field-error invalid-feedback" id="provinceError" style="display: none;">Vui lòng chọn Tỉnh/Thành phố</div>
+                        </div>
+                        <div class="col-md-4 form-item">
+                            <label class="form-label my-3">Quận/Huyện<sup>*</sup></label>
+                            <select asp-for="DistrictCode" class="form-control form-select" id="districtSelect" disabled>
+                                <option value="">-- Chọn Tỉnh/TP trước --</option>
+                            </select>
+                            <input type="hidden" asp-for="DistrictName" id="districtName" />
+                            <span asp-validation-for="DistrictCode" class="text-danger"></span>
+                            <div class="address-field-error invalid-feedback" id="districtError" style="display: none;">Vui lòng chọn Quận/Huyện</div>
+                        </div>
+                        <div class="col-md-4 form-item">
+                            <label class="form-label my-3">Phường/Xã<sup>*</sup></label>
+                            <select asp-for="WardCode" class="form-control form-select" id="wardSelect" disabled>
+                                <option value="">-- Chọn Quận/Huyện trước --</option>
+                            </select>
+                            <input type="hidden" asp-for="WardName" id="wardName" />
+                            <span asp-validation-for="WardCode" class="text-danger"></span>
+                            <div class="address-field-error invalid-feedback" id="wardError" style="display: none;">Vui lòng chọn Phường/Xã</div>
+                        </div>
+                    </div>
+                    <div class="form-item">
+                        <label asp-for="Notes" class="form-label my-3">Ghi chú đơn hàng (Tùy chọn)</label>
+                        <textarea asp-for="Notes" class="form-control" cols="30" rows="4" placeholder="Ghi chú về đơn hàng, ví dụ: thời gian giao hàng"></textarea>
+                    </div>
+                    
+                    @if (savedAddresses.Any())
+                    {
+                        <div class="form-check my-3" id="saveAddressSection" style="display: none;">
+                            <input type="checkbox" asp-for="SaveAddress" class="form-check-input" id="SaveAddressCheck" checked />
+                            <label class="form-check-label" for="SaveAddressCheck">
+                                Lưu địa chỉ này cho lần mua sau
+                            </label>
+                        </div>
+                        <div class="form-check my-3" id="setDefaultSection" style="display: none;">
+                            <input type="checkbox" asp-for="SetAsDefault" class="form-check-input" id="SetDefaultCheck" />
+                            <label class="form-check-label" for="SetDefaultCheck">
+                                Đặt làm địa chỉ mặc định
+                            </label>
+                        </div>
+                    }
+                    </div>
+                    
+                    <!-- Hidden fields for compatibility -->
+                    <input asp-for="LastName" type="hidden" value="" />
+                    <input asp-for="Email" type="hidden" value="customer@example.com" />
+                    <input asp-for="City" type="hidden" value="" />
+                </div>
+                <div class="col-md-12 col-lg-6 col-xl-5">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Sản phẩm</th>
+                                    <th scope="col">Tên</th>
+                                    <th scope="col">Giá</th>
+                                    <th scope="col">SL</th>
+                                    <th scope="col">Tổng</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in cart.Items)
+                                {
+                                    <tr>
+                                        <th scope="row">
+                                            <div class="d-flex align-items-center mt-2">
+                                                <img src="@(string.IsNullOrEmpty(item.ProductImage) ? "~/img/vegetable-item-2.jpg" : item.ProductImage)" 
+                                                     class="img-fluid rounded-circle" style="width: 90px; height: 90px;" alt="@item.ProductName">
+                                            </div>
+                                        </th>
+                                        <td class="py-5">@item.ProductName</td>
+                                        <td class="py-5">@item.Price.ToString("N0")đ</td>
+                                        <td class="py-5">@item.Quantity</td>
+                                        <td class="py-5">@item.Total.ToString("N0")đ</td>
+                                    </tr>
+                                }
+                                <tr>
+                                    <th scope="row"></th>
+                                    <td class="py-5"></td>
+                                    <td class="py-5"></td>
+                                    <td class="py-5">
+                                        <p class="mb-0 text-dark py-3">Tạm tính</p>
+                                    </td>
+                                    <td class="py-5">
+                                        <div class="py-3 border-bottom border-top">
+                                            <p class="mb-0 text-dark">@cart.Subtotal.ToString("N0")đ</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row"></th>
+                                    <td class="py-5">
+                                        <p class="mb-0 text-dark py-4">Vận chuyển</p>
+                                    </td>
+                                    <td colspan="3" class="py-5">
+                                        <!-- Shipping info based on zone (Requirements 4.1, 6.1) -->
+                                        <div id="checkout-shipping-info">
+                                            @if (cart.ShippingInfo != null)
+                                            {
+                                                <div class="shipping-zone-info">
+                                                    <p class="mb-1">
+                                                        <strong>Khu vực:</strong> 
+                                                        <span id="checkout-zone-name">
+                                                            @(cart.ShippingInfo.Zone == ShippingZone.Zone1_InnerCity ? "Nội thành" : 
+                                                              cart.ShippingInfo.Zone == ShippingZone.Zone2_OuterCity ? "Ngoại thành" : "Vùng xa")
+                                                        </span>
+                                                    </p>
+                                                    @if (cart.ShippingInfo.IsFreeShipping)
+                                                    {
+                                                        <p class="mb-1 text-success" id="checkout-shipping-fee">
+                                                            <i class="fas fa-check-circle me-1"></i>Miễn phí vận chuyển
+                                                        </p>
+                                                    }
+                                                    else
+                                                    {
+                                                        <p class="mb-1" id="checkout-shipping-fee">
+                                                            <strong>Phí ship:</strong> @cart.ShippingInfo.ShippingFee.ToString("N0")đ
+                                                        </p>
+                                                    }
+                                                    @if (!string.IsNullOrEmpty(cart.ShippingInfo.Message))
+                                                    {
+                                                        @if (cart.ShippingInfo.IsFreeShipping || cart.ShippingInfo.IsReducedShipping)
+                                                        {
+                                                            <small class="text-success" id="checkout-shipping-message">
+                                                                <i class="fas fa-gift me-1"></i>@cart.ShippingInfo.Message
+                                                            </small>
+                                                        }
+                                                        else if (cart.ShippingInfo.AmountToFreeShipping > 0)
+                                                        {
+                                                            <small class="text-info" id="checkout-shipping-message">
+                                                                <i class="fas fa-info-circle me-1"></i>@cart.ShippingInfo.Message
+                                                            </small>
+                                                        }
+                                                    }
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <p class="mb-0">@cart.ShippingFee.ToString("N0")đ</p>
+                                            }
+                                        </div>
+                                        <!-- Hidden field for shipping method (for form submission) -->
+                                        <input type="hidden" asp-for="ShippingMethod" value="ZoneBased" />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row"></th>
+                                    <td class="py-5">
+                                        <p class="mb-0 text-dark text-uppercase py-3">TỔNG CỘNG</p>
+                                    </td>
+                                    <td class="py-5"></td>
+                                    <td class="py-5"></td>
+                                    <td class="py-5">
+                                        <div class="py-3 border-bottom border-top">
+                                            <p class="mb-0 text-dark" id="totalAmount">@cart.Total.ToString("N0")đ</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="row g-4 text-center align-items-center justify-content-center border-bottom py-3">
+                        <div class="col-12">
+                            <div class="form-check text-start my-3">
+                                <input type="radio" asp-for="PaymentMethod" value="BankTransfer" class="form-check-input bg-primary border-0" id="Transfer-1">
+                                <label class="form-check-label" for="Transfer-1">Chuyển khoản ngân hàng</label>
+                            </div>
+                            <p class="text-start text-dark">Thanh toán trực tiếp vào tài khoản ngân hàng của chúng tôi. Vui lòng sử dụng mã đơn hàng làm nội dung chuyển khoản.</p>
+                        </div>
+                    </div>
+                    <div class="row g-4 text-center align-items-center justify-content-center border-bottom py-3">
+                        <div class="col-12">
+                            <div class="form-check text-start my-3">
+                                <input type="radio" asp-for="PaymentMethod" value="COD" class="form-check-input bg-primary border-0" id="Delivery-1" checked>
+                                <label class="form-check-label" for="Delivery-1">Thanh toán khi nhận hàng (COD)</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row g-4 text-center align-items-center justify-content-center pt-4">
+                        <button type="submit" class="btn border-secondary py-3 px-4 text-uppercase w-100 text-primary">Đặt hàng</button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+<!-- Checkout Page End -->
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script src="~/js/addressHandler.js"></script>
+    <script>
+        $(document).ready(function() {
+            /**
+             * AddressHandler Integration for Checkout Page
+             * **Feature: checkout-address-split, Task 21.2: Tích hợp AddressHandler.js**
+             * **Validates: Requirements 5.1**
+             */
+            
+            // Initialize AddressHandler for cascading dropdowns
+            // **Validates: Requirements 1.1, 2.1, 3.1, 4.1, 5.1**
+            var addressHandler = new AddressHandler({
+                provinceSelector: '#provinceSelect',
+                districtSelector: '#districtSelect',
+                wardSelector: '#wardSelect',
+                streetAddressSelector: '#StreetAddress',
+                provinceNameSelector: '#provinceName',
+                districtNameSelector: '#districtName',
+                wardNameSelector: '#wardName',
+                apiBaseUrl: '/api/address',
+                enableSearch: true,
+                onProvinceChange: function(code, name) {
+                    // Ensure hidden field is updated when province changes
+                    $('#provinceName').val(name || '');
+                    // Clear validation errors when user makes selection
+                    // **Feature: checkout-address-split, Task 21.3: Clear validation errors**
+                    // **Validates: Requirements 4.2, 5.3**
+                    clearFieldError('province');
+                },
+                onDistrictChange: function(code, name) {
+                    // Ensure hidden field is updated when district changes
+                    $('#districtName').val(name || '');
+                    // Clear validation errors when user makes selection
+                    clearFieldError('district');
+                },
+                onWardChange: function(code, name) {
+                    // Ensure hidden field is updated when ward changes
+                    $('#wardName').val(name || '');
+                    // Clear validation errors when user makes selection
+                    clearFieldError('ward');
+                },
+                onError: function(message, error) {
+                    console.error('Address error:', message, error);
+                    // Show error toast
+                    showAddressError(message);
+                },
+                onLoad: function() {
+                    console.log('Address handler loaded successfully');
+                }
+            });
+
+            // Initialize and load provinces
+            addressHandler.init();
+
+            // Store handler for later use (accessible globally for debugging)
+            window.checkoutAddressHandler = addressHandler;
+
+            // Handle address dropdown change (for saved addresses)
+            $('#addressSelect').change(function() {
+                var selectedValue = $(this).val();
+                var selectedOption = $(this).find('option:selected');
+                
+                if (selectedValue === 'new') {
+                    // Show form for new address
+                    $('#selectedAddressDisplay').hide();
+                    $('#addressFormSection').show();
+                    $('#addressFormTitle').text('Nhập địa chỉ mới');
+                    $('#saveAddressSection').show();
+                    $('#setDefaultSection').show();
+                    
+                    // Clear form fields
+                    clearAddressForm();
+                    
+                    // Enable form fields
+                    enableAddressForm(true);
+                    
+                    // Re-initialize address handler for new address
+                    addressHandler.init();
+                } else if (selectedValue) {
+                    // Show selected address details
+                    var fullName = selectedOption.data('fullname');
+                    var phone = selectedOption.data('phone');
+                    var address = selectedOption.data('address');
+                    var provinceCode = selectedOption.data('provincecode');
+                    var provinceName = selectedOption.data('provincename');
+                    var districtCode = selectedOption.data('districtcode');
+                    var districtName = selectedOption.data('districtname');
+                    var wardCode = selectedOption.data('wardcode');
+                    var wardName = selectedOption.data('wardname');
+                    var streetAddress = selectedOption.data('streetaddress');
+                    
+                    // Display selected address
+                    $('#addressDetails').html(
+                        '<p class="mb-1"><strong>' + fullName + '</strong></p>' +
+                        '<p class="mb-1"><i class="fas fa-phone me-2"></i>' + phone + '</p>' +
+                        '<p class="mb-0"><i class="fas fa-map-marker-alt me-2"></i>' + address + '</p>'
+                    );
+                    $('#selectedAddressDisplay').show();
+                    
+                    // Hide form section
+                    $('#addressFormSection').hide();
+                    $('#saveAddressSection').hide();
+                    $('#setDefaultSection').hide();
+                    
+                    // Fill hidden fields for form submission
+                    // **Validates: Requirements 5.1 - Ensure all address data is submitted**
+                    $('#FullNameInput').val(fullName);
+                    $('#FirstName').val(fullName);
+                    $('#Mobile').val(phone);
+                    $('#ProvinceCode').val(provinceCode);
+                    $('#provinceName').val(provinceName);
+                    $('#DistrictCode').val(districtCode);
+                    $('#districtName').val(districtName);
+                    $('#WardCode').val(wardCode);
+                    $('#wardName').val(wardName);
+                    $('#StreetAddress').val(streetAddress);
+                    $('#StreetAddressInput').val(streetAddress);
+                    
+                    // Update shipping based on selected address district (Requirements 4.1, 6.1)
+                    if (districtName) {
+                        updateShippingForDistrict(districtName);
+                    }
+                } else {
+                    // No selection - show empty form
+                    $('#selectedAddressDisplay').hide();
+                    $('#addressFormSection').show();
+                    $('#addressFormTitle').text('Thông tin giao hàng');
+                    $('#saveAddressSection').hide();
+                    $('#setDefaultSection').hide();
+                    
+                    // Clear form fields
+                    clearAddressForm();
+                    
+                    // Enable form fields
+                    enableAddressForm(true);
+                    
+                    // Re-initialize address handler
+                    addressHandler.init();
+                }
+            });
+            
+            // Auto-select default address on page load
+            var defaultOption = $('#addressSelect option[selected="selected"]').first();
+            if (defaultOption.length && defaultOption.val()) {
+                $('#addressSelect').val(defaultOption.val()).trigger('change');
+            }
+            
+            // Sync full name to FirstName field
+            $('#FullNameInput').on('input', function() {
+                $('#FirstName').val($(this).val());
+            });
+            
+            // Street address input handlers
+            // **Feature: checkout-address-split, Task 21.3: Character counter and validation**
+            // **Validates: Requirements 4.1, 4.2**
+            $('#StreetAddressInput, #StreetAddress').on('input', function() {
+                var value = $(this).val();
+                var length = value ? value.length : 0;
+                
+                // Update character counter
+                updateCharCounter(length);
+                
+                // Sync both inputs
+                $('#StreetAddressInput').val(value);
+                $('#StreetAddress').val(value);
+                
+                // Clear validation error on input
+                clearFieldError('streetAddress');
+                
+                // Show warning if approaching limit
+                if (length > 200) {
+                    showFieldError('streetAddress', 'Địa chỉ không được vượt quá 200 ký tự');
+                }
+            });
+
+            // Form validation and submission handler
+            // **Feature: checkout-address-split, Task 21.3: Cập nhật validation messages**
+            // **Validates: Requirements 4.2, 5.1, 5.3**
+            $('form').on('submit', function(e) {
+                var selectedAddressId = $('#addressSelect').val();
+                
+                // If using saved address, skip validation (data already filled)
+                if (selectedAddressId && selectedAddressId !== 'new' && selectedAddressId !== '') {
+                    return true;
+                }
+                
+                // Clear all previous errors first
+                clearAllFieldErrors();
+                
+                // Validate address fields for new address
+                var validation = addressHandler.validate();
+                var addressValues = addressHandler.getAddressValues();
+                
+                // Additional validation for street address length
+                if (addressValues.streetAddress && addressValues.streetAddress.length > 200) {
+                    validation.isValid = false;
+                    validation.errors.push('Địa chỉ không được vượt quá 200 ký tự');
+                }
+                
+                if (!validation.isValid) {
+                    e.preventDefault();
+                    
+                    // Show validation summary at top of form
+                    showValidationSummary(validation.errors);
+                    
+                    // Highlight invalid fields with individual error messages
+                    highlightInvalidFields(addressValues);
+                    
+                    // Scroll to validation summary or first error
+                    var scrollTarget = $('.validation-summary').length ? 
+                        $('.validation-summary') : $('.is-invalid').first();
+                    
+                    if (scrollTarget.length) {
+                        $('html, body').animate({
+                            scrollTop: scrollTarget.offset().top - 100
+                        }, 300);
+                    }
+                    
+                    return false;
+                }
+                
+                // Ensure hidden name fields are populated before submit
+                // **Validates: Requirements 5.1 - Compose full address**
+                var addressValues = addressHandler.getAddressValues();
+                $('#provinceName').val(addressValues.provinceName);
+                $('#districtName').val(addressValues.districtName);
+                $('#wardName').val(addressValues.wardName);
+                
+                return true;
+            });
+
+            // Helper functions
+            // **Feature: checkout-address-split, Task 21.3: Cập nhật validation messages**
+            // **Validates: Requirements 4.2, 5.3**
+            
+            /**
+             * Clear all form fields and validation states
+             */
+            function clearAddressForm() {
+                $('#FullNameInput').val('');
+                $('#FirstName').val('');
+                $('#Mobile').val('');
+                $('#StreetAddressInput').val('');
+                $('#StreetAddress').val('');
+                $('#ProvinceCode').val('');
+                $('#provinceName').val('');
+                $('#DistrictCode').val('');
+                $('#districtName').val('');
+                $('#WardCode').val('');
+                $('#wardName').val('');
+                
+                // Clear validation states
+                clearAllFieldErrors();
+                
+                // Reset character counter
+                updateCharCounter(0);
+            }
+
+            /**
+             * Enable or disable address form fields
+             */
+            function enableAddressForm(enable) {
+                $('#FullNameInput').prop('readonly', !enable);
+                $('#Mobile').prop('readonly', !enable);
+                $('#StreetAddressInput').prop('readonly', !enable);
+                $('#StreetAddress').prop('readonly', !enable);
+            }
+
+            /**
+             * Show toast notification for address errors
+             */
+            function showAddressError(message) {
+                // Create toast notification for error
+                var toastHtml = '<div class="toast show address-error-toast" role="alert">' +
+                    '<div class="toast-header bg-danger text-white">' +
+                    '<i class="fa fa-exclamation-circle me-2"></i>' +
+                    '<strong class="me-auto">Lỗi</strong>' +
+                    '<button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>' +
+                    '</div>' +
+                    '<div class="toast-body">' + message + '</div>' +
+                    '</div>';
+                
+                var toastContainer = $('.toast-container');
+                if (toastContainer.length === 0) {
+                    toastContainer = $('<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;"></div>');
+                    $('body').append(toastContainer);
+                }
+                
+                var toast = $(toastHtml);
+                toastContainer.append(toast);
+                
+                // Auto-hide after 5 seconds
+                setTimeout(function() {
+                    toast.fadeOut(function() {
+                        $(this).remove();
+                    });
+                }, 5000);
+            }
+
+            /**
+             * Clear error for a specific field
+             * fieldName - Field name (province, district, ward, streetAddress)
+             */
+            function clearFieldError(fieldName) {
+                var selectors = {
+                    'province': { select: '#provinceSelect', error: '#provinceError' },
+                    'district': { select: '#districtSelect', error: '#districtError' },
+                    'ward': { select: '#wardSelect', error: '#wardError' },
+                    'streetAddress': { input: '#StreetAddressInput, #StreetAddress', error: '#streetAddressError' }
+                };
+                
+                var config = selectors[fieldName];
+                if (!config) return;
+                
+                if (config.select) {
+                    $(config.select).removeClass('is-invalid');
+                    $(config.select).closest('.address-search-wrapper').removeClass('is-invalid');
+                }
+                if (config.input) {
+                    $(config.input).removeClass('is-invalid');
+                }
+                $(config.error).hide().text('');
+            }
+
+            /**
+             * Clear all field errors
+             */
+            function clearAllFieldErrors() {
+                $('.is-invalid').removeClass('is-invalid');
+                $('.address-field-error').hide().text('');
+                $('.address-search-wrapper').removeClass('is-invalid');
+                $('.validation-summary').remove();
+            }
+
+            /**
+             * Show error for a specific field
+             * fieldName - Field name (province, district, ward, streetAddress)
+             * message - Error message
+             */
+            function showFieldError(fieldName, message) {
+                var selectors = {
+                    'province': { select: '#provinceSelect', error: '#provinceError' },
+                    'district': { select: '#districtSelect', error: '#districtError' },
+                    'ward': { select: '#wardSelect', error: '#wardError' },
+                    'streetAddress': { input: '#StreetAddressInput, #StreetAddress', error: '#streetAddressError' }
+                };
+                
+                var config = selectors[fieldName];
+                if (!config) return;
+                
+                if (config.select) {
+                    $(config.select).addClass('is-invalid');
+                    $(config.select).closest('.address-search-wrapper').addClass('is-invalid');
+                }
+                if (config.input) {
+                    $(config.input).addClass('is-invalid');
+                }
+                $(config.error).text(message).show();
+            }
+
+            /**
+             * Highlight all invalid fields based on address values
+             * values - Address values from addressHandler.getAddressValues()
+             */
+            function highlightInvalidFields(values) {
+                // Clear previous errors first
+                clearAllFieldErrors();
+                
+                // Check each field and show appropriate error
+                if (!values.provinceCode) {
+                    showFieldError('province', 'Vui lòng chọn Tỉnh/Thành phố');
+                }
+                if (!values.districtCode) {
+                    showFieldError('district', 'Vui lòng chọn Quận/Huyện');
+                }
+                if (!values.wardCode) {
+                    showFieldError('ward', 'Vui lòng chọn Phường/Xã');
+                }
+                if (!values.streetAddress) {
+                    showFieldError('streetAddress', 'Vui lòng nhập số nhà, tên đường');
+                } else if (values.streetAddress.length > 200) {
+                    showFieldError('streetAddress', 'Địa chỉ không được vượt quá 200 ký tự');
+                }
+            }
+
+            /**
+             * Update character counter for street address
+             * length - Current character count
+             */
+            function updateCharCounter(length) {
+                var counter = $('#streetAddressCounter');
+                counter.text(length + '/200 ký tự');
+                
+                // Update counter color based on length
+                counter.removeClass('warning danger');
+                if (length >= 200) {
+                    counter.addClass('danger');
+                } else if (length >= 180) {
+                    counter.addClass('warning');
+                }
+            }
+
+            /**
+             * Show validation summary at the top of the form
+             * errors - Array of error messages
+             */
+            function showValidationSummary(errors) {
+                // Remove existing summary
+                $('.validation-summary').remove();
+                
+                if (errors.length === 0) return;
+                
+                var summaryHtml = '<div class="validation-summary">' +
+                    '<strong><i class="fa fa-exclamation-triangle me-2"></i>Vui lòng kiểm tra lại các thông tin sau:</strong>' +
+                    '<ul>';
+                
+                errors.forEach(function(error) {
+                    summaryHtml += '<li>' + error + '</li>';
+                });
+                
+                summaryHtml += '</ul></div>';
+                
+                $('#addressFormSection').prepend(summaryHtml);
+            }
+
+            // Update shipping when district changes (Requirements 4.1, 6.1)
+            // This function is called when user selects a saved address or changes district
+            function updateShippingForDistrict(districtName) {
+                if (!districtName) {
+                    return;
+                }
+                
+                var subtotal = @cart.Subtotal;
+                
+                // Call API to recalculate shipping
+                $.ajax({
+                    url: '/Cart/CalculateShippingAjax',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ 
+                        subtotal: subtotal, 
+                        district: districtName 
+                    }),
+                    success: function(data) {
+                        if (data.success) {
+                            updateCheckoutShippingDisplay(data.shippingInfo);
+                            // Update total
+                            var total = subtotal + data.shippingInfo.shippingFee;
+                            $('#totalAmount').text(total.toLocaleString('vi-VN') + 'đ');
+                        }
+                    },
+                    error: function(err) {
+                        console.error('Error calculating shipping:', err);
+                    }
+                });
+            }
+            
+            // Update checkout shipping display (Requirements 5.1, 5.2, 5.3, 5.4)
+            function updateCheckoutShippingDisplay(shippingInfo) {
+                var zoneNames = {
+                    1: 'Nội thành',
+                    2: 'Ngoại thành',
+                    3: 'Vùng xa'
+                };
+                
+                var zoneName = zoneNames[shippingInfo.zone] || 'Vùng xa';
+                $('#checkout-zone-name').text(zoneName);
+                
+                var feeEl = $('#checkout-shipping-fee');
+                if (shippingInfo.isFreeShipping) {
+                    feeEl.html('<i class="fas fa-check-circle me-1"></i>Miễn phí vận chuyển');
+                    feeEl.removeClass('mb-1').addClass('mb-1 text-success');
+                } else {
+                    feeEl.html('<strong>Phí ship:</strong> ' + shippingInfo.shippingFee.toLocaleString('vi-VN') + 'đ');
+                    feeEl.removeClass('text-success').addClass('mb-1');
+                }
+                
+                var messageEl = $('#checkout-shipping-message');
+                if (shippingInfo.message) {
+                    if (!messageEl.length) {
+                        messageEl = $('<small id="checkout-shipping-message"></small>');
+                        $('#checkout-shipping-fee').after(messageEl);
+                    }
+                    
+                    if (shippingInfo.isFreeShipping || shippingInfo.isReducedShipping) {
+                        messageEl.html('<i class="fas fa-gift me-1"></i>' + shippingInfo.message);
+                        messageEl.removeClass('text-info').addClass('text-success');
+                    } else if (shippingInfo.amountToFreeShipping > 0) {
+                        messageEl.html('<i class="fas fa-info-circle me-1"></i>' + shippingInfo.message);
+                        messageEl.removeClass('text-success').addClass('text-info');
+                    }
+                    messageEl.show();
+                } else if (messageEl.length) {
+                    messageEl.hide();
+                }
+            }
+            
+            // Hook into district change from AddressHandler
+            var originalOnDistrictChange = addressHandler.options.onDistrictChange;
+            addressHandler.options.onDistrictChange = function(code, name) {
+                if (originalOnDistrictChange) {
+                    originalOnDistrictChange(code, name);
+                }
+                // Update shipping when district changes
+                if (name) {
+                    updateShippingForDistrict(name);
+                }
+            };
+        });
+    </script>
+}

@@ -1,0 +1,190 @@
+@model Fruitables.ViewModels.DashboardViewModel
+@{
+    ViewData["Title"] = "Dashboard";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminDashboardLayout.cshtml";
+}
+
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="mb-1">Dashboard</h4>
+        <p class="text-muted mb-0">Chào mừng trở lại, @User.Identity?.Name!</p>
+    </div>
+    <div>
+        <span class="badge bg-success fs-6">
+            <i class="fas fa-user-shield me-1"></i>
+            @User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value
+        </span>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="row g-4 mb-4">
+    <!-- Orders Card -->
+    <div class="col-md-6 col-xl-3">
+        <div class="admin-card p-3">
+            <div class="d-flex align-items-center">
+                <div class="flex-shrink-0">
+                    <div class="bg-primary bg-opacity-10 rounded-circle p-3">
+                        <i class="fas fa-shopping-cart text-primary fa-2x"></i>
+                    </div>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                    <h3 class="mb-0">@Model.Orders.TotalOrders</h3>
+                    <small class="text-muted">Đơn hàng</small>
+                    @if (Model.Orders.TodayOrders > 0)
+                    {
+                        <div class="mt-1">
+                            <span class="badge bg-primary">+@Model.Orders.TodayOrders hôm nay</span>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Revenue Card -->
+    <div class="col-md-6 col-xl-3">
+        <div class="admin-card p-3">
+            <div class="d-flex align-items-center">
+                <div class="flex-shrink-0">
+                    <div class="bg-success bg-opacity-10 rounded-circle p-3">
+                        <i class="fas fa-dollar-sign text-success fa-2x"></i>
+                    </div>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                    <h3 class="mb-0">@Model.Revenue.TotalRevenue.ToString("N0")</h3>
+                    <small class="text-muted">Doanh thu (VND)</small>
+                    @if (Model.Revenue.MonthlyGrowthPercent != 0)
+                    {
+                        <div class="mt-1">
+                            <span class="badge @(Model.Revenue.MonthlyGrowthPercent > 0 ? "bg-success" : "bg-danger")">
+                                @(Model.Revenue.MonthlyGrowthPercent > 0 ? "+" : "")@Model.Revenue.MonthlyGrowthPercent.ToString("N1")%
+                            </span>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Products Card -->
+    <div class="col-md-6 col-xl-3">
+        <div class="admin-card p-3">
+            <div class="d-flex align-items-center">
+                <div class="flex-shrink-0">
+                    <div class="bg-info bg-opacity-10 rounded-circle p-3">
+                        <i class="fas fa-box text-info fa-2x"></i>
+                    </div>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                    <h3 class="mb-0">@Model.Inventory.TotalProducts</h3>
+                    <small class="text-muted">Sản phẩm</small>
+                    <div class="mt-1">
+                        <span class="badge bg-success">@Model.Inventory.ActiveProducts hoạt động</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stock Alert Card -->
+    <div class="col-md-6 col-xl-3">
+        <div class="admin-card p-3">
+            <div class="d-flex align-items-center">
+                <div class="flex-shrink-0">
+                    <div class="bg-warning bg-opacity-10 rounded-circle p-3">
+                        <i class="fas fa-exclamation-triangle text-warning fa-2x"></i>
+                    </div>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                    <h3 class="mb-0">@Model.Inventory.LowStockProducts</h3>
+                    <small class="text-muted">Sắp hết hàng</small>
+                    @if (Model.Inventory.OutOfStockProducts > 0)
+                    {
+                        <div class="mt-1">
+                            <span class="badge bg-danger">@Model.Inventory.OutOfStockProducts hết hàng</span>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions & Recent Orders -->
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="admin-card h-100">
+            <div class="card-header">
+                <i class="fas fa-bolt me-2"></i>Thao tác nhanh
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a asp-action="Index" asp-controller="Settings" asp-area="Admin" class="btn btn-outline-primary">
+                        <i class="fas fa-cog me-2"></i>Cài đặt hệ thống
+                    </a>
+                    <a asp-action="Create" asp-controller="Product" asp-area="Admin" class="btn btn-outline-success">
+                        <i class="fas fa-plus me-2"></i>Thêm sản phẩm
+                    </a>
+                    <a asp-action="Index" asp-controller="Product" asp-area="Admin" class="btn btn-outline-info">
+                        <i class="fas fa-box me-2"></i>Quản lý sản phẩm
+                    </a>
+                    <a href="/" class="btn btn-outline-secondary" target="_blank">
+                        <i class="fas fa-external-link-alt me-2"></i>Xem trang chủ
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div class="admin-card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-clock me-2"></i>Đơn hàng gần đây</span>
+                <a asp-action="Index" asp-controller="Order" asp-area="Admin" class="btn btn-sm btn-primary">Xem tất cả</a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Mã đơn</th>
+                                <th>Khách hàng</th>
+                                <th>Tổng tiền</th>
+                                <th>Trạng thái</th>
+                                <th>Ngày đặt</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.RecentOrders.Any())
+                            {
+                                var vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+                                foreach (var order in Model.RecentOrders)
+                                {
+                                    var createdAtVN = TimeZoneInfo.ConvertTimeFromUtc(order.CreatedAt, vnTimeZone);
+                                    <tr>
+                                        <td>
+                                            <a asp-action="Detail" asp-controller="Order" asp-area="Admin" asp-route-id="@order.Id">
+                                                <strong>#@order.OrderNumber</strong>
+                                            </a>
+                                        </td>
+                                        <td>@order.CustomerName</td>
+                                        <td>@order.Total.ToString("N0")đ</td>
+                                        <td><span class="badge @order.StatusBadgeClass">@order.Status</span></td>
+                                        <td>@createdAtVN.ToString("dd/MM/yyyy")</td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-4">Chưa có đơn hàng nào</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

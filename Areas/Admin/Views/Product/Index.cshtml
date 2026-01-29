@@ -1,0 +1,183 @@
+@model Fruitables.ViewModels.ProductListViewModel
+@{
+    ViewData["Title"] = "Quản lý sản phẩm";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminDashboardLayout.cshtml";
+}
+
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="mb-1">Quản lý sản phẩm</h4>
+        <p class="text-muted mb-0">Quản lý sản phẩm của cửa hàng</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="Trash" class="btn btn-outline-secondary">
+            <i class="fas fa-trash me-2"></i>Thùng rác
+        </a>
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Thêm sản phẩm
+        </a>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="admin-card mb-3">
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <input type="text" id="filterSearch" value="@Model.Search" class="form-control" placeholder="Tìm kiếm sản phẩm..." />
+            </div>
+            <div class="col-md-3">
+                <select id="filterCategory" class="form-select">
+                    <option value="">-- Tất cả danh mục --</option>
+                    @foreach (var category in Model.Categories)
+                    {
+                        <option value="@category.Id" selected="@(Model.CategoryId == category.Id)">@category.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select id="filterSort" class="form-select">
+                    <option value="">Sắp xếp mặc định</option>
+                    <option value="name" selected="@(Model.SortBy == "name")">Tên A-Z</option>
+                    <option value="name_desc" selected="@(Model.SortBy == "name_desc")">Tên Z-A</option>
+                    <option value="price" selected="@(Model.SortBy == "price")">Giá thấp đến cao</option>
+                    <option value="price_desc" selected="@(Model.SortBy == "price_desc")">Giá cao đến thấp</option>
+                    <option value="newest" selected="@(Model.SortBy == "newest")">Mới nhất</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <div id="loadingIndicator" class="d-none h-100 d-flex align-items-center justify-content-center">
+                    <span class="spinner-border spinner-border-sm text-primary me-2"></span>
+                    <span class="text-muted">Đang tải...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Products List -->
+<div class="admin-card" id="productListContainer">
+    @await Html.PartialAsync("_ProductList", Model)
+</div>
+
+<!-- Soft Delete Confirmation Modal -->
+<div class="modal fade" id="softDeleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-trash-alt text-warning me-2"></i>Chuyển vào thùng rác</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Bạn có chắc chắn muốn chuyển sản phẩm <strong id="softDeleteProductName"></strong> vào thùng rác?</p>
+                <p class="text-muted mb-0"><small>Sản phẩm sẽ được chuyển vào thùng rác và có thể khôi phục.</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <form id="softDeleteForm" method="post" style="display: inline;">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-warning">Chuyển vào thùng rác</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hard Delete Confirmation Modal -->
+<div class="modal fade" id="hardDeleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="fas fa-exclamation-triangle me-2"></i>Xóa vĩnh viễn</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    <strong>Cảnh báo:</strong> Hành động này không thể hoàn tác!
+                </div>
+                <p>Bạn có chắc chắn muốn xóa vĩnh viễn sản phẩm <strong id="hardDeleteProductName"></strong>?</p>
+                <p class="text-muted mb-0"><small>Sản phẩm sẽ bị xóa hoàn toàn khỏi hệ thống nếu không có trong đơn hàng nào.</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <form id="hardDeleteForm" method="post" style="display: inline;">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-danger">Xóa vĩnh viễn</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    let debounceTimer;
+    let currentPage = 1;
+
+    function debounce(func, delay) {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(func, delay);
+    }
+
+    function loadProducts(page = 1) {
+        currentPage = page;
+        const search = document.getElementById('filterSearch').value;
+        const categoryId = document.getElementById('filterCategory').value;
+        const sortBy = document.getElementById('filterSort').value;
+
+        const params = new URLSearchParams();
+        if (search) params.append('search', search);
+        if (categoryId) params.append('categoryId', categoryId);
+        if (sortBy) params.append('sortBy', sortBy);
+        params.append('page', page);
+
+        document.getElementById('loadingIndicator').classList.remove('d-none');
+
+        fetch(`@Url.Action("Index", "Product", new { area = "Admin" })?${params.toString()}`, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(response => response.text())
+        .then(html => {
+            document.getElementById('productListContainer').innerHTML = html;
+            // Update URL without reload
+            const newUrl = `@Url.Action("Index", "Product", new { area = "Admin" })?${params.toString()}`;
+            window.history.replaceState({}, '', newUrl);
+        })
+        .catch(error => console.error('Error:', error))
+        .finally(() => {
+            document.getElementById('loadingIndicator').classList.add('d-none');
+        });
+    }
+
+    function loadPage(page) {
+        loadProducts(page);
+    }
+
+    // Real-time filter with 300ms debounce
+    document.getElementById('filterSearch').addEventListener('input', function() {
+        debounce(() => loadProducts(1), 300);
+    });
+
+    document.getElementById('filterCategory').addEventListener('change', function() {
+        loadProducts(1);
+    });
+
+    document.getElementById('filterSort').addEventListener('change', function() {
+        loadProducts(1);
+    });
+
+    function confirmSoftDelete(id, name) {
+        document.getElementById('softDeleteProductName').textContent = name;
+        document.getElementById('softDeleteForm').action = '@Url.Action("SoftDelete", "Product", new { area = "Admin" })/' + id;
+        new bootstrap.Modal(document.getElementById('softDeleteModal')).show();
+    }
+
+    function confirmHardDelete(id, name) {
+        document.getElementById('hardDeleteProductName').textContent = name;
+        document.getElementById('hardDeleteForm').action = '@Url.Action("HardDelete", "Product", new { area = "Admin" })/' + id;
+        new bootstrap.Modal(document.getElementById('hardDeleteModal')).show();
+    }
+</script>
+}

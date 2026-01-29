@@ -1,0 +1,267 @@
+@using Fruitables.Models
+@{
+    var products = ViewBag.AllProducts as List<Product> ?? new List<Product>();
+    var categories = ViewBag.Categories as List<Category> ?? new List<Category>();
+}
+
+<div class="container-fluid fruite py-5">
+    <div class="container py-5">
+        <div class="tab-class text-center">
+            <div class="row g-4">
+                <div class="col-lg-4 text-start">
+                    <h1>Sản phẩm hữu cơ</h1>
+                </div>
+                <div class="col-lg-8 text-end">
+                    <ul class="nav nav-pills d-inline-flex text-center mb-5">
+                        <li class="nav-item">
+                            <a class="d-flex m-2 py-2 bg-light rounded-pill active" data-bs-toggle="pill" href="#tab-all" data-category-name="Tất cả">
+                                <span class="text-dark" style="width: 130px;">Tất cả</span>
+                            </a>
+                        </li>
+                        @foreach (var category in categories.Take(4))
+                        {
+                            <li class="nav-item">
+                                <a class="d-flex py-2 m-2 bg-light rounded-pill" data-bs-toggle="pill" href="#tab-@category.Id" data-category-name="@category.Name">
+                                    <span class="text-dark" style="width: 130px;">@category.Name</span>
+                                </a>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+            <div class="tab-content">
+                <!-- Tab Tất cả -->
+                <div id="tab-all" class="tab-pane fade show p-0 active">
+                    <!-- Filter checkboxes -->
+                    <div class="d-flex justify-content-start align-items-center mb-3 flex-wrap gap-3">
+                        <span class="text-muted small">Lọc theo:</span>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input filter-checkbox" type="checkbox" id="filter-featured-all" data-filter="featured" data-category="all">
+                            <label class="form-check-label small" for="filter-featured-all">Nổi bật</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input filter-checkbox" type="checkbox" id="filter-sale-all" data-filter="sale" data-category="all">
+                            <label class="form-check-label small" for="filter-sale-all">Giá tốt</label>
+                        </div>
+                    </div>
+                    <!-- Active filters display -->
+                    <div class="active-filters mb-3 text-start" data-category="all" style="display: none;">
+                        <span class="text-muted small">Đang xem:</span>
+                        <span class="filter-tags"></span>
+                    </div>
+                    <div class="row g-4">
+                        <div class="col-lg-12">
+                            <div class="row g-4 products-grid" data-category="all" data-show-category-badge="true">
+                                @if (products.Any())
+                                {
+                                    @foreach (var product in products)
+                                    {
+                                        <partial name="_ProductCard" model="product" view-data='new ViewDataDictionary(ViewData) { { "ShowCategoryBadge", true } }' />
+                                    }
+                                }
+                                else
+                                {
+                                    <div class="col-12 text-center no-products">
+                                        <p>Chưa có sản phẩm.</p>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabs cho từng Category -->
+                @foreach (var category in categories.Take(4))
+                {
+                    var categoryProducts = products.Where(p => p.CategoryId == category.Id).ToList();
+                    <div id="tab-@category.Id" class="tab-pane fade show p-0">
+                        <!-- Filter checkboxes -->
+                        <div class="d-flex justify-content-start align-items-center mb-3 flex-wrap gap-3">
+                            <span class="text-muted small">Lọc theo:</span>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-featured-@category.Id" data-filter="featured" data-category="@category.Id">
+                                <label class="form-check-label small" for="filter-featured-@category.Id">Nổi bật</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-sale-@category.Id" data-filter="sale" data-category="@category.Id">
+                                <label class="form-check-label small" for="filter-sale-@category.Id">Giá tốt</label>
+                            </div>
+                        </div>
+                        <!-- Active filters display -->
+                        <div class="active-filters mb-3 text-start" data-category="@category.Id" style="display: none;">
+                            <span class="text-muted small">Đang xem:</span>
+                            <span class="filter-tags"></span>
+                        </div>
+                        <div class="row g-4">
+                            <div class="col-lg-12">
+                                <div class="row g-4 products-grid" data-category="@category.Id" data-show-category-badge="false">
+                                    @if (categoryProducts.Any())
+                                    {
+                                        @foreach (var product in categoryProducts)
+                                        {
+                                            <partial name="_ProductCard" model="product" view-data='new ViewDataDictionary(ViewData) { { "ShowCategoryBadge", false } }' />
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <div class="col-12 text-center no-products">
+                                            <p>Chưa có sản phẩm trong danh mục này.</p>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.filter-tag {
+    display: inline-flex;
+    align-items: center;
+    background-color: #81c408;
+    color: white;
+    padding: 2px 10px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    margin-left: 5px;
+}
+.filter-tag .remove-filter {
+    margin-left: 6px;
+    cursor: pointer;
+    font-weight: bold;
+}
+.filter-tag .remove-filter:hover {
+    opacity: 0.7;
+}
+.featured-ribbon {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: linear-gradient(135deg, #81c408 0%, #5a9a00 100%);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    z-index: 10;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+.category-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 10;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle filter checkbox changes
+    document.querySelectorAll('.filter-checkbox').forEach(function(checkbox) {
+        checkbox.addEventListener('change', function() {
+            var categoryId = this.getAttribute('data-category');
+            applyFilters(categoryId);
+        });
+    });
+
+    function applyFilters(categoryId) {
+        var tabPane = document.querySelector('#tab-' + categoryId) || document.querySelector('#tab-all');
+        var productsGrid = tabPane.querySelector('.products-grid');
+        var productItems = productsGrid.querySelectorAll('.product-card-wrapper');
+        var activeFiltersDiv = tabPane.querySelector('.active-filters');
+        var filterTagsSpan = activeFiltersDiv.querySelector('.filter-tags');
+        
+        // Get active filters
+        var featuredChecked = tabPane.querySelector('.filter-checkbox[data-filter="featured"]').checked;
+        var saleChecked = tabPane.querySelector('.filter-checkbox[data-filter="sale"]').checked;
+        
+        var hasVisibleProducts = false;
+        
+        productItems.forEach(function(item) {
+            var isFeatured = item.getAttribute('data-featured') === 'true';
+            var isSale = item.getAttribute('data-sale') === 'true';
+            var show = true;
+            
+            // Apply filters (AND logic)
+            if (featuredChecked && !isFeatured) show = false;
+            if (saleChecked && !isSale) show = false;
+            
+            if (show) {
+                item.style.display = '';
+                hasVisibleProducts = true;
+            } else {
+                item.style.display = 'none';
+            }
+        });
+        
+        // Update active filters display
+        updateActiveFiltersDisplay(activeFiltersDiv, filterTagsSpan, featuredChecked, saleChecked, categoryId);
+        
+        // Show/hide no products message
+        var filteredMsg = productsGrid.querySelector('.no-products-filtered');
+        if (!hasVisibleProducts) {
+            if (!filteredMsg) {
+                var msg = document.createElement('div');
+                msg.className = 'col-12 text-center no-products-filtered';
+                msg.innerHTML = '<p>Không có sản phẩm phù hợp với bộ lọc.</p>';
+                productsGrid.appendChild(msg);
+            }
+        } else {
+            if (filteredMsg) filteredMsg.remove();
+        }
+    }
+    
+    function updateActiveFiltersDisplay(container, tagsSpan, featuredChecked, saleChecked, categoryId) {
+        var tags = [];
+        
+        if (featuredChecked) {
+            tags.push('<span class="filter-tag">Nổi bật <span class="remove-filter" data-filter="featured" data-category="' + categoryId + '">×</span></span>');
+        }
+        if (saleChecked) {
+            tags.push('<span class="filter-tag">Giá tốt <span class="remove-filter" data-filter="sale" data-category="' + categoryId + '">×</span></span>');
+        }
+        
+        if (tags.length > 0) {
+            tagsSpan.innerHTML = tags.join('');
+            container.style.display = '';
+            
+            // Add click handlers for remove buttons
+            container.querySelectorAll('.remove-filter').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var filter = this.getAttribute('data-filter');
+                    var catId = this.getAttribute('data-category');
+                    var tabPane = document.querySelector('#tab-' + catId) || document.querySelector('#tab-all');
+                    var checkbox = tabPane.querySelector('.filter-checkbox[data-filter="' + filter + '"]');
+                    if (checkbox) {
+                        checkbox.checked = false;
+                        applyFilters(catId);
+                    }
+                });
+            });
+        } else {
+            container.style.display = 'none';
+        }
+    }
+    
+    // Reset filters when main tab changes
+    document.querySelectorAll('[data-bs-toggle="pill"]').forEach(function(mainTab) {
+        mainTab.addEventListener('shown.bs.tab', function() {
+            var targetId = this.getAttribute('href');
+            var targetPane = document.querySelector(targetId);
+            if (targetPane) {
+                // Reset checkboxes
+                targetPane.querySelectorAll('.filter-checkbox').forEach(function(cb) {
+                    cb.checked = false;
+                });
+                // Reset display
+                var categoryId = targetId.replace('#tab-', '');
+                applyFilters(categoryId);
+            }
+        });
+    });
+});
+</script>

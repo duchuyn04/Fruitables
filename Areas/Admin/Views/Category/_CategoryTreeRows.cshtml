@@ -1,0 +1,69 @@
+@model List<Fruitables.Models.CategoryTreeNode>
+
+@foreach (var category in Model)
+{
+    <tr data-id="@category.Id" data-parent="@category.ParentId">
+        <td>
+            <span style="padding-left: @(category.Level * 24)px">
+                @if (category.Children.Any())
+                {
+                    <i class="fas fa-folder text-warning me-2"></i>
+                }
+                else
+                {
+                    <i class="fas fa-folder-open text-muted me-2"></i>
+                }
+                @category.Name
+            </span>
+        </td>
+        <td><code>@category.Slug</code></td>
+        <td class="text-center">
+            <span class="badge bg-info">@category.ProductCount</span>
+        </td>
+        <td class="text-center">
+            @if (category.IsActive)
+            {
+                <span class="badge bg-success">Hoạt động</span>
+            }
+            else
+            {
+                <span class="badge bg-secondary">Ẩn</span>
+            }
+        </td>
+        <td class="text-center">
+            <div class="dropdown">
+                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    <i class="fas fa-ellipsis-v"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li>
+                        <a asp-action="Create" asp-route-parentId="@category.Id" class="dropdown-item">
+                            <i class="fas fa-plus me-2 text-success"></i>Thêm danh mục con
+                        </a>
+                    </li>
+                    <li>
+                        <a asp-action="Edit" asp-route-id="@category.Id" class="dropdown-item">
+                            <i class="fas fa-edit me-2 text-primary"></i>Chỉnh sửa
+                        </a>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <a href="#" class="dropdown-item" onclick="confirmSoftDelete(@category.Id, '@category.Name.Replace("'", "\\'")'); return false;">
+                            <i class="fas fa-trash-alt me-2 text-warning"></i>Chuyển vào thùng rác
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="dropdown-item text-danger" onclick="confirmHardDelete(@category.Id, '@category.Name.Replace("'", "\\'")'); return false;">
+                            <i class="fas fa-trash me-2"></i>Xóa vĩnh viễn
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </td>
+    </tr>
+    
+    @if (category.Children.Any())
+    {
+        @await Html.PartialAsync("_CategoryTreeRows", category.Children)
+    }
+}

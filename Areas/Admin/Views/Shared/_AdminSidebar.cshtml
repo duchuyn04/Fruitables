@@ -1,0 +1,115 @@
+@{
+    var controller = ViewContext.RouteData.Values["controller"]?.ToString();
+    var action = ViewContext.RouteData.Values["action"]?.ToString();
+}
+
+<!-- Brand -->
+<div class="sidebar-brand">
+    <h4>
+        <i class="fas fa-leaf text-primary me-2"></i>
+        <span class="text-white">Fruit</span><span class="text-primary">ables</span>
+    </h4>
+    <small class="text-muted">Admin Panel</small>
+</div>
+
+<!-- Menu -->
+<div class="sidebar-menu">
+    <!-- Main -->
+    <div class="sidebar-menu-title">Tổng quan</div>
+    <ul class="sidebar-nav">
+        <li class="sidebar-nav-item">
+            <a asp-action="Index" asp-controller="Dashboard" asp-area="Admin" 
+               class="sidebar-nav-link @(controller == "Dashboard" ? "active" : "")">
+                <i class="fas fa-tachometer-alt"></i>
+                <span>Dashboard</span>
+            </a>
+        </li>
+    </ul>
+
+    <!-- Thống kê -->
+    <div class="sidebar-menu-title">Thống kê</div>
+    <ul class="sidebar-nav">
+        <li class="sidebar-nav-item">
+            <a asp-action="Index" asp-controller="Revenue" asp-area="Admin" 
+               class="sidebar-nav-link @(controller == "Revenue" && action == "Index" ? "active" : "")">
+                <i class="fas fa-chart-line"></i>
+                <span>Doanh thu</span>
+            </a>
+        </li>
+        <li class="sidebar-nav-item">
+            <a asp-action="CancelledOrders" asp-controller="Revenue" asp-area="Admin" 
+               class="sidebar-nav-link @(controller == "Revenue" && action == "CancelledOrders" ? "active" : "")">
+                <i class="fas fa-times-circle"></i>
+                <span>Đơn hủy</span>
+            </a>
+        </li>
+    </ul>
+
+    <!-- Shop Management -->
+    <div class="sidebar-menu-title">Quản lý cửa hàng</div>
+    <ul class="sidebar-nav">
+        <li class="sidebar-nav-item">
+            <a asp-action="Index" asp-controller="Product" asp-area="Admin" 
+               class="sidebar-nav-link @(controller == "Product" ? "active" : "")">
+                <i class="fas fa-box"></i>
+                <span>Sản phẩm</span>
+            </a>
+        </li>
+        <li class="sidebar-nav-item">
+            <a asp-action="Index" asp-controller="Category" asp-area="Admin" 
+               class="sidebar-nav-link @(controller == "Category" ? "active" : "")">
+                <i class="fas fa-tags"></i>
+                <span>Danh mục</span>
+            </a>
+        </li>
+        <li class="sidebar-nav-item">
+            <a asp-action="Index" asp-controller="Order" asp-area="Admin" 
+               class="sidebar-nav-link @(controller == "Order" ? "active" : "")">
+                <i class="fas fa-shopping-cart"></i>
+                <span>Đơn hàng</span>
+            </a>
+        </li>
+        <li class="sidebar-nav-item">
+            <a href="#" class="sidebar-nav-link">
+                <i class="fas fa-ticket-alt"></i>
+                <span>Mã giảm giá</span>
+            </a>
+        </li>
+    </ul>
+
+    <!-- Content -->
+    <div class="sidebar-menu-title">Nội dung</div>
+    <ul class="sidebar-nav">
+        <li class="sidebar-nav-item">
+            <a href="#" class="sidebar-nav-link">
+                <i class="fas fa-star"></i>
+                <span>Đánh giá</span>
+            </a>
+        </li>
+        <li class="sidebar-nav-item">
+            <a href="#" class="sidebar-nav-link">
+                <i class="fas fa-envelope"></i>
+                <span>Liên hệ</span>
+            </a>
+        </li>
+    </ul>
+
+    <!-- System -->
+    <div class="sidebar-menu-title">Hệ thống</div>
+    <ul class="sidebar-nav">
+        <li class="sidebar-nav-item">
+            <a asp-action="Index" asp-controller="Settings" asp-area="Admin" 
+               class="sidebar-nav-link @(controller == "Settings" ? "active" : "")">
+                <i class="fas fa-cog"></i>
+                <span>Cài đặt</span>
+            </a>
+        </li>
+        <li class="sidebar-nav-item">
+            <a asp-action="Index" asp-controller="User" asp-area="Admin" 
+               class="sidebar-nav-link @(controller == "User" ? "active" : "")">
+                <i class="fas fa-users"></i>
+                <span>Người dùng</span>
+            </a>
+        </li>
+    </ul>
+</div>

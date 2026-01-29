@@ -1,0 +1,179 @@
+@model Fruitables.ViewModels.OrderListResult
+@using Fruitables.Models
+@{
+    var sortBy = ViewBag.SortBy as string ?? "CreatedAt";
+    var sortDescending = (bool)(ViewBag.SortDescending ?? true);
+}
+
+<div class="card-body p-0">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>
+                        <a href="#" onclick="sortBy('OrderNumber'); return false;" class="text-decoration-none text-dark">
+                            Mã đơn
+                            @if (sortBy == "OrderNumber")
+                            {
+                                <i class="fas @(sortDescending ? "fa-sort-down" : "fa-sort-up")"></i>
+                            }
+                        </a>
+                    </th>
+                    <th>Khách hàng</th>
+                    <th>
+                        <a href="#" onclick="sortBy('Total'); return false;" class="text-decoration-none text-dark">
+                            Tổng tiền
+                            @if (sortBy == "Total")
+                            {
+                                <i class="fas @(sortDescending ? "fa-sort-down" : "fa-sort-up")"></i>
+                            }
+                        </a>
+                    </th>
+                    <th>
+                        <a href="#" onclick="sortBy('Status'); return false;" class="text-decoration-none text-dark">
+                            Trạng thái
+                            @if (sortBy == "Status")
+                            {
+                                <i class="fas @(sortDescending ? "fa-sort-down" : "fa-sort-up")"></i>
+                            }
+                        </a>
+                    </th>
+                    <th>Thanh toán</th>
+                    <th>
+                        <a href="#" onclick="sortBy('CreatedAt'); return false;" class="text-decoration-none text-dark">
+                            Ngày tạo
+                            @if (sortBy == "CreatedAt")
+                            {
+                                <i class="fas @(sortDescending ? "fa-sort-down" : "fa-sort-up")"></i>
+                            }
+                        </a>
+                    </th>
+                    <th class="text-center">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Orders.Any())
+                {
+                    @foreach (var order in Model.Orders)
+                    {
+                        <tr>
+                            <td>
+                                <a asp-action="Detail" asp-route-id="@order.Id" class="fw-bold text-primary">
+                                    @order.OrderNumber
+                                </a>
+                            </td>
+                            <td>
+                                @if (order.User != null)
+                                {
+                                    <span>@order.User.Name</span>
+                                    <br /><small class="text-muted">@order.User.Email</small>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">Khách vãng lai</span>
+                                }
+                            </td>
+                            <td class="fw-bold">@order.Total.ToString("N0")đ</td>
+                            <td>
+                                <span class="badge @GetStatusBadgeClass(order.Status)">
+                                    @GetStatusDisplayName(order.Status)
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge @GetPaymentStatusBadgeClass(order.PaymentStatus)">
+                                    @GetPaymentStatusDisplayName(order.PaymentStatus)
+                                </span>
+                            </td>
+                            <td>@order.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td class="text-center">
+                                <a asp-action="Detail" asp-route-id="@order.Id" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="7" class="text-center py-4 text-muted">
+                            <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
+                            Không có đơn hàng nào
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Pagination -->
+@if (Model.TotalPages > 1)
+{
+    <div class="card-footer">
+        <nav>
+            <ul class="pagination justify-content-center mb-0">
+                <li class="page-item @(Model.Page <= 1 ? "disabled" : "")">
+                    <a class="page-link" href="#" onclick="loadPage(@(Model.Page - 1)); return false;">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                </li>
+                @for (int i = 1; i <= Model.TotalPages; i++)
+                {
+                    var pageNum = i;
+                    <li class="page-item @(i == Model.Page ? "active" : "")">
+                        <a class="page-link" href="#" onclick="loadPage(@pageNum); return false;">@i</a>
+                    </li>
+                }
+                <li class="page-item @(Model.Page >= Model.TotalPages ? "disabled" : "")">
+                    <a class="page-link" href="#" onclick="loadPage(@(Model.Page + 1)); return false;">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+}
+
+<!-- Hidden field for total count update -->
+<input type="hidden" id="orderTotalCount" value="@Model.TotalCount" />
+
+@functions {
+    string GetStatusDisplayName(OrderStatus orderStatus) => orderStatus switch
+    {
+        OrderStatus.Pending => "Chờ xử lý",
+        OrderStatus.Processing => "Đang xử lý",
+        OrderStatus.Shipped => "Đang giao",
+        OrderStatus.Delivered => "Đã giao",
+        OrderStatus.Cancelled => "Đã hủy",
+        OrderStatus.Returned => "Trả hàng",
+        _ => orderStatus.ToString()
+    };
+
+    string GetPaymentStatusDisplayName(PaymentStatus payStatus) => payStatus switch
+    {
+        PaymentStatus.Pending => "Chờ thanh toán",
+        PaymentStatus.Paid => "Đã thanh toán",
+        PaymentStatus.Refunded => "Đã hoàn tiền",
+        _ => payStatus.ToString()
+    };
+
+    string GetStatusBadgeClass(OrderStatus orderStatus) => orderStatus switch
+    {
+        OrderStatus.Pending => "bg-warning text-dark",
+        OrderStatus.Processing => "bg-info",
+        OrderStatus.Shipped => "bg-primary",
+        OrderStatus.Delivered => "bg-success",
+        OrderStatus.Cancelled => "bg-danger",
+        OrderStatus.Returned => "bg-secondary",
+        _ => "bg-secondary"
+    };
+
+    string GetPaymentStatusBadgeClass(PaymentStatus payStatus) => payStatus switch
+    {
+        PaymentStatus.Pending => "bg-warning text-dark",
+        PaymentStatus.Paid => "bg-success",
+        PaymentStatus.Refunded => "bg-info",
+        _ => "bg-secondary"
+    };
+}
