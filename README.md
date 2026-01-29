@@ -61,7 +61,7 @@ Fruitables là một hệ thống thương mại điện tử chuyên về bán 
 - **ViewComponent Pattern**: Tái sử dụng UI components
 
 ## Cấu Trúc Dự Án
-
+```
 Fruitables/
 │
 ├── Areas/
@@ -88,7 +88,7 @@ Fruitables/
 
 Fruitables.Tests/                 # Test project
 └── *Tests.cs                     # Unit & property tests
-
+```
 ## Modules Chính
 
 ### 1. Module Xác Thực & Phân Quyền
