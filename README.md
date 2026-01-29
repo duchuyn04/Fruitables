@@ -61,25 +61,34 @@ Fruitables là một hệ thống thương mại điện tử chuyên về bán 
 - **ViewComponent Pattern**: Tái sử dụng UI components
 
 ## Cấu Trúc Dự Án
+
 Fruitables/
+│
 ├── Areas/
-│   └── Admin/              # Admin Panel (Dashboard, Quản lý)
-│       ├── Controllers/    # Admin controllers
-│       └── Views/          # Admin views
-├── Controllers/            # Public controllers
-├── Services/               # Business logic services
-│   └── Interfaces/         # Service interfaces
-├── Repositories/           # Data access layer
-│   └── Interfaces/         # Repository interfaces
-├── Models/                 # Domain models & entities
-├── ViewModels/             # Data transfer objects cho views
-├── Data/                   # DbContext & migrations
-├── Helpers/                # Utility classes
-├── Constants/              # Application constants
-├── ViewComponents/         # Reusable UI components
-├── Views/                  # Razor views
-├── wwwroot/                # Static files (CSS, JS, images)
-└── Migrations/             # EF Core migrations
+│   └── Admin/                    # Admin Panel (Dashboard, Quản lý)
+│       ├── Controllers/          # Admin controllers
+│       └── Views/                # Admin views
+│
+├── Controllers/                  # Public controllers
+├── Services/                     # Business logic services
+│   └── Interfaces/               # Service interfaces
+│
+├── Repositories/                 # Data access layer
+│   └── Interfaces/               # Repository interfaces
+│
+├── Models/                       # Domain models & entities
+├── ViewModels/                   # Data transfer objects cho views
+├── Data/                         # DbContext & migrations
+├── Helpers/                      # Utility classes
+├── Constants/                    # Application constants
+├── ViewComponents/               # Reusable UI components
+├── Views/                        # Razor views
+├── wwwroot/                      # Static files (CSS, JS, images)
+└── Migrations/                   # EF Core migrations
+
+Fruitables.Tests/                 # Test project
+└── *Tests.cs                     # Unit & property tests
+
 ## Modules Chính
 
 ### 1. Module Xác Thực & Phân Quyền
@@ -371,13 +380,17 @@ Fruitables/
 
 1. **Clone repository**
 
+```bash
 git clone <repository-url>
 cd Fruitables
+```
 
 
 2. **Cấu hình Connection String**
 
 Chỉnh sửa `appsettings.json`:
+
+```json
 {
   "ConnectionStrings": {
     "DefaultConnection": "Server=localhost;Database=FruitablesDb;Trusted_Connection=True;TrustServerCertificate=True"
@@ -388,6 +401,8 @@ Chỉnh sửa `appsettings.json`:
 3. **Cấu hình Google OAuth (Optional)**
 
 Thêm vào `appsettings.json` hoặc User Secrets:
+
+```json
 {
   "Authentication": {
     "Google": {
@@ -399,12 +414,18 @@ Thêm vào `appsettings.json` hoặc User Secrets:
 ```
 
 4. **Chạy Migrations**
+
+```bash
 cd Fruitables
 dotnet ef database update
+```
 
 
 5. **Chạy ứng dụng**
+
+```bash
 dotnet run
+```
 
 6. **Truy cập ứng dụng**
 - Frontend: `https://localhost:5001`
