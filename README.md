@@ -293,7 +293,6 @@ Fruitables.Tests/                 # Test project
 - `ReviewModerationService`: Xử lý kiểm duyệt
 - Nâng cấp `WordMaskingService`: Thêm severity levels
 
-**Tài liệu**: `.kiro/specs/review-moderation/`
 
 ### 2. Module Quản Lý Kho & Tồn Kho
 **Trạng thái**: 💡 Ý tưởng
