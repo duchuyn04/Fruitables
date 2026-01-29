@@ -80,10 +80,6 @@ Fruitables/
 ├── Views/                  # Razor views
 ├── wwwroot/                # Static files (CSS, JS, images)
 └── Migrations/             # EF Core migrations
-
-Fruitables.Tests/           # Test project
-└── *Tests.cs               # Unit & property tests
-
 ## Modules Chính
 
 ### 1. Module Xác Thực & Phân Quyền
