@@ -50,6 +50,11 @@ public class Product
 
     public DateTime? DeletedAt { get; set; }
 
+    // Review statistics
+    [Column(TypeName = "decimal(3,2)")]
+    public decimal AverageRating { get; set; } = 0;
+    public int ReviewCount { get; set; } = 0;
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

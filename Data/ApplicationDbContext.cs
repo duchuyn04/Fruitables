@@ -20,6 +20,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<ProductImage> ProductImages => Set<ProductImage>();
     public DbSet<ProductTag> ProductTags => Set<ProductTag>();
     public DbSet<Review> Reviews => Set<Review>();
+    public DbSet<ReviewReport> ReviewReports => Set<ReviewReport>();
     public DbSet<Cart> Carts => Set<Cart>();
     public DbSet<CartItem> CartItems => Set<CartItem>();
     public DbSet<Order> Orders => Set<Order>();
@@ -269,6 +270,65 @@ public class ApplicationDbContext : DbContext
             entity.HasOne(a => a.ChangedByAdmin)
                   .WithMany()
                   .HasForeignKey(a => a.ChangedByAdminId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Review
+        modelBuilder.Entity<Review>(entity =>
+        {
+            entity.HasIndex(e => e.ProductId);
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => new { e.Status, e.IsHidden, e.IsDeleted });
+            entity.HasIndex(e => e.CreatedAt);
+            entity.HasIndex(e => e.Rating);
+            entity.HasIndex(e => new { e.ProductId, e.Status, e.IsHidden })
+                  .HasFilter("[IsDeleted] = 0");
+            
+            entity.HasOne(r => r.Product)
+                  .WithMany(p => p.Reviews)
+                  .HasForeignKey(r => r.ProductId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            
+            entity.HasOne(r => r.User)
+                  .WithMany(u => u.Reviews)
+                  .HasForeignKey(r => r.UserId)
+                  .OnDelete(DeleteBehavior.Restrict)
+                  .IsRequired();
+            
+            entity.HasOne(r => r.HiddenByAdmin)
+                  .WithMany()
+                  .HasForeignKey(r => r.HiddenByAdminId)
+                  .OnDelete(DeleteBehavior.Restrict)
+                  .IsRequired(false);
+            
+            entity.HasOne(r => r.DeletedByAdmin)
+                  .WithMany()
+                  .HasForeignKey(r => r.DeletedByAdminId)
+                  .OnDelete(DeleteBehavior.Restrict)
+                  .IsRequired(false);
+        });
+
+        // ReviewReport
+        modelBuilder.Entity<ReviewReport>(entity =>
+        {
+            entity.HasIndex(e => e.ReviewId);
+            entity.HasIndex(e => e.Status);
+            entity.HasIndex(e => e.CreatedAt);
+            entity.HasIndex(e => new { e.ReportedByUserId, e.ReviewId }).IsUnique();
+            
+            entity.HasOne(rr => rr.Review)
+                  .WithMany(r => r.Reports)
+                  .HasForeignKey(rr => rr.ReviewId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            
+            entity.HasOne(rr => rr.ReportedByUser)
+                  .WithMany()
+                  .HasForeignKey(rr => rr.ReportedByUserId)
+                  .OnDelete(DeleteBehavior.Restrict);
+            
+            entity.HasOne(rr => rr.HandledByAdmin)
+                  .WithMany()
+                  .HasForeignKey(rr => rr.HandledByAdminId)
                   .OnDelete(DeleteBehavior.Restrict);
         });
 
