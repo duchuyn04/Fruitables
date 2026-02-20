@@ -13,8 +13,10 @@ Fruitables là một hệ thống thương mại điện tử chuyên về bán 
   - Cookie-based Authentication
   - Google OAuth 2.0
   - BCrypt.Net cho mã hóa mật khẩu
+  - **RBAC (Role-Based Access Control)** với fine-grained permissions
 - **ORM**: Entity Framework Core với Code-First Migrations
 - **Dependency Injection**: Built-in ASP.NET Core DI Container
+- **Caching**: Memory Cache cho performance optimization
 
 ### Frontend
 - **Template Engine**: Razor Views (.cshtml)
@@ -91,21 +93,54 @@ Fruitables.Tests/                 # Test project
 ```
 ## Modules Chính
 
-### 1. Module Xác Thực & Phân Quyền
+### 1. Module Xác Thực & Phân Quyền (RBAC)
 **Trạng thái**: ✅ Hoàn thành
 
 **Chức năng**:
 - Đăng ký, đăng nhập với email/password
 - Đăng nhập với Google OAuth
-- Phân quyền: Customer, Admin, SuperAdmin
+- **Hệ thống RBAC (Role-Based Access Control)**:
+  - Quản lý Roles (vai trò) động
+  - Quản lý Permissions (quyền) chi tiết
+  - Gán permissions cho roles
+  - Gán roles cho users
+  - Audit log đầy đủ cho mọi thay đổi
+  - Migration từ hệ thống enum cũ sang RBAC
+  - Backward compatibility với legacy code
+- Phân quyền: Customer, Admin, SuperAdmin (có thể mở rộng)
 - Quản lý session và cookie authentication
 - Khóa/mở khóa tài khoản người dùng
+- **Diagnostics tools** để troubleshoot permission issues
 
 **Services**:
 - `AuthenticationService`: Xác thực cơ bản
 - `GoogleAuthService`: Tích hợp Google OAuth
 - `UserAuthService`: Quản lý người dùng
 - `UserManagementService`: Quản lý tài khoản (khóa/mở)
+- **`RbacService`**: Quản lý roles và permissions
+- **`MigrationService`**: Migration từ legacy sang RBAC
+
+**Models**:
+- **`Role`**: Vai trò trong hệ thống
+- **`Permission`**: Quyền cụ thể (products.create, orders.view, etc.)
+- **`UserRoleMapping`**: Mapping user-role
+- **`RolePermission`**: Mapping role-permission
+- **`RbacAuditLog`**: Audit log cho RBAC
+
+**Controllers**:
+- **`RoleController`**: Quản lý roles
+- **`PermissionController`**: Quản lý permissions
+- **`RbacAuditController`**: Xem audit logs
+- **`DiagnosticsController`**: Troubleshooting tools
+
+**Permissions mặc định**:
+- **Products**: view, create, update, delete, manage_inventory
+- **Orders**: view_all, view_own, create, update_status, cancel, refund
+- **Users**: view, create, update, lock, unlock, delete
+- **Reviews**: view, create, moderate, delete
+- **Settings**: view, update
+- **Dashboard**: view, view_statistics
+- **System**: manage, view_logs, manage_rbac
 
 ### 2. Module Quản Lý Sản Phẩm
 **Trạng thái**: ✅ Hoàn thành
@@ -419,14 +454,27 @@ cd Fruitables
 dotnet ef database update
 ```
 
+5. **Chạy RBAC Migration (Quan trọng!)**
 
-5. **Chạy ứng dụng**
+Sau khi chạy migrations, bạn cần migrate users sang hệ thống RBAC:
+
+**Option 1: Via Web UI (Recommended)**
+- Đăng nhập với tài khoản admin
+- Truy cập: `https://localhost:5001/Admin/Diagnostics/Migration`
+- Nhấn "Run Migration"
+- Đăng xuất và đăng nhập lại
+
+**Option 2: Via Diagnostics Page**
+- Truy cập: `https://localhost:5001/Admin/Diagnostics`
+- Xem system status và làm theo hướng dẫn
+
+6. **Chạy ứng dụng**
 
 ```bash
 dotnet run
 ```
 
-6. **Truy cập ứng dụng**
+7. **Truy cập ứng dụng**
 - Frontend: `https://localhost:5001`
 - Admin Panel: `https://localhost:5001/Admin`
 
@@ -456,6 +504,11 @@ dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=opencover
 
 ### Bảng Chính
 - `Users`: Người dùng (Customer/Admin/SuperAdmin)
+- **`Roles`**: Vai trò trong hệ thống RBAC
+- **`Permissions`**: Quyền cụ thể trong hệ thống
+- **`UserRoleMappings`**: Mapping user-role
+- **`RolePermissions`**: Mapping role-permission
+- **`RbacAuditLogs`**: Audit log cho RBAC
 - `Addresses`: Địa chỉ giao hàng
 - `Categories`: Danh mục sản phẩm
 - `Products`: Sản phẩm
@@ -497,6 +550,11 @@ dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=opencover
 - `GET /Admin/User`: Quản lý người dùng
 - `GET /Admin/Revenue`: Thống kê doanh thu
 - `GET /Admin/Settings`: Cấu hình hệ thống
+- **`GET /Admin/Role`**: Quản lý roles (RBAC)
+- **`GET /Admin/Permission`**: Quản lý permissions (RBAC)
+- **`GET /Admin/RbacAudit`**: Xem audit logs (RBAC)
+- **`GET /Admin/Diagnostics`**: Diagnostics & troubleshooting
+- **`GET /Admin/Diagnostics/Migration`**: RBAC migration tool
 
 ### Address API
 - `GET /api/address/provinces`: Danh sách tỉnh/thành
@@ -507,5 +565,24 @@ dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=opencover
 
 Dự án này được phát triển cho mục đích học tập và thương mại.
 
-**Phiên bản**: 1.0.0  
-**Cập nhật lần cuối**: Tháng 1, 2026
+**Phiên bản**: 2.0.0  
+**Cập nhật lần cuối**: Tháng 2, 2026
+
+---
+
+## 🆕 Changelog
+
+### Version 2.0.0 (Feb 2026)
+- ✨ **NEW**: Complete RBAC (Role-Based Access Control) system
+  - Dynamic role and permission management
+  - Fine-grained access control
+  - Audit logging for all RBAC operations
+  - Migration tool from legacy enum to RBAC
+  - Backward compatibility layer
+- 🛠️ **NEW**: Diagnostics tools for troubleshooting
+- 🔒 **IMPROVED**: Enhanced security with permission-based authorization
+- 📚 **DOCS**: Added comprehensive setup guide (SETUP.md)
+- 🧹 **CLEANUP**: Removed bin/obj from Git, added proper .gitignore
+
+### Version 1.0.0 (Jan 2026)
+- Initial release with core e-commerce features
