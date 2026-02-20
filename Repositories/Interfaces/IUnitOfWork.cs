@@ -30,5 +30,12 @@ public interface IUnitOfWork : IDisposable
     // New repository for Address
     IRepository<Address> Addresses { get; }
     
+    // RBAC repositories
+    IRepository<Role> Roles { get; }
+    IRepository<Permission> Permissions { get; }
+    IRepository<UserRoleMapping> UserRoleMappings { get; }
+    IRepository<RolePermission> RolePermissions { get; }
+    IRepository<RbacAuditLog> RbacAuditLogs { get; }
+    
     Task<int> SaveChangesAsync();
 }

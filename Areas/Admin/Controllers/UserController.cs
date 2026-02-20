@@ -3,23 +3,28 @@ using Microsoft.AspNetCore.Mvc;
 using Fruitables.Services.Interfaces;
 using Fruitables.ViewModels;
 using Fruitables.Models;
+using Fruitables.Attributes;
 using System.Security.Claims;
 
 namespace Fruitables.Areas.Admin.Controllers;
 
 /// <summary>
 /// Controller for User Management in Admin Panel
-/// Requirements: 1.1, 2.1, 3.1, 4.1, 5.1, 6.1, 7.1, 7.2
+/// Requirements: 1.1, 2.1, 3.1, 4.1, 5.1, 6.1, 7.1, 7.2, 10.5, 10.6
 /// </summary>
 [Area("Admin")]
 [Authorize(Roles = "Admin,SuperAdmin")]
 public class UserController : Controller
 {
     private readonly IUserManagementService _userManagementService;
+    private readonly IRbacService _rbacService;
 
-    public UserController(IUserManagementService userManagementService)
+    public UserController(
+        IUserManagementService userManagementService,
+        IRbacService rbacService)
     {
         _userManagementService = userManagementService;
+        _rbacService = rbacService;
     }
 
     /// <summary>
@@ -198,6 +203,160 @@ public class UserController : Controller
         }
 
         return Json(result.Data);
+    }
+
+    /// <summary>
+    /// Display role management page for a user
+    /// GET: /Admin/User/ManageRoles/{id}
+    /// Requirements: 10.5 - Manage user roles
+    /// </summary>
+    [RequirePermission("users.update")]
+    public async Task<IActionResult> ManageRoles(int id)
+    {
+        // Get user details
+        var userResult = await _userManagementService.GetCustomerDetailAsync(id);
+        if (!userResult.IsValid)
+        {
+            TempData["Error"] = userResult.ErrorMessage ?? "Không tìm thấy người dùng";
+            return RedirectToAction(nameof(Index));
+        }
+
+        // Get user's current roles
+        var userRoles = await _rbacService.GetUserRolesAsync(id);
+        
+        // Get all available roles
+        var allRoles = await _rbacService.GetAllRolesAsync(includeInactive: false);
+        
+        // Get user's effective permissions
+        var effectivePermissions = await _rbacService.GetUserPermissionsAsync(id);
+        
+        // Get permissions grouped by module for display
+        var permissionsGrouped = await _rbacService.GetPermissionsGroupedByModuleAsync();
+
+        var viewModel = new UserRoleManagementViewModel
+        {
+            UserId = id,
+            UserName = userResult.Data!.Name,
+            UserEmail = userResult.Data.Email,
+            CurrentRoles = userRoles,
+            AvailableRoles = allRoles,
+            EffectivePermissions = effectivePermissions,
+            PermissionsGroupedByModule = permissionsGrouped
+        };
+
+        return View(viewModel);
+    }
+
+    /// <summary>
+    /// API to assign a role to a user
+    /// POST: /Admin/User/AssignRole
+    /// Requirements: 10.5 - Assign role to user
+    /// </summary>
+    [HttpPost]
+    [RequirePermission("users.update")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AssignRole([FromBody] AssignRoleRequest request)
+    {
+        try
+        {
+            var adminId = GetCurrentAdminId();
+            await _rbacService.AssignRoleToUserAsync(request.UserId, request.RoleId, adminId);
+
+            return Json(new
+            {
+                success = true,
+                message = "Gán vai trò thành công"
+            });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new
+            {
+                success = false,
+                error = ex.Message
+            });
+        }
+    }
+
+    /// <summary>
+    /// API to revoke a role from a user
+    /// POST: /Admin/User/RevokeRole
+    /// Requirements: 10.5 - Revoke role from user
+    /// </summary>
+    [HttpPost]
+    [RequirePermission("users.update")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RevokeRole([FromBody] RevokeRoleRequest request)
+    {
+        try
+        {
+            var adminId = GetCurrentAdminId();
+            await _rbacService.RevokeRoleFromUserAsync(request.UserId, request.RoleId, adminId);
+
+            return Json(new
+            {
+                success = true,
+                message = "Thu hồi vai trò thành công"
+            });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new
+            {
+                success = false,
+                error = ex.Message
+            });
+        }
+    }
+
+    /// <summary>
+    /// API to get user's effective permissions
+    /// GET: /Admin/User/GetEffectivePermissions
+    /// Requirements: 10.6 - Display effective permissions
+    /// </summary>
+    [HttpGet]
+    [RequirePermission("users.update")]
+    public async Task<IActionResult> GetEffectivePermissions(int userId)
+    {
+        try
+        {
+            var permissions = await _rbacService.GetUserPermissionsAsync(userId);
+            var permissionsGrouped = await _rbacService.GetPermissionsGroupedByModuleAsync();
+            
+            // Group effective permissions by module
+            var effectiveByModule = new Dictionary<string, List<string>>();
+            foreach (var permission in permissions)
+            {
+                var parts = permission.Split('.');
+                if (parts.Length == 2)
+                {
+                    var module = parts[0];
+                    if (!effectiveByModule.ContainsKey(module))
+                    {
+                        effectiveByModule[module] = new List<string>();
+                    }
+                    effectiveByModule[module].Add(permission);
+                }
+            }
+
+            return Json(new
+            {
+                success = true,
+                data = new
+                {
+                    permissions = permissions,
+                    groupedByModule = effectiveByModule
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new
+            {
+                success = false,
+                error = ex.Message
+            });
+        }
     }
 
     #region Helper Methods

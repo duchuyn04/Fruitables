@@ -27,6 +27,13 @@ public class UnitOfWork : IUnitOfWork
     private IRepository<ProductTag>? _productTags;
     private IRepository<ProductLog>? _productLogs;
     private IRepository<Address>? _addresses;
+    
+    // RBAC repositories
+    private IRepository<Role>? _roles;
+    private IRepository<Permission>? _permissions;
+    private IRepository<UserRoleMapping>? _userRoleMappings;
+    private IRepository<RolePermission>? _rolePermissions;
+    private IRepository<RbacAuditLog>? _rbacAuditLogs;
 
     public UnitOfWork(ApplicationDbContext context)
     {
@@ -82,6 +89,22 @@ public class UnitOfWork : IUnitOfWork
     
     public IRepository<Address> Addresses => 
         _addresses ??= new Repository<Address>(_context);
+    
+    // RBAC repository properties
+    public IRepository<Role> Roles => 
+        _roles ??= new Repository<Role>(_context);
+    
+    public IRepository<Permission> Permissions => 
+        _permissions ??= new Repository<Permission>(_context);
+    
+    public IRepository<UserRoleMapping> UserRoleMappings => 
+        _userRoleMappings ??= new Repository<UserRoleMapping>(_context);
+    
+    public IRepository<RolePermission> RolePermissions => 
+        _rolePermissions ??= new Repository<RolePermission>(_context);
+    
+    public IRepository<RbacAuditLog> RbacAuditLogs => 
+        _rbacAuditLogs ??= new Repository<RbacAuditLog>(_context);
 
     public async Task<int> SaveChangesAsync()
     {

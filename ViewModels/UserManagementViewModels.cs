@@ -251,3 +251,42 @@ public class UserAccountLogViewModel
 }
 
 #endregion
+
+#region Role Management
+
+/// <summary>
+/// ViewModel for user role management page
+/// Requirements: 10.5, 10.6
+/// </summary>
+public class UserRoleManagementViewModel
+{
+    public int UserId { get; set; }
+    public string UserName { get; set; } = string.Empty;
+    public string UserEmail { get; set; } = string.Empty;
+    public List<Role> CurrentRoles { get; set; } = new();
+    public List<Role> AvailableRoles { get; set; } = new();
+    public List<string> EffectivePermissions { get; set; } = new();
+    public Dictionary<string, List<Permission>> PermissionsGroupedByModule { get; set; } = new();
+}
+
+/// <summary>
+/// Request to assign a role to a user
+/// Requirements: 10.5
+/// </summary>
+public class AssignRoleRequest
+{
+    public int UserId { get; set; }
+    public int RoleId { get; set; }
+}
+
+/// <summary>
+/// Request to revoke a role from a user
+/// Requirements: 10.5
+/// </summary>
+public class RevokeRoleRequest
+{
+    public int UserId { get; set; }
+    public int RoleId { get; set; }
+}
+
+#endregion

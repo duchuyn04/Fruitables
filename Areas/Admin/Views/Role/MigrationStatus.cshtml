@@ -1,0 +1,99 @@
+@model Fruitables.Services.Interfaces.MigrationStatus
+@{
+    ViewData["Title"] = "Trạng Thái Migration RBAC";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Trạng Thái Migration RBAC</h3>
+                </div>
+                <div class="card-body">
+                    @if (TempData["Success"] != null)
+                    {
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            @TempData["Success"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    }
+                    @if (TempData["Error"] != null)
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            @TempData["Error"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    }
+
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h5 class="card-title">Trạng Thái</h5>
+                                    <p class="card-text">
+                                        @if (Model.IsCompleted)
+                                        {
+                                            <span class="badge bg-success">Đã hoàn thành</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-warning">Chưa hoàn thành</span>
+                                        }
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h5 class="card-title">Tổng Số Người Dùng</h5>
+                                    <p class="card-text display-6">@Model.TotalUsers</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h5 class="card-title">Đã Migrate</h5>
+                                    <p class="card-text display-6">@Model.MigratedUsers</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    @if (Model.LastMigrationDate.HasValue)
+                    {
+                        <div class="alert alert-info">
+                            <strong>Lần Migration Cuối:</strong> @Model.LastMigrationDate.Value.ToString("dd/MM/yyyy HH:mm:ss")
+                        </div>
+                    }
+
+                    <div class="mt-4">
+                        @if (!Model.IsCompleted)
+                        {
+                            <form asp-action="RunMigration" method="post" onsubmit="return confirm('Bạn có chắc chắn muốn chạy migration? Thao tác này sẽ chuyển đổi tất cả người dùng sang hệ thống RBAC.');">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-play"></i> Chạy Migration
+                                </button>
+                            </form>
+                        }
+                        else
+                        {
+                            <div class="alert alert-success">
+                                <i class="fas fa-check-circle"></i> Migration đã hoàn thành. Tất cả người dùng đã được chuyển đổi sang hệ thống RBAC.
+                            </div>
+                        }
+                    </div>
+
+                    <div class="mt-4">
+                        <a asp-action="Index" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Quay Lại Danh Sách Vai Trò
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

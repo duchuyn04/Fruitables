@@ -89,4 +89,9 @@ public class User
     /// Lịch sử khóa/mở khóa tài khoản
     /// </summary>
     public virtual ICollection<UserAccountLog> AccountLogs { get; set; } = new List<UserAccountLog>();
+    
+    /// <summary>
+    /// Vai trò RBAC của người dùng
+    /// </summary>
+    public virtual ICollection<UserRoleMapping> UserRoleMappings { get; set; } = new List<UserRoleMapping>();
 }

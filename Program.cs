@@ -4,12 +4,17 @@ using Fruitables.Data;
 using Fruitables.Repositories;
 using Fruitables.Repositories.Interfaces;
 using Fruitables.Services;
-using Fruitables.Services.Interfaces; 
+using Fruitables.Services.Interfaces;
+using Fruitables.Filters;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews(options =>
+{
+    // Register RequirePermissionFilter globally
+    options.Filters.Add<RequirePermissionFilter>();
+});
 
 // Add DbContext
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -48,6 +53,10 @@ builder.Services.AddScoped<ICancelledOrdersStatisticsService, CancelledOrdersSta
 builder.Services.AddScoped<IUserManagementService, UserManagementService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IShippingService, ShippingService>();
+
+// Add RBAC Services
+builder.Services.AddScoped<IRbacService, RbacService>();
+builder.Services.AddScoped<IMigrationService, MigrationService>();
 
 // Add VietnamAddressService with HttpClient configured for 10 second timeout
 builder.Services.AddHttpClient<IVietnamAddressService, VietnamAddressService>(client =>

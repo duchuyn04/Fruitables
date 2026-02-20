@@ -230,6 +230,45 @@
                 </div>
             </div>
 
+            <!-- Role Management Section -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-user-shield me-2"></i>Quản lý vai trò</h5>
+                </div>
+                <div class="card-body">
+                    <h6 class="mb-3">Vai trò hiện tại</h6>
+                    <div id="currentRolesContainer">
+                        <div class="text-center py-2">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                <span class="visually-hidden">Đang tải...</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr class="my-3">
+                    
+                    <h6 class="mb-3">Gán vai trò mới</h6>
+                    <div id="availableRolesContainer">
+                        <div class="text-center py-2">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                <span class="visually-hidden">Đang tải...</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr class="my-3">
+                    
+                    <h6 class="mb-3"><i class="fas fa-key me-2"></i>Quyền hạn hiệu quả</h6>
+                    <div id="effectivePermissionsContainer">
+                        <div class="text-center py-2">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                <span class="visually-hidden">Đang tải...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Purchase History -->
             <div class="card">
                 <div class="card-header">
@@ -341,6 +380,9 @@
     // Load purchase history on page load
     document.addEventListener('DOMContentLoaded', function() {
         loadPurchaseHistory(1);
+        loadCurrentRoles();
+        loadAvailableRoles();
+        loadEffectivePermissions();
 
         // Initialize toasts
         const toastElList = [].slice.call(document.querySelectorAll('.toast'));
@@ -494,6 +536,117 @@
 
     function hideAccountLogs() {
         document.getElementById('accountLogsCard').classList.add('d-none');
+    }
+
+    // Role Management Functions
+    let currentUserRoles = [];
+    let allAvailableRoles = [];
+
+    function loadCurrentRoles() {
+        // We'll use a simple approach - call the controller to get role data
+        // For now, show a message that directs to the ManageRoles page
+        document.getElementById('currentRolesContainer').innerHTML = 
+            `<div class="d-flex justify-content-between align-items-center">
+                <p class="text-muted mb-0">Để quản lý vai trò, vui lòng truy cập trang quản lý vai trò</p>
+                <a href="@Url.Action("ManageRoles", "User", new { area = "Admin" })?id=${customerId}" class="btn btn-sm btn-primary">
+                    <i class="fas fa-edit me-1"></i>Quản lý vai trò
+                </a>
+            </div>`;
+    }
+
+    function loadAvailableRoles() {
+        // Hide this section since we're directing users to the ManageRoles page
+        document.getElementById('availableRolesContainer').innerHTML = 
+            '<p class="text-muted mb-0">Sử dụng trang quản lý vai trò để gán vai trò mới</p>';
+    }
+
+    function loadEffectivePermissions() {
+        fetch(`@Url.Action("GetEffectivePermissions", "User", new { area = "Admin" })?userId=${customerId}`)
+            .then(response => response.json())
+            .then(result => {
+                if (result.success && result.data) {
+                    renderEffectivePermissions(result.data);
+                } else {
+                    document.getElementById('effectivePermissionsContainer').innerHTML = 
+                        '<p class="text-danger mb-0">Không thể tải quyền hạn</p>';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('effectivePermissionsContainer').innerHTML = 
+                    '<p class="text-danger mb-0">Đã xảy ra lỗi khi tải dữ liệu</p>';
+            });
+    }
+
+    function renderEffectivePermissions(data) {
+        if (!data.permissions || data.permissions.length === 0) {
+            document.getElementById('effectivePermissionsContainer').innerHTML = 
+                '<p class="text-muted mb-0">Người dùng chưa có quyền hạn nào</p>';
+            return;
+        }
+
+        let html = '<div class="row">';
+        
+        // Group permissions by module
+        const groupedByModule = data.groupedByModule || {};
+        const modules = Object.keys(groupedByModule).sort();
+
+        if (modules.length === 0) {
+            html += '<div class="col-12"><p class="text-muted mb-0">Người dùng chưa có quyền hạn nào</p></div>';
+        } else {
+            modules.forEach(module => {
+                html += '<div class="col-md-6 mb-3">';
+                html += `<div class="border rounded p-3 h-100 bg-light">`;
+                html += `<h6 class="text-primary mb-2"><i class="fas fa-folder me-1"></i>${getModuleDisplayName(module)}</h6>`;
+                html += '<ul class="list-unstyled mb-0 small">';
+                
+                groupedByModule[module].forEach(permission => {
+                    const action = permission.split('.')[1];
+                    html += `<li class="mb-1"><i class="fas fa-check text-success me-1"></i>${getPermissionDisplayName(action)}</li>`;
+                });
+                
+                html += '</ul></div></div>';
+            });
+        }
+
+        html += '</div>';
+        document.getElementById('effectivePermissionsContainer').innerHTML = html;
+    }
+
+    function getModuleDisplayName(module) {
+        const names = {
+            'products': 'Sản phẩm',
+            'orders': 'Đơn hàng',
+            'users': 'Người dùng',
+            'reviews': 'Đánh giá',
+            'settings': 'Cài đặt',
+            'dashboard': 'Bảng điều khiển',
+            'system': 'Hệ thống'
+        };
+        return names[module] || module;
+    }
+
+    function getPermissionDisplayName(action) {
+        const names = {
+            'view': 'Xem',
+            'view_all': 'Xem tất cả',
+            'view_own': 'Xem của mình',
+            'create': 'Tạo mới',
+            'update': 'Cập nhật',
+            'delete': 'Xóa',
+            'lock': 'Khóa',
+            'unlock': 'Mở khóa',
+            'manage': 'Quản lý',
+            'manage_inventory': 'Quản lý tồn kho',
+            'update_status': 'Cập nhật trạng thái',
+            'cancel': 'Hủy',
+            'refund': 'Hoàn tiền',
+            'moderate': 'Kiểm duyệt',
+            'view_statistics': 'Xem thống kê',
+            'view_logs': 'Xem nhật ký',
+            'manage_rbac': 'Quản lý phân quyền'
+        };
+        return names[action] || action;
     }
 </script>
 }

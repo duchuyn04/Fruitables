@@ -1,6 +1,15 @@
+@using System.Security.Claims
+@inject Fruitables.Services.Interfaces.IRbacService RbacService
 @{
     var controller = ViewContext.RouteData.Values["controller"]?.ToString();
     var action = ViewContext.RouteData.Values["action"]?.ToString();
+    
+    // Get current user ID for permission checking
+    var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    var userId = int.TryParse(userIdClaim, out var id) ? id : 0;
+    
+    // Check if user has RBAC management permission
+    var hasRbacPermission = userId > 0 && await RbacService.HasPermissionAsync(userId, "system.manage_rbac");
 }
 
 <!-- Brand -->
@@ -97,6 +106,31 @@
     <!-- System -->
     <div class="sidebar-menu-title">Hệ thống</div>
     <ul class="sidebar-nav">
+        @if (hasRbacPermission)
+        {
+            <!-- Phân quyền submenu -->
+            <li class="sidebar-nav-item">
+                <a asp-action="Index" asp-controller="Role" asp-area="Admin" 
+                   class="sidebar-nav-link @(controller == "Role" ? "active" : "")">
+                    <i class="fas fa-user-tag"></i>
+                    <span>Vai trò</span>
+                </a>
+            </li>
+            <li class="sidebar-nav-item">
+                <a asp-action="Index" asp-controller="Permission" asp-area="Admin" 
+                   class="sidebar-nav-link @(controller == "Permission" ? "active" : "")">
+                    <i class="fas fa-key"></i>
+                    <span>Quyền hạn</span>
+                </a>
+            </li>
+            <li class="sidebar-nav-item">
+                <a asp-action="Index" asp-controller="RbacAudit" asp-area="Admin" 
+                   class="sidebar-nav-link @(controller == "RbacAudit" ? "active" : "")">
+                    <i class="fas fa-history"></i>
+                    <span>Nhật ký</span>
+                </a>
+            </li>
+        }
         <li class="sidebar-nav-item">
             <a asp-action="Index" asp-controller="Settings" asp-area="Admin" 
                class="sidebar-nav-link @(controller == "Settings" ? "active" : "")">

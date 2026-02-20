@@ -35,6 +35,13 @@ public class ApplicationDbContext : DbContext
     public DbSet<OrderStatusAuditLog> OrderStatusAuditLogs => Set<OrderStatusAuditLog>();
     public DbSet<AuditLogAttachment> AuditLogAttachments => Set<AuditLogAttachment>();
     public DbSet<UserAccountLog> UserAccountLogs => Set<UserAccountLog>();
+    
+    // RBAC
+    public DbSet<Role> Roles => Set<Role>();
+    public DbSet<Permission> Permissions => Set<Permission>();
+    public DbSet<UserRoleMapping> UserRoleMappings => Set<UserRoleMapping>();
+    public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
+    public DbSet<RbacAuditLog> RbacAuditLogs => Set<RbacAuditLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -191,6 +198,78 @@ public class ApplicationDbContext : DbContext
                   .WithMany()
                   .HasForeignKey(u => u.LockedByAdminId)
                   .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        // Role
+        modelBuilder.Entity<Role>(entity =>
+        {
+            entity.HasIndex(e => e.Name).IsUnique();
+        });
+
+        // Permission
+        modelBuilder.Entity<Permission>(entity =>
+        {
+            entity.HasIndex(e => e.Name).IsUnique();
+            entity.HasIndex(e => e.Module);
+        });
+
+        // UserRoleMapping
+        modelBuilder.Entity<UserRoleMapping>(entity =>
+        {
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => e.RoleId);
+            entity.HasIndex(e => new { e.UserId, e.RoleId }).IsUnique();
+            
+            entity.HasOne(ur => ur.User)
+                  .WithMany(u => u.UserRoleMappings)
+                  .HasForeignKey(ur => ur.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            
+            entity.HasOne(ur => ur.Role)
+                  .WithMany(r => r.UserRoleMappings)
+                  .HasForeignKey(ur => ur.RoleId)
+                  .OnDelete(DeleteBehavior.Restrict);
+            
+            entity.HasOne(ur => ur.AssignedByAdmin)
+                  .WithMany()
+                  .HasForeignKey(ur => ur.AssignedByAdminId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // RolePermission
+        modelBuilder.Entity<RolePermission>(entity =>
+        {
+            entity.HasIndex(e => e.RoleId);
+            entity.HasIndex(e => e.PermissionId);
+            entity.HasIndex(e => new { e.RoleId, e.PermissionId }).IsUnique();
+            
+            entity.HasOne(rp => rp.Role)
+                  .WithMany(r => r.RolePermissions)
+                  .HasForeignKey(rp => rp.RoleId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            
+            entity.HasOne(rp => rp.Permission)
+                  .WithMany(p => p.RolePermissions)
+                  .HasForeignKey(rp => rp.PermissionId)
+                  .OnDelete(DeleteBehavior.Restrict);
+            
+            entity.HasOne(rp => rp.AssignedByAdmin)
+                  .WithMany()
+                  .HasForeignKey(rp => rp.AssignedByAdminId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // RbacAuditLog
+        modelBuilder.Entity<RbacAuditLog>(entity =>
+        {
+            entity.HasIndex(e => new { e.EntityType, e.EntityId });
+            entity.HasIndex(e => e.ChangedAt);
+            entity.HasIndex(e => e.ChangedByAdminId);
+            
+            entity.HasOne(a => a.ChangedByAdmin)
+                  .WithMany()
+                  .HasForeignKey(a => a.ChangedByAdminId)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Seed Admin User
