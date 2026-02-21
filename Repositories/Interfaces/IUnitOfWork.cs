@@ -11,6 +11,8 @@ public interface IUnitOfWork : IDisposable
     IRepository<OrderItem> OrderItems { get; }
     IRepository<Setting> Settings { get; }
     IRepository<Review> Reviews { get; }
+    IReviewRepository ReviewRepository { get; }
+    IReviewReportRepository ReviewReports { get; }
     IRepository<ContactMessage> Contacts { get; }
     IRepository<Testimonial> Testimonials { get; }
     IRepository<User> Users { get; }
