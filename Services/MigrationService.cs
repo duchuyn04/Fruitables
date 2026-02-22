@@ -283,8 +283,12 @@ public class MigrationService : IMigrationService
                 // Reviews module
                 new Permission { Name = "reviews.view", Description = "View reviews", Module = "reviews" },
                 new Permission { Name = "reviews.create", Description = "Create reviews", Module = "reviews" },
+                new Permission { Name = "reviews.edit_own", Description = "Edit own reviews", Module = "reviews" },
+                new Permission { Name = "reviews.delete_own", Description = "Delete own reviews", Module = "reviews" },
                 new Permission { Name = "reviews.moderate", Description = "Moderate reviews", Module = "reviews" },
                 new Permission { Name = "reviews.delete", Description = "Delete reviews", Module = "reviews" },
+                new Permission { Name = "reviews.view_reports", Description = "View review reports", Module = "reviews" },
+                new Permission { Name = "reviews.view_statistics", Description = "View review statistics", Module = "reviews" },
                 
                 // Settings module
                 new Permission { Name = "settings.view", Description = "View settings", Module = "settings" },
@@ -348,7 +352,10 @@ public class MigrationService : IMigrationService
                 "products.view",
                 "orders.view_own",
                 "orders.create",
-                "reviews.create"
+                "reviews.view",
+                "reviews.create",
+                "reviews.edit_own",
+                "reviews.delete_own"
             };
 
             await AssignPermissionsToRole(customerRole.Id, customerPermissions, permissionDict);

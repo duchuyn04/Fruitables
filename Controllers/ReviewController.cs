@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using Fruitables.Attributes;
 using Fruitables.Services.Interfaces;
 using Fruitables.ViewModels;
 
@@ -23,6 +24,7 @@ public class ReviewController : Controller
     /// </summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequirePermission("reviews.create")]
     public async Task<IActionResult> Create([FromBody] CreateReviewDto dto)
     {
         try
@@ -54,6 +56,7 @@ public class ReviewController : Controller
     /// </summary>
     [HttpPut("{id}")]
     [ValidateAntiForgeryToken]
+    [RequirePermission("reviews.edit_own")]
     public async Task<IActionResult> Edit(int id, [FromBody] UpdateReviewDto dto)
     {
         try
@@ -85,6 +88,7 @@ public class ReviewController : Controller
     /// </summary>
     [HttpDelete("{id}")]
     [ValidateAntiForgeryToken]
+    [RequirePermission("reviews.delete_own")]
     public async Task<IActionResult> Delete(int id)
     {
         try
@@ -111,6 +115,7 @@ public class ReviewController : Controller
     /// </summary>
     [HttpPost("{id}/report")]
     [ValidateAntiForgeryToken]
+    [RequirePermission("reviews.view")]
     public async Task<IActionResult> Report(int id, [FromBody] ReportReviewDto dto)
     {
         try
@@ -142,6 +147,7 @@ public class ReviewController : Controller
     /// </summary>
     [HttpPost("{id}/helpful")]
     [ValidateAntiForgeryToken]
+    [RequirePermission("reviews.view")]
     public async Task<IActionResult> MarkHelpful(int id)
     {
         try
@@ -167,6 +173,7 @@ public class ReviewController : Controller
     /// Kiểm tra user có thể review sản phẩm không
     /// </summary>
     [HttpGet("can-review/{productId}")]
+    [RequirePermission("reviews.view")]
     public async Task<IActionResult> CanReview(int productId)
     {
         try

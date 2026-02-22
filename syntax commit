@@ -10,8 +10,6 @@ type: Là loại thay đổi. Chỉ cần tập trung vào các phần chính sa
 
 subject: Là tiêu đề, mô tả ngắn gọn (dưới 50 chữ) cái bạn đã làm. Viết kiểu câu mệnh lệnh (ra lệnh) ở thì hiện tại.
 
-Lưu ý: Mỗi công ty có thể mỗi khác nhưng về cơ bản thì nó vẫn kiểu như vậy
-
 Ví dụ:
 fix: Correct login logic for admin user
 feat: Add Google login button to homepage
