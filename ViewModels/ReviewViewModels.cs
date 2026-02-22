@@ -69,6 +69,13 @@ public class ReviewStatistics
     public decimal AverageRating { get; set; }
     public Dictionary<int, int> RatingDistribution { get; set; } = new();
     public Dictionary<int, decimal> RatingPercentages { get; set; } = new();
+    
+    // Individual star counts for easier access in views
+    public int FiveStarCount => RatingDistribution.ContainsKey(5) ? RatingDistribution[5] : 0;
+    public int FourStarCount => RatingDistribution.ContainsKey(4) ? RatingDistribution[4] : 0;
+    public int ThreeStarCount => RatingDistribution.ContainsKey(3) ? RatingDistribution[3] : 0;
+    public int TwoStarCount => RatingDistribution.ContainsKey(2) ? RatingDistribution[2] : 0;
+    public int OneStarCount => RatingDistribution.ContainsKey(1) ? RatingDistribution[1] : 0;
 }
 
 /// <summary>
@@ -91,7 +98,8 @@ public class ReviewAdminStatistics
     public int ReviewsThisWeek { get; set; }
     public int ReviewsThisMonth { get; set; }
     
-    public List<TopReviewedProduct> TopReviewedProducts { get; set; } = new();
+    public Dictionary<int, int> RatingDistribution { get; set; } = new();
+    public List<TopReviewedProduct> MostReviewedProducts { get; set; } = new();
     public List<TopRatedProduct> TopRatedProducts { get; set; } = new();
 }
 
@@ -100,6 +108,7 @@ public class TopReviewedProduct
     public int ProductId { get; set; }
     public string ProductName { get; set; } = string.Empty;
     public int ReviewCount { get; set; }
+    public decimal AverageRating { get; set; }
 }
 
 public class TopRatedProduct
@@ -189,11 +198,12 @@ public class ReviewReportViewModel
     public string ReviewComment { get; set; } = string.Empty;
     public int ReviewRating { get; set; }
     public string ReviewUserName { get; set; } = string.Empty;
+    public string ReviewProductName { get; set; } = string.Empty;
     public int ProductId { get; set; }
     public string ProductName { get; set; } = string.Empty;
     
     public int ReportedByUserId { get; set; }
-    public string ReportedByUserName { get; set; } = string.Empty;
+    public string ReporterName { get; set; } = string.Empty;
     public ReportReason Reason { get; set; }
     public string? Description { get; set; }
     

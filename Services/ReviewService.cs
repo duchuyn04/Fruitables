@@ -574,10 +574,11 @@ public class ReviewService : IReviewService
                 ReviewComment = rr.Review.Comment ?? "",
                 ReviewRating = rr.Review.Rating,
                 ReviewUserName = rr.Review.User.Name,
+                ReviewProductName = rr.Review.Product.Name,
                 ProductId = rr.Review.ProductId,
                 ProductName = rr.Review.Product.Name,
                 ReportedByUserId = rr.ReportedByUserId,
-                ReportedByUserName = rr.ReportedByUser.Name,
+                ReporterName = rr.ReportedByUser.Name,
                 Reason = rr.Reason,
                 Description = rr.Description,
                 Status = rr.Status,
@@ -675,10 +676,11 @@ public class ReviewService : IReviewService
                 {
                     ProductId = p.Id,
                     ProductName = p.Name,
-                    ReviewCount = p.ReviewCount
+                    ReviewCount = p.ReviewCount,
+                    AverageRating = p.AverageRating
                 })
                 .ToListAsync();
-            stats.TopReviewedProducts = topReviewed;
+            stats.MostReviewedProducts = topReviewed;
 
             // Top rated products
             var topRated = await _unitOfWork.Products

@@ -1,4 +1,5 @@
 @model PagedResult<ReviewReportViewModel>
+@using Fruitables.Models
 @{
     ViewData["Title"] = "Báo cáo đánh giá";
 }
@@ -103,9 +104,6 @@
                                             {
                                                 case ReportReason.Spam:
                                                     <text>Spam</text>
-                                                    break;
-                                                case ReportReason.Inappropriate:
-                                                    <text>Không phù hợp</text>
                                                     break;
                                                 case ReportReason.Offensive:
                                                     <text>Xúc phạm</text>

@@ -155,4 +155,8 @@ public class PagedResult<T>
     public int TotalPages => (int)Math.Ceiling((double)TotalCount / PageSize);
     public bool HasPreviousPage => Page > 1;
     public bool HasNextPage => Page < TotalPages;
+    
+    // Aliases for compatibility
+    public List<T> Data => Items;
+    public int CurrentPage => Page;
 }
