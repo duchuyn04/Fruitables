@@ -1,0 +1,100 @@
+@model Fruitables.ViewModels.ReviewViewModel
+
+<div class="review-item mb-4 p-3 border rounded">
+    <div class="d-flex">
+        <!-- User Avatar -->
+        <div class="review-avatar me-3">
+            @if (!string.IsNullOrEmpty(Model.UserAvatar) && !Model.UserAvatar.Contains("default-avatar"))
+            {
+                <img src="@Model.UserAvatar" class="rounded-circle" style="width: 60px; height: 60px; object-fit: cover;" alt="@Model.UserName">
+            }
+            else
+            {
+                <img src="/img/default-avatar.svg" class="rounded-circle" style="width: 60px; height: 60px; background-color: #e4e6eb;" alt="@Model.UserName">
+            }
+        </div>
+
+        <!-- Review Content -->
+        <div class="review-content flex-grow-1">
+            <!-- Header: Name, Date, Rating -->
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                    <h6 class="mb-0">@Model.UserName</h6>
+                    <small class="text-muted">@Model.CreatedAt.ToString("dd/MM/yyyy HH:mm")</small>
+                    @if (Model.IsVerifiedPurchase)
+                    {
+                        <span class="badge bg-success ms-2" title="Đã mua hàng">
+                            <i class="fa fa-check-circle"></i> Đã mua hàng
+                        </span>
+                    }
+                </div>
+                <div class="review-rating">
+                    @for (int i = 0; i < 5; i++)
+                    {
+                        <i class="fa fa-star @(i < Model.Rating ? "text-warning" : "text-muted")"></i>
+                    }
+                </div>
+            </div>
+
+            <!-- Comment -->
+            <p class="review-comment mb-2">@Model.Comment</p>
+
+            <!-- Updated indicator -->
+            @if (Model.UpdatedAt.HasValue && Model.UpdatedAt.Value != Model.CreatedAt)
+            {
+                <small class="text-muted fst-italic">Đã chỉnh sửa: @Model.UpdatedAt.Value.ToString("dd/MM/yyyy HH:mm")</small>
+            }
+
+            <!-- Action Buttons -->
+            <div class="review-actions mt-3 d-flex gap-2">
+                <!-- Helpful Button -->
+                <button type="button" class="btn btn-sm btn-outline-secondary helpful-btn" data-review-id="@Model.Id">
+                    <i class="fa fa-thumbs-up"></i> Hữu ích (@Model.HelpfulCount)
+                </button>
+
+                <!-- Report Button (for other users) -->
+                @if (!Model.IsOwner)
+                {
+                    <button type="button" class="btn btn-sm btn-outline-danger report-btn" data-review-id="@Model.Id" data-bs-toggle="modal" data-bs-target="#reportReviewModal">
+                        <i class="fa fa-flag"></i> Báo cáo
+                    </button>
+                }
+
+                <!-- Edit/Delete Buttons (for owner) -->
+                @if (Model.IsOwner)
+                {
+                    <button type="button" class="btn btn-sm btn-outline-primary edit-review-btn" data-review-id="@Model.Id" data-rating="@Model.Rating" data-comment="@Model.Comment">
+                        <i class="fa fa-edit"></i> Sửa
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-danger delete-review-btn" data-review-id="@Model.Id">
+                        <i class="fa fa-trash"></i> Xóa
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.review-item {
+    background: #fff;
+    transition: box-shadow 0.3s ease;
+}
+
+.review-item:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.review-comment {
+    line-height: 1.6;
+    color: #333;
+}
+
+.review-rating i {
+    font-size: 0.9rem;
+}
+
+.review-actions .btn {
+    font-size: 0.85rem;
+}
+</style>

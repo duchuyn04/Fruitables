@@ -1,64 +1,146 @@
-@using Fruitables.Models
+@using Fruitables.ViewModels
+@model int
+
 @{
-    var product = Model as Product;
-    var reviews = product?.Reviews?.ToList() ?? new List<Review>();
+    // This will be populated by the controller
+    var statistics = ViewBag.ReviewStatistics as ReviewStatistics;
+    var reviews = ViewBag.Reviews as PagedResult<ReviewViewModel>;
+    var canReview = ViewBag.CanReview as bool? ?? false;
+    var isAuthenticated = User.Identity?.IsAuthenticated ?? false;
 }
 
-@if (reviews.Any())
+<!-- Review Statistics Section -->
+@if (statistics != null && statistics.TotalReviews > 0)
 {
-    @foreach (var review in reviews)
-    {
-        <div class="d-flex mb-4">
-            @if (!string.IsNullOrEmpty(review.User?.Avatar) && !review.User.Avatar.Contains("default-avatar"))
-            {
-                <img src="@review.User.Avatar" class="img-fluid rounded-circle p-3" style="width: 100px; height: 100px; object-fit: cover;" alt="@review.User?.Name">
-            }
-            else
-            {
-                <img src="/img/default-avatar.svg" class="img-fluid rounded-circle p-3" style="width: 100px; height: 100px; background-color: #e4e6eb;" alt="@review.User?.Name">
-            }
-            <div class="">
-                <p class="mb-2" style="font-size: 14px;">@review.CreatedAt.ToString("MMMM dd, yyyy")</p>
-                <div class="d-flex justify-content-between">
-                    <h5>@review.User?.Name</h5>
-                    <div class="d-flex mb-3">
-                        @for (int i = 0; i < 5; i++)
-                        {
-                            <i class="fa fa-star @(i < review.Rating ? "text-secondary" : "")"></i>
-                        }
-                    </div>
+    <div class="review-statistics mb-4 p-4 bg-light rounded">
+        <div class="row">
+            <div class="col-md-4 text-center border-end">
+                <h2 class="display-4 mb-0">@statistics.AverageRating.ToString("F1")</h2>
+                <div class="mb-2">
+                    @for (int i = 0; i < 5; i++)
+                    {
+                        <i class="fa fa-star @(i < Math.Round(statistics.AverageRating) ? "text-warning" : "text-muted")"></i>
+                    }
                 </div>
-                <p>@review.Comment</p>
+                <p class="text-muted mb-0">@statistics.TotalReviews đánh giá</p>
             </div>
+            <div class="col-md-8">
+                <h6 class="mb-3">Phân bố đánh giá</h6>
+                @for (int star = 5; star >= 1; star--)
+                {
+                    var count = star == 5 ? statistics.FiveStarCount :
+                                star == 4 ? statistics.FourStarCount :
+                                star == 3 ? statistics.ThreeStarCount :
+                                star == 2 ? statistics.TwoStarCount :
+                                statistics.OneStarCount;
+                    var percentage = statistics.TotalReviews > 0 ? (count * 100.0 / statistics.TotalReviews) : 0;
+                    
+                    <div class="d-flex align-items-center mb-2">
+                        <span class="me-2" style="width: 60px;">@star <i class="fa fa-star text-warning"></i></span>
+                        <div class="progress flex-grow-1 me-2" style="height: 8px;">
+                            <div class="progress-bar bg-warning" role="progressbar" style="width: @percentage%" aria-valuenow="@percentage" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <span class="text-muted" style="width: 50px;">@count</span>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Write Review Button -->
+@if (isAuthenticated)
+{
+    @if (canReview)
+    {
+        <div class="mb-4">
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#writeReviewModal">
+                <i class="fa fa-edit"></i> Viết đánh giá
+            </button>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-info mb-4">
+            <i class="fa fa-info-circle"></i> Bạn đã đánh giá sản phẩm này hoặc chưa mua hàng.
         </div>
     }
 }
 else
 {
-    <div class="text-center py-4">
-        <p>No reviews yet. Be the first to review this product!</p>
+    <div class="alert alert-warning mb-4">
+        <i class="fa fa-sign-in"></i> Vui lòng <a asp-controller="Account" asp-action="Login" asp-route-returnUrl="@Context.Request.Path">đăng nhập</a> để viết đánh giá.
     </div>
 }
 
-<!-- Review Form (for logged in users) -->
-<div class="mt-4">
-    <h5>Leave a Review</h5>
-    <form asp-controller="Shop" asp-action="AddReview" method="post">
-        <input type="hidden" name="productId" value="@product?.Id" />
-        <div class="mb-3">
-            <label class="form-label">Rating</label>
-            <select name="rating" class="form-select" style="width: 100px;">
-                <option value="5">5 Stars</option>
-                <option value="4">4 Stars</option>
-                <option value="3">3 Stars</option>
-                <option value="2">2 Stars</option>
-                <option value="1">1 Star</option>
-            </select>
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Comment</label>
-            <textarea name="comment" class="form-control" rows="3" placeholder="Write your review..."></textarea>
-        </div>
-        <button type="submit" class="btn btn-primary">Submit Review</button>
-    </form>
-</div>
+<!-- Sort and Filter -->
+@if (reviews != null && reviews.Items.Any())
+{
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">Tất cả đánh giá (@reviews.TotalCount)</h5>
+        <select class="form-select" style="width: 200px;" id="reviewSort" onchange="sortReviews(this.value)">
+            <option value="newest">Mới nhất</option>
+            <option value="oldest">Cũ nhất</option>
+            <option value="highest">Đánh giá cao nhất</option>
+            <option value="lowest">Đánh giá thấp nhất</option>
+            <option value="helpful">Hữu ích nhất</option>
+        </select>
+    </div>
+
+    <!-- Reviews List -->
+    <div id="reviewsList">
+        @foreach (var review in reviews.Items)
+        {
+            <partial name="_ReviewItem" model="review" />
+        }
+    </div>
+
+    <!-- Pagination -->
+    @if (reviews.TotalPages > 1)
+    {
+        <nav aria-label="Review pagination" class="mt-4">
+            <ul class="pagination justify-content-center">
+                <li class="page-item @(reviews.CurrentPage == 1 ? "disabled" : "")">
+                    <a class="page-link" href="?page=@(reviews.CurrentPage - 1)" aria-label="Previous">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+                @for (int i = 1; i <= reviews.TotalPages; i++)
+                {
+                    <li class="page-item @(i == reviews.CurrentPage ? "active" : "")">
+                        <a class="page-link" href="?page=@i">@i</a>
+                    </li>
+                }
+                <li class="page-item @(reviews.CurrentPage == reviews.TotalPages ? "disabled" : "")">
+                    <a class="page-link" href="?page=@(reviews.CurrentPage + 1)" aria-label="Next">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    }
+}
+else
+{
+    <div class="text-center py-5">
+        <i class="fa fa-comments fa-3x text-muted mb-3"></i>
+        <p class="text-muted">Chưa có đánh giá nào. Hãy là người đầu tiên đánh giá sản phẩm này!</p>
+    </div>
+}
+
+<!-- Include Modals -->
+<partial name="_WriteReviewModal" model="Model" />
+<partial name="_ReportReviewModal" />
+
+@section Scripts {
+    <script src="~/js/review.js"></script>
+}
+
+<script>
+function sortReviews(sortBy) {
+    const url = new URL(window.location.href);
+    url.searchParams.set('sortBy', sortBy);
+    url.searchParams.set('page', '1');
+    window.location.href = url.toString();
+}
+</script>

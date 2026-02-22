@@ -1,0 +1,141 @@
+<!-- Report Review Modal -->
+<div class="modal fade" id="reportReviewModal" tabindex="-1" aria-labelledby="reportReviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="reportReviewModalLabel">Báo cáo đánh giá</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="reportForm">
+                    <input type="hidden" id="reportReviewId" name="reviewId" value="" />
+                    
+                    <!-- Reason Selection -->
+                    <div class="mb-3">
+                        <label class="form-label">Lý do báo cáo <span class="text-danger">*</span></label>
+                        <select class="form-select" id="reportReason" name="reason" required>
+                            <option value="">-- Chọn lý do --</option>
+                            <option value="0">Spam hoặc quảng cáo</option>
+                            <option value="1">Ngôn từ không phù hợp</option>
+                            <option value="2">Nội dung sai sự thật</option>
+                            <option value="3">Đánh giá giả mạo</option>
+                            <option value="4">Lý do khác</option>
+                        </select>
+                        <div class="invalid-feedback">Vui lòng chọn lý do báo cáo</div>
+                    </div>
+
+                    <!-- Description -->
+                    <div class="mb-3">
+                        <label for="reportDescription" class="form-label">Mô tả chi tiết (tùy chọn)</label>
+                        <textarea class="form-control" id="reportDescription" name="description" rows="3" 
+                                  placeholder="Cung cấp thêm thông tin về báo cáo của bạn..." 
+                                  maxlength="500"></textarea>
+                        <small class="text-muted">Tối đa 500 ký tự</small>
+                    </div>
+
+                    <!-- Alert for errors -->
+                    <div class="alert alert-danger d-none" id="reportError" role="alert"></div>
+                    
+                    <!-- Alert for success -->
+                    <div class="alert alert-success d-none" id="reportSuccess" role="alert"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-danger" id="submitReportBtn">
+                    <span class="btn-text">Gửi báo cáo</span>
+                    <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('reportReviewModal');
+    const form = document.getElementById('reportForm');
+    const submitBtn = document.getElementById('submitReportBtn');
+    const reportError = document.getElementById('reportError');
+    const reportSuccess = document.getElementById('reportSuccess');
+
+    // Set review ID when report button is clicked
+    document.querySelectorAll('.report-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const reviewId = this.getAttribute('data-review-id');
+            document.getElementById('reportReviewId').value = reviewId;
+        });
+    });
+
+    // Reset form when modal is closed
+    modal.addEventListener('hidden.bs.modal', function() {
+        form.reset();
+        reportError.classList.add('d-none');
+        reportSuccess.classList.add('d-none');
+        form.classList.remove('was-validated');
+    });
+
+    // Submit report
+    submitBtn.addEventListener('click', async function() {
+        // Validate form
+        if (!form.checkValidity()) {
+            form.classList.add('was-validated');
+            return;
+        }
+
+        const reviewId = document.getElementById('reportReviewId').value;
+        const reason = document.getElementById('reportReason').value;
+        const description = document.getElementById('reportDescription').value.trim();
+
+        if (!reviewId || !reason) {
+            reportError.textContent = 'Vui lòng điền đầy đủ thông tin';
+            reportError.classList.remove('d-none');
+            return;
+        }
+
+        // Disable button and show loading
+        submitBtn.disabled = true;
+        submitBtn.querySelector('.btn-text').textContent = 'Đang gửi...';
+        submitBtn.querySelector('.spinner-border').classList.remove('d-none');
+        reportError.classList.add('d-none');
+
+        try {
+            const response = await fetch(`/Review/${reviewId}/report`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value
+                },
+                body: JSON.stringify({
+                    reason: parseInt(reason),
+                    description: description
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                reportSuccess.textContent = result.message || 'Báo cáo đã được gửi thành công!';
+                reportSuccess.classList.remove('d-none');
+                
+                // Close modal after 1.5 seconds
+                setTimeout(() => {
+                    bootstrap.Modal.getInstance(modal).hide();
+                }, 1500);
+            } else {
+                reportError.textContent = result.message || 'Có lỗi xảy ra. Vui lòng thử lại.';
+                reportError.classList.remove('d-none');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            reportError.textContent = 'Có lỗi xảy ra. Vui lòng thử lại.';
+            reportError.classList.remove('d-none');
+        } finally {
+            // Re-enable button
+            submitBtn.disabled = false;
+            submitBtn.querySelector('.btn-text').textContent = 'Gửi báo cáo';
+            submitBtn.querySelector('.spinner-border').classList.add('d-none');
+        }
+    });
+});
+</script>

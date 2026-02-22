@@ -1,0 +1,228 @@
+@model int
+
+<!-- Write Review Modal -->
+<div class="modal fade" id="writeReviewModal" tabindex="-1" aria-labelledby="writeReviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="writeReviewModalLabel">Viết đánh giá</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="reviewForm">
+                    <input type="hidden" id="productId" name="productId" value="@Model" />
+                    <input type="hidden" id="reviewId" name="reviewId" value="" />
+                    
+                    <!-- Rating Selection -->
+                    <div class="mb-3">
+                        <label class="form-label">Đánh giá của bạn <span class="text-danger">*</span></label>
+                        <div class="star-rating">
+                            <input type="radio" id="star5" name="rating" value="5" required />
+                            <label for="star5" title="5 sao"><i class="fa fa-star"></i></label>
+                            
+                            <input type="radio" id="star4" name="rating" value="4" />
+                            <label for="star4" title="4 sao"><i class="fa fa-star"></i></label>
+                            
+                            <input type="radio" id="star3" name="rating" value="3" />
+                            <label for="star3" title="3 sao"><i class="fa fa-star"></i></label>
+                            
+                            <input type="radio" id="star2" name="rating" value="2" />
+                            <label for="star2" title="2 sao"><i class="fa fa-star"></i></label>
+                            
+                            <input type="radio" id="star1" name="rating" value="1" />
+                            <label for="star1" title="1 sao"><i class="fa fa-star"></i></label>
+                        </div>
+                        <div class="invalid-feedback" id="ratingError">Vui lòng chọn số sao</div>
+                    </div>
+
+                    <!-- Comment -->
+                    <div class="mb-3">
+                        <label for="comment" class="form-label">Nhận xét <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="comment" name="comment" rows="4" 
+                                  placeholder="Chia sẻ trải nghiệm của bạn về sản phẩm này..." 
+                                  required minlength="10" maxlength="1000"></textarea>
+                        <div class="d-flex justify-content-between mt-1">
+                            <small class="text-muted">Tối thiểu 10 ký tự</small>
+                            <small class="text-muted"><span id="charCount">0</span>/1000</small>
+                        </div>
+                        <div class="invalid-feedback" id="commentError">Nhận xét phải có ít nhất 10 ký tự</div>
+                    </div>
+
+                    <!-- Alert for errors -->
+                    <div class="alert alert-danger d-none" id="reviewError" role="alert"></div>
+                    
+                    <!-- Alert for success -->
+                    <div class="alert alert-success d-none" id="reviewSuccess" role="alert"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-primary" id="submitReviewBtn">
+                    <span class="btn-text">Gửi đánh giá</span>
+                    <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Star Rating Styles */
+.star-rating {
+    display: flex;
+    flex-direction: row-reverse;
+    justify-content: flex-end;
+    gap: 5px;
+}
+
+.star-rating input[type="radio"] {
+    display: none;
+}
+
+.star-rating label {
+    cursor: pointer;
+    font-size: 2rem;
+    color: #ddd;
+    transition: color 0.2s ease;
+}
+
+.star-rating label:hover,
+.star-rating label:hover ~ label,
+.star-rating input[type="radio"]:checked ~ label {
+    color: #ffc107;
+}
+
+.star-rating label:hover {
+    transform: scale(1.1);
+}
+
+/* Character counter */
+#charCount {
+    font-weight: 600;
+}
+
+/* Button loading state */
+#submitReviewBtn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('writeReviewModal');
+    const form = document.getElementById('reviewForm');
+    const commentField = document.getElementById('comment');
+    const charCount = document.getElementById('charCount');
+    const submitBtn = document.getElementById('submitReviewBtn');
+    const reviewError = document.getElementById('reviewError');
+    const reviewSuccess = document.getElementById('reviewSuccess');
+
+    // Character counter
+    commentField.addEventListener('input', function() {
+        charCount.textContent = this.value.length;
+    });
+
+    // Reset form when modal is closed
+    modal.addEventListener('hidden.bs.modal', function() {
+        form.reset();
+        charCount.textContent = '0';
+        reviewError.classList.add('d-none');
+        reviewSuccess.classList.add('d-none');
+        document.getElementById('reviewId').value = '';
+        document.getElementById('writeReviewModalLabel').textContent = 'Viết đánh giá';
+        
+        // Reset validation states
+        form.classList.remove('was-validated');
+        document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+    });
+
+    // Submit review
+    submitBtn.addEventListener('click', async function() {
+        // Validate form
+        if (!form.checkValidity()) {
+            form.classList.add('was-validated');
+            return;
+        }
+
+        const rating = form.querySelector('input[name="rating"]:checked');
+        if (!rating) {
+            document.getElementById('ratingError').style.display = 'block';
+            return;
+        }
+
+        const comment = commentField.value.trim();
+        if (comment.length < 10) {
+            commentField.classList.add('is-invalid');
+            return;
+        }
+
+        // Disable button and show loading
+        submitBtn.disabled = true;
+        submitBtn.querySelector('.btn-text').textContent = 'Đang gửi...';
+        submitBtn.querySelector('.spinner-border').classList.remove('d-none');
+        reviewError.classList.add('d-none');
+
+        const reviewId = document.getElementById('reviewId').value;
+        const isEdit = reviewId !== '';
+        const url = isEdit ? `/Review/Edit/${reviewId}` : '/Review/Create';
+        const method = isEdit ? 'PUT' : 'POST';
+
+        try {
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value
+                },
+                body: JSON.stringify({
+                    productId: parseInt(document.getElementById('productId').value),
+                    rating: parseInt(rating.value),
+                    comment: comment
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                reviewSuccess.textContent = result.message || 'Đánh giá đã được gửi thành công!';
+                reviewSuccess.classList.remove('d-none');
+                
+                // Reload page after 1.5 seconds
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                reviewError.textContent = result.message || 'Có lỗi xảy ra. Vui lòng thử lại.';
+                reviewError.classList.remove('d-none');
+                
+                // Re-enable button
+                submitBtn.disabled = false;
+                submitBtn.querySelector('.btn-text').textContent = isEdit ? 'Cập nhật' : 'Gửi đánh giá';
+                submitBtn.querySelector('.spinner-border').classList.add('d-none');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            reviewError.textContent = 'Có lỗi xảy ra. Vui lòng thử lại.';
+            reviewError.classList.remove('d-none');
+            
+            // Re-enable button
+            submitBtn.disabled = false;
+            submitBtn.querySelector('.btn-text').textContent = isEdit ? 'Cập nhật' : 'Gửi đánh giá';
+            submitBtn.querySelector('.spinner-border').classList.add('d-none');
+        }
+    });
+});
+
+// Function to open modal for editing
+function openEditReviewModal(reviewId, rating, comment) {
+    document.getElementById('reviewId').value = reviewId;
+    document.getElementById('writeReviewModalLabel').textContent = 'Chỉnh sửa đánh giá';
+    document.getElementById(`star${rating}`).checked = true;
+    document.getElementById('comment').value = comment;
+    document.getElementById('charCount').textContent = comment.length;
+    
+    const modal = new bootstrap.Modal(document.getElementById('writeReviewModal'));
+    modal.show();
+}
+</script>
