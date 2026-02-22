@@ -89,12 +89,36 @@
     <!-- Content -->
     <div class="sidebar-menu-title">Nội dung</div>
     <ul class="sidebar-nav">
-        <li class="sidebar-nav-item">
-            <a href="#" class="sidebar-nav-link">
-                <i class="fas fa-star"></i>
-                <span>Đánh giá</span>
-            </a>
-        </li>
+        @if (userId > 0 && await RbacService.HasPermissionAsync(userId, "reviews.view"))
+        {
+            <li class="sidebar-nav-item">
+                <a asp-action="Index" asp-controller="ReviewAdmin" asp-area="Admin" 
+                   class="sidebar-nav-link @(controller == "ReviewAdmin" && action == "Index" ? "active" : "")">
+                    <i class="fas fa-star"></i>
+                    <span>Quản lý đánh giá</span>
+                </a>
+            </li>
+        }
+        @if (userId > 0 && await RbacService.HasPermissionAsync(userId, "reviews.view_reports"))
+        {
+            <li class="sidebar-nav-item">
+                <a asp-action="Reports" asp-controller="ReviewAdmin" asp-area="Admin" 
+                   class="sidebar-nav-link @(controller == "ReviewAdmin" && action == "Reports" ? "active" : "")">
+                    <i class="fas fa-flag"></i>
+                    <span>Báo cáo đánh giá</span>
+                </a>
+            </li>
+        }
+        @if (userId > 0 && await RbacService.HasPermissionAsync(userId, "reviews.view_statistics"))
+        {
+            <li class="sidebar-nav-item">
+                <a asp-action="Statistics" asp-controller="ReviewAdmin" asp-area="Admin" 
+                   class="sidebar-nav-link @(controller == "ReviewAdmin" && action == "Statistics" ? "active" : "")">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Thống kê đánh giá</span>
+                </a>
+            </li>
+        }
         <li class="sidebar-nav-item">
             <a href="#" class="sidebar-nav-link">
                 <i class="fas fa-envelope"></i>

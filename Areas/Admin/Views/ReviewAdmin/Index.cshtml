@@ -1,0 +1,271 @@
+@model PagedResult<ReviewAdminViewModel>
+@{
+    ViewData["Title"] = "Quản lý đánh giá";
+}
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2 class="mb-0">Quản lý đánh giá</h2>
+            <p class="text-muted">Xem và quản lý tất cả đánh giá sản phẩm</p>
+        </div>
+    </div>
+
+    <!-- Filter Form -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" asp-action="Index" id="filterForm">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Tìm kiếm</label>
+                        <input type="text" name="SearchTerm" class="form-control" placeholder="Tên sản phẩm, người dùng..." value="@Model.Data?.FirstOrDefault()?.SearchTerm">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Trạng thái</label>
+                        <select name="Status" class="form-select">
+                            <option value="">Tất cả</option>
+                            <option value="Pending">Chờ duyệt</option>
+                            <option value="Approved">Đã duyệt</option>
+                            <option value="Rejected">Từ chối</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Hiển thị</label>
+                        <select name="IsHidden" class="form-select">
+                            <option value="">Tất cả</option>
+                            <option value="false">Hiện</option>
+                            <option value="true">Ẩn</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Đánh giá</label>
+                        <select name="Rating" class="form-select">
+                            <option value="">Tất cả</option>
+                            <option value="5">5 sao</option>
+                            <option value="4">4 sao</option>
+                            <option value="3">3 sao</option>
+                            <option value="2">2 sao</option>
+                            <option value="1">1 sao</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Sắp xếp</label>
+                        <select name="SortBy" class="form-select">
+                            <option value="Newest">Mới nhất</option>
+                            <option value="Oldest">Cũ nhất</option>
+                            <option value="HighestRating">Đánh giá cao</option>
+                            <option value="LowestRating">Đánh giá thấp</option>
+                            <option value="MostReported">Nhiều báo cáo</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search"></i> Tìm kiếm
+                        </button>
+                        <a href="@Url.Action("Index")" class="btn btn-secondary">
+                            <i class="fas fa-redo"></i> Đặt lại
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Reviews List -->
+    <div class="card">
+        <div class="card-body">
+            @if (Model.Data != null && Model.Data.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th style="width: 5%">
+                                    <input type="checkbox" id="selectAll">
+                                </th>
+                                <th style="width: 25%">Sản phẩm</th>
+                                <th style="width: 15%">Người dùng</th>
+                                <th style="width: 10%">Đánh giá</th>
+                                <th style="width: 10%">Trạng thái</th>
+                                <th style="width: 10%">Báo cáo</th>
+                                <th style="width: 15%">Ngày tạo</th>
+                                <th style="width: 10%">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var review in Model.Data)
+                            {
+                                <tr>
+                                    <td>
+                                        <input type="checkbox" class="review-checkbox" value="@review.Id">
+                                    </td>
+                                    <td>
+                                        <strong>@review.ProductName</strong>
+                                        @if (!string.IsNullOrEmpty(review.Comment))
+                                        {
+                                            <br>
+                                            <small class="text-muted">@(review.Comment.Length > 100 ? review.Comment.Substring(0, 100) + "..." : review.Comment)</small>
+                                        }
+                                    </td>
+                                    <td>
+                                        @review.UserName
+                                        @if (review.IsVerifiedPurchase)
+                                        {
+                                            <br><span class="badge bg-success"><i class="fas fa-check"></i> Đã mua</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="text-warning">
+                                            @for (int i = 1; i <= 5; i++)
+                                            {
+                                                <i class="fas fa-star@(i <= review.Rating ? "" : "-o")"></i>
+                                            }
+                                        </div>
+                                    </td>
+                                    <td>
+                                        @if (review.IsDeleted)
+                                        {
+                                            <span class="badge bg-danger">Đã xóa</span>
+                                        }
+                                        else if (review.IsHidden)
+                                        {
+                                            <span class="badge bg-warning">Ẩn</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-success">Hiện</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (review.ReportCount > 0)
+                                        {
+                                            <span class="badge bg-danger">@review.ReportCount báo cáo</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <small>@review.CreatedAt.ToString("dd/MM/yyyy HH:mm")</small>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            @if (!review.IsDeleted)
+                                            {
+                                                @if (review.IsHidden)
+                                                {
+                                                    <button type="button" class="btn btn-success btn-show" data-id="@review.Id" title="Hiện">
+                                                        <i class="fas fa-eye"></i>
+                                                    </button>
+                                                }
+                                                else
+                                                {
+                                                    <button type="button" class="btn btn-warning btn-hide" data-id="@review.Id" title="Ẩn">
+                                                        <i class="fas fa-eye-slash"></i>
+                                                    </button>
+                                                }
+                                                <button type="button" class="btn btn-danger btn-delete" data-id="@review.Id" title="Xóa">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                @if (Model.TotalPages > 1)
+                {
+                    <nav aria-label="Page navigation" class="mt-3">
+                        <ul class="pagination justify-content-center">
+                            <li class="page-item @(Model.CurrentPage == 1 ? "disabled" : "")">
+                                <a class="page-link" href="?page=@(Model.CurrentPage - 1)">Trước</a>
+                            </li>
+                            @for (int i = 1; i <= Model.TotalPages; i++)
+                            {
+                                <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
+                                    <a class="page-link" href="?page=@i">@i</a>
+                                </li>
+                            }
+                            <li class="page-item @(Model.CurrentPage == Model.TotalPages ? "disabled" : "")">
+                                <a class="page-link" href="?page=@(Model.CurrentPage + 1)">Sau</a>
+                            </li>
+                        </ul>
+                    </nav>
+                }
+
+                <div class="text-center text-muted mt-2">
+                    Hiển thị @((Model.CurrentPage - 1) * Model.PageSize + 1) - @Math.Min(Model.CurrentPage * Model.PageSize, Model.TotalCount) trong tổng số @Model.TotalCount đánh giá
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-5">
+                    <i class="fas fa-star fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">Không có đánh giá nào</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Hide Modal -->
+<div class="modal fade" id="hideModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Ẩn đánh giá</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="hideForm">
+                    <input type="hidden" id="hideReviewId">
+                    <div class="mb-3">
+                        <label class="form-label">Lý do ẩn <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="hideReason" rows="3" required></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-warning" id="confirmHide">Ẩn đánh giá</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Xóa đánh giá</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="deleteForm">
+                    <input type="hidden" id="deleteReviewId">
+                    <p class="text-danger"><i class="fas fa-exclamation-triangle"></i> Hành động này không thể hoàn tác!</p>
+                    <div class="mb-3">
+                        <label class="form-label">Lý do xóa <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="deleteReason" rows="3" required></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-danger" id="confirmDelete">Xóa đánh giá</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/reviewAdmin.js"></script>
+}

@@ -1,0 +1,202 @@
+@model ReviewAdminStatistics
+@{
+    ViewData["Title"] = "Thống kê đánh giá";
+}
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2 class="mb-0">Thống kê đánh giá</h2>
+            <p class="text-muted">Tổng quan về đánh giá sản phẩm</p>
+        </div>
+    </div>
+
+    <!-- Overview Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 text-white-50">Tổng đánh giá</h6>
+                            <h2 class="card-title mb-0">@Model.TotalReviews</h2>
+                        </div>
+                        <div>
+                            <i class="fas fa-star fa-3x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 text-white-50">Đã duyệt</h6>
+                            <h2 class="card-title mb-0">@Model.ApprovedReviews</h2>
+                        </div>
+                        <div>
+                            <i class="fas fa-check-circle fa-3x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 text-white-50">Chờ duyệt</h6>
+                            <h2 class="card-title mb-0">@Model.PendingReviews</h2>
+                        </div>
+                        <div>
+                            <i class="fas fa-clock fa-3x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 text-white-50">Báo cáo chờ xử lý</h6>
+                            <h2 class="card-title mb-0">@Model.PendingReports</h2>
+                        </div>
+                        <div>
+                            <i class="fas fa-flag fa-3x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rating Distribution -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Phân bố đánh giá</h5>
+                </div>
+                <div class="card-body">
+                    @{
+                        var maxCount = Model.RatingDistribution?.Values.Max() ?? 1;
+                    }
+                    @for (int i = 5; i >= 1; i--)
+                    {
+                        var count = Model.RatingDistribution?.ContainsKey(i) == true ? Model.RatingDistribution[i] : 0;
+                        var percentage = Model.TotalReviews > 0 ? (count * 100.0 / Model.TotalReviews) : 0;
+                        var barWidth = maxCount > 0 ? (count * 100.0 / maxCount) : 0;
+                        
+                        <div class="mb-3">
+                            <div class="d-flex align-items-center mb-1">
+                                <span class="me-2" style="width: 60px;">@i <i class="fas fa-star text-warning"></i></span>
+                                <div class="progress flex-grow-1" style="height: 20px;">
+                                    <div class="progress-bar bg-warning" role="progressbar" style="width: @barWidth%" aria-valuenow="@count" aria-valuemin="0" aria-valuemax="@maxCount"></div>
+                                </div>
+                                <span class="ms-2" style="width: 100px;">@count (@percentage.ToString("F1")%)</span>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Đánh giá trung bình</h5>
+                </div>
+                <div class="card-body text-center">
+                    <h1 class="display-1 text-warning mb-3">@Model.AverageRating.ToString("F1")</h1>
+                    <div class="mb-3">
+                        @for (int i = 1; i <= 5; i++)
+                        {
+                            <i class="fas fa-star@(i <= Math.Round(Model.AverageRating) ? "" : "-o") fa-2x text-warning"></i>
+                        }
+                    </div>
+                    <p class="text-muted">Dựa trên @Model.TotalReviews đánh giá</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Products -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Sản phẩm được đánh giá cao nhất</h5>
+                </div>
+                <div class="card-body">
+                    @if (Model.TopRatedProducts != null && Model.TopRatedProducts.Any())
+                    {
+                        <div class="list-group list-group-flush">
+                            @foreach (var product in Model.TopRatedProducts)
+                            {
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>@product.ProductName</strong>
+                                        <br>
+                                        <small class="text-warning">
+                                            @for (int i = 1; i <= 5; i++)
+                                            {
+                                                <i class="fas fa-star@(i <= Math.Round(product.AverageRating) ? "" : "-o")"></i>
+                                            }
+                                            @product.AverageRating.ToString("F1")
+                                        </small>
+                                    </div>
+                                    <span class="badge bg-primary rounded-pill">@product.ReviewCount đánh giá</span>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted text-center">Chưa có dữ liệu</p>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Sản phẩm có nhiều đánh giá nhất</h5>
+                </div>
+                <div class="card-body">
+                    @if (Model.MostReviewedProducts != null && Model.MostReviewedProducts.Any())
+                    {
+                        <div class="list-group list-group-flush">
+                            @foreach (var product in Model.MostReviewedProducts)
+                            {
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>@product.ProductName</strong>
+                                        <br>
+                                        <small class="text-warning">
+                                            @for (int i = 1; i <= 5; i++)
+                                            {
+                                                <i class="fas fa-star@(i <= Math.Round(product.AverageRating) ? "" : "-o")"></i>
+                                            }
+                                            @product.AverageRating.ToString("F1")
+                                        </small>
+                                    </div>
+                                    <span class="badge bg-primary rounded-pill">@product.ReviewCount đánh giá</span>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted text-center">Chưa có dữ liệu</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

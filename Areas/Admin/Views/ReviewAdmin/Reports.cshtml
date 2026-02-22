@@ -1,0 +1,199 @@
+@model PagedResult<ReviewReportViewModel>
+@{
+    ViewData["Title"] = "Báo cáo đánh giá";
+}
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2 class="mb-0">Báo cáo đánh giá</h2>
+            <p class="text-muted">Xem và xử lý các báo cáo từ người dùng</p>
+        </div>
+    </div>
+
+    <!-- Filter Form -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" asp-action="Reports">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Trạng thái</label>
+                        <select name="Status" class="form-select">
+                            <option value="">Tất cả</option>
+                            <option value="Pending">Chờ xử lý</option>
+                            <option value="Resolved">Đã xử lý</option>
+                            <option value="Dismissed">Đã bỏ qua</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Lý do</label>
+                        <select name="Reason" class="form-select">
+                            <option value="">Tất cả</option>
+                            <option value="Spam">Spam</option>
+                            <option value="Inappropriate">Không phù hợp</option>
+                            <option value="Offensive">Xúc phạm</option>
+                            <option value="Fake">Giả mạo</option>
+                            <option value="Other">Khác</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Sắp xếp</label>
+                        <select name="SortBy" class="form-select">
+                            <option value="Newest">Mới nhất</option>
+                            <option value="Oldest">Cũ nhất</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search"></i> Tìm kiếm
+                        </button>
+                        <a href="@Url.Action("Reports")" class="btn btn-secondary">
+                            <i class="fas fa-redo"></i> Đặt lại
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Reports List -->
+    <div class="card">
+        <div class="card-body">
+            @if (Model.Data != null && Model.Data.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th style="width: 20%">Đánh giá</th>
+                                <th style="width: 15%">Người báo cáo</th>
+                                <th style="width: 15%">Lý do</th>
+                                <th style="width: 25%">Mô tả</th>
+                                <th style="width: 10%">Trạng thái</th>
+                                <th style="width: 10%">Ngày báo cáo</th>
+                                <th style="width: 5%">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var report in Model.Data)
+                            {
+                                <tr>
+                                    <td>
+                                        <strong>@report.ReviewProductName</strong>
+                                        <br>
+                                        <small class="text-muted">
+                                            @for (int i = 1; i <= 5; i++)
+                                            {
+                                                <i class="fas fa-star@(i <= report.ReviewRating ? "" : "-o") text-warning"></i>
+                                            }
+                                            bởi @report.ReviewUserName
+                                        </small>
+                                        @if (!string.IsNullOrEmpty(report.ReviewComment))
+                                        {
+                                            <br>
+                                            <small class="text-muted fst-italic">"@(report.ReviewComment.Length > 50 ? report.ReviewComment.Substring(0, 50) + "..." : report.ReviewComment)"</small>
+                                        }
+                                    </td>
+                                    <td>@report.ReporterName</td>
+                                    <td>
+                                        <span class="badge bg-secondary">
+                                            @switch (report.Reason)
+                                            {
+                                                case ReportReason.Spam:
+                                                    <text>Spam</text>
+                                                    break;
+                                                case ReportReason.Inappropriate:
+                                                    <text>Không phù hợp</text>
+                                                    break;
+                                                case ReportReason.Offensive:
+                                                    <text>Xúc phạm</text>
+                                                    break;
+                                                case ReportReason.Fake:
+                                                    <text>Giả mạo</text>
+                                                    break;
+                                                default:
+                                                    <text>Khác</text>
+                                                    break;
+                                            }
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <small>@(string.IsNullOrEmpty(report.Description) ? "-" : (report.Description.Length > 80 ? report.Description.Substring(0, 80) + "..." : report.Description))</small>
+                                    </td>
+                                    <td>
+                                        @switch (report.Status)
+                                        {
+                                            case ReportStatus.Pending:
+                                                <span class="badge bg-warning">Chờ xử lý</span>
+                                                break;
+                                            case ReportStatus.Resolved:
+                                                <span class="badge bg-success">Đã xử lý</span>
+                                                break;
+                                            case ReportStatus.Dismissed:
+                                                <span class="badge bg-secondary">Đã bỏ qua</span>
+                                                break;
+                                        }
+                                    </td>
+                                    <td>
+                                        <small>@report.CreatedAt.ToString("dd/MM/yyyy HH:mm")</small>
+                                    </td>
+                                    <td>
+                                        @if (report.Status == ReportStatus.Pending)
+                                        {
+                                            <div class="btn-group btn-group-sm">
+                                                <button type="button" class="btn btn-success btn-resolve" data-id="@report.Id" title="Xử lý">
+                                                    <i class="fas fa-check"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-secondary btn-dismiss" data-id="@report.Id" title="Bỏ qua">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </div>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                @if (Model.TotalPages > 1)
+                {
+                    <nav aria-label="Page navigation" class="mt-3">
+                        <ul class="pagination justify-content-center">
+                            <li class="page-item @(Model.CurrentPage == 1 ? "disabled" : "")">
+                                <a class="page-link" href="?page=@(Model.CurrentPage - 1)">Trước</a>
+                            </li>
+                            @for (int i = 1; i <= Model.TotalPages; i++)
+                            {
+                                <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
+                                    <a class="page-link" href="?page=@i">@i</a>
+                                </li>
+                            }
+                            <li class="page-item @(Model.CurrentPage == Model.TotalPages ? "disabled" : "")">
+                                <a class="page-link" href="?page=@(Model.CurrentPage + 1)">Sau</a>
+                            </li>
+                        </ul>
+                    </nav>
+                }
+
+                <div class="text-center text-muted mt-2">
+                    Hiển thị @((Model.CurrentPage - 1) * Model.PageSize + 1) - @Math.Min(Model.CurrentPage * Model.PageSize, Model.TotalCount) trong tổng số @Model.TotalCount báo cáo
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-5">
+                    <i class="fas fa-flag fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">Không có báo cáo nào</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/reviewAdmin.js"></script>
+}
