@@ -246,19 +246,91 @@ Fruitables.Tests/                 # Test project
 - `LockType`: Enum loại khóa
 - `ViolationTypes`: Enum loại vi phạm
 
-### 7. Module Đánh Giá & Testimonials
-**Trạng thái**: ✅ Hoàn thành (Cơ bản)
+### 7. Module Đánh Giá Sản Phẩm (Product Comments)
+**Trạng thái**: ✅ Hoàn thành
 
-**Chức năng**:
-- Khách hàng đánh giá sản phẩm (rating + comment)
-- Hiển thị đánh giá trên trang sản phẩm
-- Quản lý testimonials
-- Che từ ngữ không phù hợp (word masking)
+**Chức năng Customer**:
+- Đánh giá sản phẩm với rating (1-5 sao) và comment
+- Chỉnh sửa đánh giá trong 24h sau khi tạo
+- Xóa đánh giá của chính mình
+- Đánh dấu đánh giá hữu ích (helpful)
+- Báo cáo đánh giá vi phạm với lý do cụ thể
+- Badge "Đã mua hàng" cho verified purchase
+- Giới hạn 5 đánh giá/ngày/user (rate limiting)
+- Lọc từ ngữ không phù hợp tự động
+
+**Chức năng Admin**:
+- Xem tất cả đánh giá với lọc và tìm kiếm
+- Ẩn/hiện đánh giá với lý do
+- Xóa đánh giá vi phạm (soft delete)
+- Quản lý báo cáo vi phạm (resolve/dismiss)
+- Thống kê đánh giá:
+  - Tổng quan (total, approved, pending, hidden)
+  - Phân bố rating (1-5 sao)
+  - Top sản phẩm được đánh giá cao
+  - Sản phẩm có nhiều đánh giá nhất
+- Audit logging đầy đủ cho mọi hành động admin
 
 **Services**:
-- `ReviewService`: Quản lý đánh giá
+- `ReviewService`: Quản lý đánh giá (CRUD, moderation, statistics)
+- `WordMaskingService`: Lọc từ ngữ không phù hợp
 - `TestimonialService`: Quản lý testimonials
-- `WordMaskingService`: Lọc từ ngữ
+
+**Models**:
+- `Review`: Đánh giá sản phẩm với status, visibility
+- `ReviewReport`: Báo cáo vi phạm
+- `ReviewStatus`: Enum (Pending/Approved/Rejected)
+- `ReportReason`: Enum (Spam/Offensive/Fake/Other)
+- `ReportStatus`: Enum (Pending/Resolved/Dismissed)
+
+**ViewModels**:
+- `ReviewViewModel`: Hiển thị đánh giá cho customer
+- `ReviewAdminViewModel`: Hiển thị đánh giá cho admin
+- `ReviewStatistics`: Thống kê tổng quan
+- `ReviewAdminStatistics`: Thống kê chi tiết cho admin
+- `CreateReviewDto`, `UpdateReviewDto`, `ReportReviewDto`
+
+**Controllers**:
+- `ReviewController`: API cho customer operations
+- `ReviewAdminController`: Quản lý đánh giá (admin panel)
+
+**Repositories**:
+- `ReviewRepository`: Data access cho reviews
+- `ReviewReportRepository`: Data access cho reports
+
+**RBAC Permissions**:
+- `reviews.view`: Xem đánh giá
+- `reviews.create`: Tạo đánh giá
+- `reviews.edit_own`: Chỉnh sửa đánh giá của mình
+- `reviews.delete_own`: Xóa đánh giá của mình
+- `reviews.moderate`: Ẩn/hiện đánh giá (admin)
+- `reviews.delete`: Xóa đánh giá (admin)
+- `reviews.view_reports`: Xem báo cáo vi phạm
+- `reviews.view_statistics`: Xem thống kê
+
+**Security Features**:
+- ✅ XSS protection (auto-encode output)
+- ✅ CSRF protection (ValidateAntiForgeryToken)
+- ✅ SQL injection protection (EF Core parameterized queries)
+- ✅ Authorization checks (RBAC + ownership validation)
+- ✅ Rate limiting (5 reviews/day/user)
+- ✅ Input validation (rating 1-5, comment 10-1000 chars)
+- ✅ Audit logging cho admin actions
+
+**API Endpoints**:
+- `POST /Review/Create`: Tạo đánh giá
+- `PUT /Review/Edit/{id}`: Chỉnh sửa đánh giá
+- `DELETE /Review/Delete/{id}`: Xóa đánh giá
+- `POST /Review/{id}/Report`: Báo cáo vi phạm
+- `POST /Review/{id}/Helpful`: Đánh dấu hữu ích
+- `GET /Review/CanReview/{productId}`: Kiểm tra có thể đánh giá
+- `GET /Admin/ReviewAdmin`: Quản lý đánh giá
+- `POST /Admin/ReviewAdmin/Hide`: Ẩn đánh giá
+- `POST /Admin/ReviewAdmin/Show`: Hiện đánh giá
+- `POST /Admin/ReviewAdmin/Delete`: Xóa đánh giá
+- `GET /Admin/ReviewAdmin/Reports`: Xem báo cáo
+- `POST /Admin/ReviewAdmin/HandleReport`: Xử lý báo cáo
+- `GET /Admin/ReviewAdmin/Statistics`: Xem thống kê
 
 ### 8. Module Cấu Hình Hệ Thống
 **Trạng thái**: ✅ Hoàn thành
@@ -307,26 +379,20 @@ Fruitables.Tests/                 # Test project
 
 ## Modules Sẽ Phát Triển Trong Tương Lai
 
-### 1. Module Kiểm Duyệt Đánh Giá (Review Moderation)
-**Trạng thái**: 📋 Đã lên kế hoạch
+### 1. Module Nâng Cấp Đánh Giá (Review Enhancements)
+**Trạng thái**: 💡 Ý tưởng
 
-**Mô tả**: Module cho phép Admin duyệt, từ chối và xóa đánh giá của khách hàng, đảm bảo chất lượng nội dung.
+**Mô tả**: Nâng cấp module đánh giá với các tính năng nâng cao.
 
 **Chức năng dự kiến**:
-- Xem danh sách đánh giá với lọc theo trạng thái (Pending/Approved/Rejected)
-- Duyệt/từ chối đánh giá với lý do
+- Upload hình ảnh/video trong đánh giá
+- Phản hồi đánh giá từ shop owner
 - Duyệt/từ chối hàng loạt
-- Xóa mềm (soft delete) đánh giá vi phạm
 - Khôi phục đánh giá đã xóa (trong 30 ngày)
-- Lịch sử kiểm duyệt (audit trail)
-- Thống kê tổng quan đánh giá
-- Phân quyền Moderator/Admin
 - Gửi email thông báo khi từ chối
 - Nâng cao word masking với severity levels
-
-**Services dự kiến**:
-- `ReviewModerationService`: Xử lý kiểm duyệt
-- Nâng cấp `WordMaskingService`: Thêm severity levels
+- AI sentiment analysis cho đánh giá
+- Gợi ý sản phẩm dựa trên đánh giá
 
 
 ### 2. Module Quản Lý Kho & Tồn Kho
@@ -565,12 +631,29 @@ dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=opencover
 
 Dự án này được phát triển cho mục đích học tập và thương mại.
 
-**Phiên bản**: 2.0.0  
+**Phiên bản**: 2.1.0  
 **Cập nhật lần cuối**: Tháng 2, 2026
 
 ---
 
 ## 🆕 Changelog
+
+### Version 2.1.0 (Feb 2026)
+- ✨ **NEW**: Complete Product Comments System
+  - Customer reviews with rating and comments
+  - Edit reviews within 24 hours
+  - Report inappropriate reviews
+  - Mark reviews as helpful
+  - Verified purchase badges
+  - Admin moderation panel
+  - Review statistics and analytics
+  - Rate limiting (5 reviews/day/user)
+  - Word masking for inappropriate content
+  - Full RBAC integration with 8 review permissions
+  - Comprehensive security audit (XSS, CSRF, SQL injection protection)
+- 📊 **NEW**: Review statistics dashboard for admins
+- 🔒 **SECURITY**: Enhanced input validation and authorization checks
+- 🧪 **TESTING**: 60+ test cases (unit, integration, property tests)
 
 ### Version 2.0.0 (Feb 2026)
 - ✨ **NEW**: Complete RBAC (Role-Based Access Control) system
