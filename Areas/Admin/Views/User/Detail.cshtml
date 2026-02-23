@@ -543,21 +543,13 @@
     let allAvailableRoles = [];
 
     function loadCurrentRoles() {
-        // We'll use a simple approach - call the controller to get role data
-        // For now, show a message that directs to the ManageRoles page
         document.getElementById('currentRolesContainer').innerHTML = 
-            `<div class="d-flex justify-content-between align-items-center">
-                <p class="text-muted mb-0">Để quản lý vai trò, vui lòng truy cập trang quản lý vai trò</p>
-                <a href="@Url.Action("ManageRoles", "User", new { area = "Admin" })?id=${customerId}" class="btn btn-sm btn-primary">
-                    <i class="fas fa-edit me-1"></i>Quản lý vai trò
-                </a>
-            </div>`;
+            '<p class="text-muted mb-0">Chức năng quản lý vai trò đang được phát triển</p>';
     }
 
     function loadAvailableRoles() {
-        // Hide this section since we're directing users to the ManageRoles page
         document.getElementById('availableRolesContainer').innerHTML = 
-            '<p class="text-muted mb-0">Sử dụng trang quản lý vai trò để gán vai trò mới</p>';
+            '<p class="text-muted mb-0">Chức năng quản lý vai trò đang được phát triển</p>';
     }
 
     function loadEffectivePermissions() {

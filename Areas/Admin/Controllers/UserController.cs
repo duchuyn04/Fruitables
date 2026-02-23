@@ -205,47 +205,48 @@ public class UserController : Controller
         return Json(new { isValid = true, data = result.Data });
     }
 
-    /// <summary>
-    /// Display role management page for a user
-    /// GET: /Admin/User/ManageRoles/{id}
-    /// Requirements: 10.5 - Manage user roles
-    /// </summary>
-    [RequirePermission("users.update")]
-    public async Task<IActionResult> ManageRoles(int id)
-    {
-        // Get user details
-        var userResult = await _userManagementService.GetCustomerDetailAsync(id);
-        if (!userResult.IsValid)
-        {
-            TempData["Error"] = userResult.ErrorMessage ?? "Không tìm thấy người dùng";
-            return RedirectToAction(nameof(Index));
-        }
+    // TODO: Implement role management feature
+    // /// <summary>
+    // /// Display role management page for a user
+    // /// GET: /Admin/User/ManageRoles/{id}
+    // /// Requirements: 10.5 - Manage user roles
+    // /// </summary>
+    // [RequirePermission("users.update")]
+    // public async Task<IActionResult> ManageRoles(int id)
+    // {
+    //     // Get user details
+    //     var userResult = await _userManagementService.GetCustomerDetailAsync(id);
+    //     if (!userResult.IsValid)
+    //     {
+    //         TempData["Error"] = userResult.ErrorMessage ?? "Không tìm thấy người dùng";
+    //         return RedirectToAction(nameof(Index));
+    //     }
 
-        // Get user's current roles
-        var userRoles = await _rbacService.GetUserRolesAsync(id);
-        
-        // Get all available roles
-        var allRoles = await _rbacService.GetAllRolesAsync(includeInactive: false);
-        
-        // Get user's effective permissions
-        var effectivePermissions = await _rbacService.GetUserPermissionsAsync(id);
-        
-        // Get permissions grouped by module for display
-        var permissionsGrouped = await _rbacService.GetPermissionsGroupedByModuleAsync();
+    //     // Get user's current roles
+    //     var userRoles = await _rbacService.GetUserRolesAsync(id);
+    //     
+    //     // Get all available roles
+    //     var allRoles = await _rbacService.GetAllRolesAsync(includeInactive: false);
+    //     
+    //     // Get user's effective permissions
+    //     var effectivePermissions = await _rbacService.GetUserPermissionsAsync(id);
+    //     
+    //     // Get permissions grouped by module for display
+    //     var permissionsGrouped = await _rbacService.GetPermissionsGroupedByModuleAsync();
 
-        var viewModel = new UserRoleManagementViewModel
-        {
-            UserId = id,
-            UserName = userResult.Data!.Name,
-            UserEmail = userResult.Data.Email,
-            CurrentRoles = userRoles,
-            AvailableRoles = allRoles,
-            EffectivePermissions = effectivePermissions,
-            PermissionsGroupedByModule = permissionsGrouped
-        };
+    //     var viewModel = new UserRoleManagementViewModel
+    //     {
+    //         UserId = id,
+    //         UserName = userResult.Data!.Name,
+    //         UserEmail = userResult.Data.Email,
+    //         CurrentRoles = userRoles,
+    //         AvailableRoles = allRoles,
+    //         EffectivePermissions = effectivePermissions,
+    //         PermissionsGroupedByModule = permissionsGrouped
+    //     };
 
-        return View(viewModel);
-    }
+    //     return View(viewModel);
+    // }
 
     /// <summary>
     /// API to assign a role to a user
