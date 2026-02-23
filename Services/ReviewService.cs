@@ -299,6 +299,11 @@ public class ReviewService : IReviewService
             if (hasReviewed)
                 return false;
 
+            // Check if user has purchased the product (verified purchase)
+            var hasPurchased = await CheckVerifiedPurchaseAsync(userId, productId);
+            if (!hasPurchased)
+                return false;
+
             // Check rate limit
             var today = DateTime.UtcNow.Date;
             var reviewCountToday = await _unitOfWork.ReviewRepository.CountUserReviewsInPeriodAsync(userId, today);
