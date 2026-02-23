@@ -1,14 +1,44 @@
 @model PagedResult<ReviewAdminViewModel>
 @{
     ViewData["Title"] = "Quản lý đánh giá";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminDashboardLayout.cshtml";
 }
 
+@Html.AntiForgeryToken()
+
 <div class="container-fluid">
-    <div class="row mb-4">
-        <div class="col-12">
-            <h2 class="mb-0">Quản lý đánh giá</h2>
-            <p class="text-muted">Xem và quản lý tất cả đánh giá sản phẩm</p>
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="mb-1">Quản lý đánh giá</h4>
+            <p class="text-muted mb-0">Tổng cộng <span id="totalCount">@Model.TotalCount</span> đánh giá</p>
         </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
+        @if (TempData["Success"] != null)
+        {
+            <div class="toast show" role="alert" data-bs-autohide="true" data-bs-delay="5000">
+                <div class="toast-header bg-success text-white">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <strong class="me-auto">Thành công</strong>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+                </div>
+                <div class="toast-body">@TempData["Success"]</div>
+            </div>
+        }
+        @if (TempData["Error"] != null)
+        {
+            <div class="toast show" role="alert" data-bs-autohide="true" data-bs-delay="5000">
+                <div class="toast-header bg-danger text-white">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    <strong class="me-auto">Lỗi</strong>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+                </div>
+                <div class="toast-body">@TempData["Error"]</div>
+            </div>
+        }
     </div>
 
     <!-- Filter Form -->
@@ -16,56 +46,58 @@
         <div class="card-body">
             <form method="get" asp-action="Index" id="filterForm">
                 <div class="row g-3">
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                         <label class="form-label">Tìm kiếm</label>
-                        <input type="text" name="SearchTerm" class="form-control" placeholder="Tên sản phẩm, người dùng..." value="">
+                        <input type="text" name="SearchTerm" class="form-control" 
+                               placeholder="Tên sản phẩm, người dùng..." 
+                               value="@Context.Request.Query["SearchTerm"]">
                     </div>
                     <div class="col-md-2">
                         <label class="form-label">Trạng thái</label>
                         <select name="Status" class="form-select">
                             <option value="">Tất cả</option>
-                            <option value="Pending">Chờ duyệt</option>
-                            <option value="Approved">Đã duyệt</option>
-                            <option value="Rejected">Từ chối</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Hiển thị</label>
-                        <select name="IsHidden" class="form-select">
-                            <option value="">Tất cả</option>
-                            <option value="false">Hiện</option>
-                            <option value="true">Ẩn</option>
+                            <option value="Visible" selected="@(Context.Request.Query["Status"] == "Visible")">Hiện</option>
+                            <option value="Hidden" selected="@(Context.Request.Query["Status"] == "Hidden")">Ẩn</option>
+                            <option value="Deleted" selected="@(Context.Request.Query["Status"] == "Deleted")">Đã xóa</option>
                         </select>
                     </div>
                     <div class="col-md-2">
                         <label class="form-label">Đánh giá</label>
                         <select name="Rating" class="form-select">
                             <option value="">Tất cả</option>
-                            <option value="5">5 sao</option>
-                            <option value="4">4 sao</option>
-                            <option value="3">3 sao</option>
-                            <option value="2">2 sao</option>
-                            <option value="1">1 sao</option>
+                            <option value="5" selected="@(Context.Request.Query["Rating"] == "5")">5 sao</option>
+                            <option value="4" selected="@(Context.Request.Query["Rating"] == "4")">4 sao</option>
+                            <option value="3" selected="@(Context.Request.Query["Rating"] == "3")">3 sao</option>
+                            <option value="2" selected="@(Context.Request.Query["Rating"] == "2")">2 sao</option>
+                            <option value="1" selected="@(Context.Request.Query["Rating"] == "1")">1 sao</option>
                         </select>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
+                        <label class="form-label">Hiển thị</label>
+                        <select name="HasReports" class="form-select">
+                            <option value="">Tất cả</option>
+                            <option value="true" selected="@(Context.Request.Query["HasReports"] == "true")">Có báo cáo</option>
+                            <option value="false" selected="@(Context.Request.Query["HasReports"] == "false")">Không báo cáo</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
                         <label class="form-label">Sắp xếp</label>
                         <select name="SortBy" class="form-select">
-                            <option value="Newest">Mới nhất</option>
-                            <option value="Oldest">Cũ nhất</option>
-                            <option value="HighestRating">Đánh giá cao</option>
-                            <option value="LowestRating">Đánh giá thấp</option>
-                            <option value="MostReported">Nhiều báo cáo</option>
+                            <option value="Newest" selected="@(Context.Request.Query["SortBy"] == "Newest" || string.IsNullOrEmpty(Context.Request.Query["SortBy"]))">Mới nhất</option>
+                            <option value="Oldest" selected="@(Context.Request.Query["SortBy"] == "Oldest")">Cũ nhất</option>
+                            <option value="HighestRating" selected="@(Context.Request.Query["SortBy"] == "HighestRating")">Đánh giá cao</option>
+                            <option value="LowestRating" selected="@(Context.Request.Query["SortBy"] == "LowestRating")">Đánh giá thấp</option>
+                            <option value="MostReported" selected="@(Context.Request.Query["SortBy"] == "MostReported")">Nhiều báo cáo</option>
                         </select>
                     </div>
                 </div>
                 <div class="row mt-3">
                     <div class="col-12">
                         <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-search"></i> Tìm kiếm
+                            <i class="fas fa-search me-1"></i> Tìm kiếm
                         </button>
                         <a href="@Url.Action("Index")" class="btn btn-secondary">
-                            <i class="fas fa-redo"></i> Đặt lại
+                            <i class="fas fa-redo me-1"></i> Đặt lại
                         </a>
                     </div>
                 </div>
@@ -73,101 +105,108 @@
         </div>
     </div>
 
-    <!-- Reviews List -->
+    <!-- Reviews Table -->
     <div class="card">
-        <div class="card-body">
+        <div class="card-body p-0">
             @if (Model.Data != null && Model.Data.Any())
             {
                 <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
                             <tr>
-                                <th style="width: 5%">
-                                    <input type="checkbox" id="selectAll">
-                                </th>
-                                <th style="width: 25%">Sản phẩm</th>
+                                <th style="width: 30%">Sản phẩm & Nội dung</th>
                                 <th style="width: 15%">Người dùng</th>
-                                <th style="width: 10%">Đánh giá</th>
-                                <th style="width: 10%">Trạng thái</th>
-                                <th style="width: 10%">Báo cáo</th>
-                                <th style="width: 15%">Ngày tạo</th>
-                                <th style="width: 10%">Thao tác</th>
+                                <th class="text-center" style="width: 10%">Đánh giá</th>
+                                <th class="text-center" style="width: 10%">Trạng thái</th>
+                                <th class="text-center" style="width: 10%">Báo cáo</th>
+                                <th class="text-center" style="width: 15%">Ngày tạo</th>
+                                <th class="text-center" style="width: 10%">Thao tác</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach (var review in Model.Data)
                             {
                                 <tr>
-                                    <td>
-                                        <input type="checkbox" class="review-checkbox" value="@review.Id">
-                                    </td>
-                                    <td>
-                                        <strong>@review.ProductName</strong>
+                                    <td class="align-middle">
+                                        <div class="fw-semibold">@review.ProductName</div>
                                         @if (!string.IsNullOrEmpty(review.Comment))
                                         {
-                                            <br>
-                                            <small class="text-muted">@(review.Comment.Length > 100 ? review.Comment.Substring(0, 100) + "..." : review.Comment)</small>
+                                            <small class="text-muted d-block mt-1">
+                                                @(review.Comment.Length > 100 ? review.Comment.Substring(0, 100) + "..." : review.Comment)
+                                            </small>
                                         }
                                     </td>
-                                    <td>
-                                        @review.UserName
+                                    <td class="align-middle">
+                                        <div>@review.UserName</div>
                                         @if (review.IsVerifiedPurchase)
                                         {
-                                            <br><span class="badge bg-success"><i class="fas fa-check"></i> Đã mua</span>
+                                            <span class="badge bg-success mt-1">
+                                                <i class="fas fa-check"></i> Đã mua
+                                            </span>
                                         }
                                     </td>
-                                    <td>
+                                    <td class="text-center align-middle">
                                         <div class="text-warning">
                                             @for (int i = 1; i <= 5; i++)
                                             {
-                                                <i class="fas fa-star@(i <= review.Rating ? "" : "-o")"></i>
+                                                if (i <= review.Rating)
+                                                {
+                                                    <i class="fas fa-star"></i>
+                                                }
+                                                else
+                                                {
+                                                    <i class="far fa-star"></i>
+                                                }
                                             }
                                         </div>
                                     </td>
-                                    <td>
+                                    <td class="text-center align-middle">
                                         @if (review.IsDeleted)
                                         {
                                             <span class="badge bg-danger">Đã xóa</span>
                                         }
                                         else if (review.IsHidden)
                                         {
-                                            <span class="badge bg-warning">Ẩn</span>
+                                            <span class="badge bg-warning text-dark">Ẩn</span>
                                         }
                                         else
                                         {
                                             <span class="badge bg-success">Hiện</span>
                                         }
                                     </td>
-                                    <td>
+                                    <td class="text-center align-middle">
                                         @if (review.ReportCount > 0)
                                         {
-                                            <span class="badge bg-danger">@review.ReportCount báo cáo</span>
+                                            <span class="badge bg-danger">@review.ReportCount</span>
                                         }
                                         else
                                         {
-                                            <span class="text-muted">-</span>
+                                            <span class="text-muted">—</span>
                                         }
                                     </td>
-                                    <td>
+                                    <td class="text-center align-middle">
                                         <small>@review.CreatedAt.ToString("dd/MM/yyyy HH:mm")</small>
                                     </td>
-                                    <td>
+                                    <td class="text-center align-middle">
                                         <div class="btn-group btn-group-sm">
                                             @if (!review.IsDeleted)
                                             {
                                                 @if (review.IsHidden)
                                                 {
-                                                    <button type="button" class="btn btn-success btn-show" data-id="@review.Id" title="Hiện">
+                                                    <button type="button" class="btn btn-outline-success btn-show" 
+                                                            data-id="@review.Id" title="Hiện">
                                                         <i class="fas fa-eye"></i>
                                                     </button>
                                                 }
                                                 else
                                                 {
-                                                    <button type="button" class="btn btn-warning btn-hide" data-id="@review.Id" title="Ẩn">
+                                                    <button type="button" class="btn btn-outline-warning btn-hide" 
+                                                            data-id="@review.Id" title="Ẩn">
                                                         <i class="fas fa-eye-slash"></i>
                                                     </button>
                                                 }
-                                                <button type="button" class="btn btn-danger btn-delete" data-id="@review.Id" title="Xóa">
+                                                <button type="button" class="btn btn-outline-danger btn-delete" 
+                                                        data-id="@review.Id" title="Xóa">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
                                             }
@@ -182,27 +221,46 @@
                 <!-- Pagination -->
                 @if (Model.TotalPages > 1)
                 {
-                    <nav aria-label="Page navigation" class="mt-3">
-                        <ul class="pagination justify-content-center">
-                            <li class="page-item @(Model.CurrentPage == 1 ? "disabled" : "")">
-                                <a class="page-link" href="?page=@(Model.CurrentPage - 1)">Trước</a>
-                            </li>
-                            @for (int i = 1; i <= Model.TotalPages; i++)
-                            {
-                                <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
-                                    <a class="page-link" href="?page=@i">@i</a>
+                    <div class="card-footer">
+                        <nav>
+                            <ul class="pagination pagination-sm mb-0 justify-content-center">
+                                <li class="page-item @(Model.CurrentPage == 1 ? "disabled" : "")">
+                                    <a class="page-link" href="?page=@(Model.CurrentPage - 1)@(string.IsNullOrEmpty(Context.Request.QueryString.Value) ? "" : "&" + Context.Request.QueryString.Value.TrimStart('?'))">
+                                        <i class="fas fa-chevron-left"></i>
+                                    </a>
                                 </li>
-                            }
-                            <li class="page-item @(Model.CurrentPage == Model.TotalPages ? "disabled" : "")">
-                                <a class="page-link" href="?page=@(Model.CurrentPage + 1)">Sau</a>
-                            </li>
-                        </ul>
-                    </nav>
+                                
+                                @for (int i = 1; i <= Model.TotalPages; i++)
+                                {
+                                    if (i == 1 || i == Model.TotalPages || (i >= Model.CurrentPage - 2 && i <= Model.CurrentPage + 2))
+                                    {
+                                        <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
+                                            <a class="page-link" href="?page=@i@(string.IsNullOrEmpty(Context.Request.QueryString.Value) ? "" : "&" + Context.Request.QueryString.Value.TrimStart('?'))">@i</a>
+                                        </li>
+                                    }
+                                    else if (i == Model.CurrentPage - 3 || i == Model.CurrentPage + 3)
+                                    {
+                                        <li class="page-item disabled">
+                                            <span class="page-link">...</span>
+                                        </li>
+                                    }
+                                }
+                                
+                                <li class="page-item @(Model.CurrentPage == Model.TotalPages ? "disabled" : "")">
+                                    <a class="page-link" href="?page=@(Model.CurrentPage + 1)@(string.IsNullOrEmpty(Context.Request.QueryString.Value) ? "" : "&" + Context.Request.QueryString.Value.TrimStart('?'))">
+                                        <i class="fas fa-chevron-right"></i>
+                                    </a>
+                                </li>
+                            </ul>
+                        </nav>
+                        <div class="text-center text-muted mt-2">
+                            <small>
+                                Hiển thị @((Model.CurrentPage - 1) * Model.PageSize + 1) - @Math.Min(Model.CurrentPage * Model.PageSize, Model.TotalCount) 
+                                trong tổng số @Model.TotalCount đánh giá
+                            </small>
+                        </div>
+                    </div>
                 }
-
-                <div class="text-center text-muted mt-2">
-                    Hiển thị @((Model.CurrentPage - 1) * Model.PageSize + 1) - @Math.Min(Model.CurrentPage * Model.PageSize, Model.TotalCount) trong tổng số @Model.TotalCount đánh giá
-                </div>
             }
             else
             {
@@ -228,13 +286,16 @@
                     <input type="hidden" id="hideReviewId">
                     <div class="mb-3">
                         <label class="form-label">Lý do ẩn <span class="text-danger">*</span></label>
-                        <textarea class="form-control" id="hideReason" rows="3" required></textarea>
+                        <textarea class="form-control" id="hideReason" rows="3" required 
+                                  placeholder="Nhập lý do ẩn đánh giá này..."></textarea>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                <button type="button" class="btn btn-warning" id="confirmHide">Ẩn đánh giá</button>
+                <button type="button" class="btn btn-warning" id="confirmHide">
+                    <i class="fas fa-eye-slash me-1"></i> Ẩn đánh giá
+                </button>
             </div>
         </div>
     </div>
@@ -244,23 +305,31 @@
 <div class="modal fade" id="deleteModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Xóa đánh giá</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Xóa đánh giá
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <form id="deleteForm">
                     <input type="hidden" id="deleteReviewId">
-                    <p class="text-danger"><i class="fas fa-exclamation-triangle"></i> Hành động này không thể hoàn tác!</p>
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Cảnh báo:</strong> Hành động này không thể hoàn tác!
+                    </div>
                     <div class="mb-3">
                         <label class="form-label">Lý do xóa <span class="text-danger">*</span></label>
-                        <textarea class="form-control" id="deleteReason" rows="3" required></textarea>
+                        <textarea class="form-control" id="deleteReason" rows="3" required
+                                  placeholder="Nhập lý do xóa đánh giá này..."></textarea>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                <button type="button" class="btn btn-danger" id="confirmDelete">Xóa đánh giá</button>
+                <button type="button" class="btn btn-danger" id="confirmDelete">
+                    <i class="fas fa-trash me-1"></i> Xóa đánh giá
+                </button>
             </div>
         </div>
     </div>
@@ -268,4 +337,13 @@
 
 @section Scripts {
     <script src="~/js/reviewAdmin.js"></script>
+    <script>
+        // Initialize toasts
+        document.addEventListener('DOMContentLoaded', function() {
+            const toastElList = [].slice.call(document.querySelectorAll('.toast'));
+            toastElList.map(function(toastEl) {
+                return new bootstrap.Toast(toastEl);
+            });
+        });
+    </script>
 }
