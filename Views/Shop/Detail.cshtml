@@ -163,7 +163,7 @@
                                 <div class="description-content">@Html.Raw(Model.Description?.Replace("\n", "<br />") ?? "")</div>
                             </div>
                             <div class="tab-pane" id="nav-mission" role="tabpanel">
-                                <partial name="_ProductReviews" model="Model" />
+                                <partial name="_ProductReviews" model="Model.Id" />
                             </div>
                         </div>
                     </div>
