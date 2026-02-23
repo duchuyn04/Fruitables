@@ -1,4 +1,5 @@
 @model PagedResult<ReviewAdminViewModel>
+@using Fruitables.Helpers
 @{
     ViewData["Title"] = "Quản lý đánh giá";
     Layout = "~/Areas/Admin/Views/Shared/_AdminDashboardLayout.cshtml";
@@ -185,7 +186,7 @@
                                         }
                                     </td>
                                     <td class="text-center align-middle">
-                                        <small>@review.CreatedAt.ToString("dd/MM/yyyy HH:mm")</small>
+                                        <small>@review.CreatedAt.ToVietnamTimeString()</small>
                                     </td>
                                     <td class="text-center align-middle">
                                         <div class="btn-group btn-group-sm">
