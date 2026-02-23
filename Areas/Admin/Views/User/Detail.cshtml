@@ -8,6 +8,8 @@
     var isSuperAdmin = currentUserRole == "SuperAdmin";
 }
 
+@Html.AntiForgeryToken()
+
 <div class="container-fluid">
     <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -543,13 +545,188 @@
     let allAvailableRoles = [];
 
     function loadCurrentRoles() {
-        document.getElementById('currentRolesContainer').innerHTML = 
-            '<p class="text-muted mb-0">Chức năng quản lý vai trò đang được phát triển</p>';
+        fetch(`@Url.Action("GetUserRoles", "User", new { area = "Admin" })?userId=${customerId}`)
+            .then(response => response.json())
+            .then(result => {
+                if (result.success && result.data) {
+                    currentUserRoles = result.data;
+                    renderCurrentRoles(result.data);
+                } else {
+                    document.getElementById('currentRolesContainer').innerHTML = 
+                        '<p class="text-danger mb-0">Không thể tải vai trò hiện tại</p>';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('currentRolesContainer').innerHTML = 
+                    '<p class="text-danger mb-0">Đã xảy ra lỗi khi tải dữ liệu</p>';
+            });
+    }
+
+    function renderCurrentRoles(roles) {
+        if (!roles || roles.length === 0) {
+            document.getElementById('currentRolesContainer').innerHTML = 
+                '<p class="text-muted mb-0">Người dùng chưa có vai trò nào</p>';
+            return;
+        }
+
+        let html = '<div class="d-flex flex-wrap gap-2">';
+        roles.forEach(role => {
+            const badgeClass = role.isActive ? 'bg-primary' : 'bg-secondary';
+            html += `<div class="badge ${badgeClass} d-flex align-items-center gap-2 p-2">`;
+            html += `<span>${role.name}</span>`;
+            html += `<button type="button" class="btn-close btn-close-white btn-sm" 
+                     onclick="revokeRole(${role.id}, '${role.name}')" 
+                     style="font-size: 0.7rem; padding: 0.1rem;"></button>`;
+            html += '</div>';
+        });
+        html += '</div>';
+
+        document.getElementById('currentRolesContainer').innerHTML = html;
     }
 
     function loadAvailableRoles() {
-        document.getElementById('availableRolesContainer').innerHTML = 
-            '<p class="text-muted mb-0">Chức năng quản lý vai trò đang được phát triển</p>';
+        fetch(`@Url.Action("GetAvailableRoles", "User", new { area = "Admin" })?userId=${customerId}`)
+            .then(response => response.json())
+            .then(result => {
+                if (result.success && result.data) {
+                    allAvailableRoles = result.data;
+                    renderAvailableRoles(result.data);
+                } else {
+                    document.getElementById('availableRolesContainer').innerHTML = 
+                        '<p class="text-danger mb-0">Không thể tải vai trò khả dụng</p>';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('availableRolesContainer').innerHTML = 
+                    '<p class="text-danger mb-0">Đã xảy ra lỗi khi tải dữ liệu</p>';
+            });
+    }
+
+    function renderAvailableRoles(roles) {
+        if (!roles || roles.length === 0) {
+            document.getElementById('availableRolesContainer').innerHTML = 
+                '<p class="text-muted mb-0">Không có vai trò khả dụng để gán</p>';
+            return;
+        }
+
+        let html = '<div class="list-group">';
+        roles.forEach(role => {
+            html += `<div class="list-group-item d-flex justify-content-between align-items-center">`;
+            html += `<div>`;
+            html += `<strong>${role.name}</strong>`;
+            if (role.description) {
+                html += `<br><small class="text-muted">${role.description}</small>`;
+            }
+            html += `</div>`;
+            html += `<button type="button" class="btn btn-sm btn-outline-primary" 
+                     onclick="assignRole(${role.id}, '${role.name}')">`;
+            html += `<i class="fas fa-plus me-1"></i>Gán`;
+            html += `</button>`;
+            html += `</div>`;
+        });
+        html += '</div>';
+
+        document.getElementById('availableRolesContainer').innerHTML = html;
+    }
+
+    async function assignRole(roleId, roleName) {
+        if (!confirm(`Bạn có chắc muốn gán vai trò "${roleName}" cho người dùng này?`)) {
+            return;
+        }
+
+        try {
+            const response = await fetch('@Url.Action("AssignRole", "User", new { area = "Admin" })', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                },
+                body: JSON.stringify({
+                    userId: customerId,
+                    roleId: roleId
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                // Reload both lists
+                loadCurrentRoles();
+                loadAvailableRoles();
+                loadEffectivePermissions();
+                
+                // Show success message
+                showToast('success', 'Thành công', result.message || 'Gán vai trò thành công');
+            } else {
+                showToast('danger', 'Lỗi', result.error || 'Không thể gán vai trò');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showToast('danger', 'Lỗi', 'Đã xảy ra lỗi khi gán vai trò');
+        }
+    }
+
+    async function revokeRole(roleId, roleName) {
+        if (!confirm(`Bạn có chắc muốn thu hồi vai trò "${roleName}" khỏi người dùng này?`)) {
+            return;
+        }
+
+        try {
+            const response = await fetch('@Url.Action("RevokeRole", "User", new { area = "Admin" })', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                },
+                body: JSON.stringify({
+                    userId: customerId,
+                    roleId: roleId
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                // Reload both lists
+                loadCurrentRoles();
+                loadAvailableRoles();
+                loadEffectivePermissions();
+                
+                // Show success message
+                showToast('success', 'Thành công', result.message || 'Thu hồi vai trò thành công');
+            } else {
+                showToast('danger', 'Lỗi', result.error || 'Không thể thu hồi vai trò');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showToast('danger', 'Lỗi', 'Đã xảy ra lỗi khi thu hồi vai trò');
+        }
+    }
+
+    function showToast(type, title, message) {
+        const toastHtml = `
+            <div class="toast show" role="alert" data-bs-autohide="true" data-bs-delay="5000">
+                <div class="toast-header bg-${type} text-white">
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+                    <strong class="me-auto">${title}</strong>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+                </div>
+                <div class="toast-body">${message}</div>
+            </div>
+        `;
+        
+        const container = document.querySelector('.toast-container');
+        container.insertAdjacentHTML('beforeend', toastHtml);
+        
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            const toasts = container.querySelectorAll('.toast');
+            if (toasts.length > 0) {
+                toasts[0].remove();
+            }
+        }, 5000);
     }
 
     function loadEffectivePermissions() {
