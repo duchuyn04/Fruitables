@@ -111,10 +111,10 @@ public class UserController : Controller
 
         if (!result.IsValid)
         {
-            return BadRequest(new { error = result.ErrorMessage });
+            return Json(new { isValid = false, errorMessage = result.ErrorMessage });
         }
 
-        return Json(result.Data);
+        return Json(new { isValid = true, data = result.Data });
     }
 
     /// <summary>
@@ -199,10 +199,10 @@ public class UserController : Controller
 
         if (!result.IsValid)
         {
-            return BadRequest(new { error = result.ErrorMessage });
+            return Json(new { isValid = false, errorMessage = result.ErrorMessage });
         }
 
-        return Json(result.Data);
+        return Json(new { isValid = true, data = result.Data });
     }
 
     /// <summary>
