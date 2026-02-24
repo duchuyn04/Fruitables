@@ -132,6 +132,8 @@ public class AccountController : Controller
             new ClaimsPrincipal(claimsIdentity),
             authProperties);
 
+        TempData["SuccessMessage"] = $"Chào mừng {user.Name}! Đăng nhập thành công.";
+
         // Redirect based on returnUrl or role
         if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
         {
@@ -230,6 +232,8 @@ public class AccountController : Controller
             CookieAuthenticationDefaults.AuthenticationScheme,
             new ClaimsPrincipal(claimsIdentity),
             authProperties);
+
+        TempData["SuccessMessage"] = $"Chào mừng {user.Name}! Đăng nhập thành công.";
 
         // Redirect based on returnUrl or role
         if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
