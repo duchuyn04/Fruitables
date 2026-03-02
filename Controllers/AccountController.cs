@@ -250,4 +250,75 @@ public class AccountController : Controller
     {
         return RedirectToAction("Index", "Home");
     }
+
+    /// <summary>
+    /// GET: /Account/ForgotPassword - Display forgot password form
+    /// </summary>
+    [HttpGet]
+    public IActionResult ForgotPassword()
+    {
+        if (User.Identity?.IsAuthenticated == true)
+            return RedirectToHome();
+
+        return View(new ForgotPasswordRequest());
+    }
+
+    /// <summary>
+    /// POST: /Account/ForgotPassword - Send reset email
+    /// Always shows success message (security: don't reveal if email exists)
+    /// </summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ForgotPassword(ForgotPasswordRequest model)
+    {
+        if (!ModelState.IsValid)
+            return View(model);
+
+        var resetCallbackUrl = Url.Action(nameof(ResetPassword), "Account",
+            values: null, protocol: Request.Scheme)!;
+
+        await _userAuthService.GeneratePasswordResetTokenAsync(model.Email, resetCallbackUrl);
+
+        // Always show success to prevent email enumeration
+        TempData["SuccessMessage"] = "Nếu email tồn tại trong hệ thống, chúng tôi đã gửi hướng dẫn đặt lại mật khẩu. Vui lòng kiểm tra hộp thư của bạn.";
+        return RedirectToAction(nameof(ForgotPassword));
+    }
+
+    /// <summary>
+    /// GET: /Account/ResetPassword?email=xx&token=yy - Display reset password form
+    /// Validates token before showing the form
+    /// </summary>
+    [HttpGet]
+    public IActionResult ResetPassword(string? email, string? token)
+    {
+        if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(token))
+        {
+            TempData["ErrorMessage"] = "Liên kết đặt lại mật khẩu không hợp lệ.";
+            return RedirectToAction(nameof(Login));
+        }
+
+        return View(new ResetPasswordRequest { Email = email, Token = token });
+    }
+
+    /// <summary>
+    /// POST: /Account/ResetPassword - Process password reset
+    /// </summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ResetPassword(ResetPasswordRequest model)
+    {
+        if (!ModelState.IsValid)
+            return View(model);
+
+        var success = await _userAuthService.ResetPasswordAsync(model);
+
+        if (!success)
+        {
+            ModelState.AddModelError(string.Empty, "Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn. Vui lòng thử lại.");
+            return View(model);
+        }
+
+        TempData["SuccessMessage"] = "Mật khẩu đã được đặt lại thành công! Vui lòng đăng nhập bằng mật khẩu mới.";
+        return RedirectToAction(nameof(Login));
+    }
 }
