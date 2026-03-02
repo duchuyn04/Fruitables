@@ -1,7 +1,7 @@
 @using Fruitables.Models
 @{
     var products = ViewBag.AllProducts as List<Product> ?? new List<Product>();
-    var categories = ViewBag.Categories as List<Category> ?? new List<Category>();
+    var parentCategories = ViewBag.Categories as List<Category> ?? new List<Category>();
 }
 
 <div class="container-fluid fruite py-5">
@@ -12,27 +12,29 @@
                     <h1>Sản phẩm hữu cơ</h1>
                 </div>
                 <div class="col-lg-8 text-end">
-                    <ul class="nav nav-pills d-inline-flex text-center mb-5">
-                        <li class="nav-item">
-                            <a class="d-flex m-2 py-2 bg-light rounded-pill active" data-bs-toggle="pill" href="#tab-all" data-category-name="Tất cả">
-                                <span class="text-dark" style="width: 130px;">Tất cả</span>
-                            </a>
-                        </li>
-                        @foreach (var category in categories.Take(4))
-                        {
+                    <div id="tabsContainer">
+                        <!-- Main tabs: Tất cả + Danh mục cha -->
+                        <ul class="nav nav-pills d-inline-flex text-center mb-5" id="mainCategoryTabs">
                             <li class="nav-item">
-                                <a class="d-flex py-2 m-2 bg-light rounded-pill" data-bs-toggle="pill" href="#tab-@category.Id" data-category-name="@category.Name">
-                                    <span class="text-dark" style="width: 130px;">@category.Name</span>
+                                <a class="d-flex m-2 py-2 bg-light rounded-pill active" data-bs-toggle="pill" href="#tab-all">
+                                    <span class="text-dark" style="width: 130px;">Tất cả</span>
                                 </a>
                             </li>
-                        }
-                    </ul>
+                            @foreach (var category in parentCategories.Take(4))
+                            {
+                                <li class="nav-item">
+                                    <a class="d-flex py-2 m-2 bg-light rounded-pill" data-bs-toggle="pill" href="#tab-@category.Id" data-category-id="@category.Id" data-category-name="@category.Name">
+                                        <span class="text-dark" style="width: 130px;">@category.Name</span>
+                                    </a>
+                                </li>
+                            }
+                        </ul>
+                    </div>
                 </div>
             </div>
             <div class="tab-content">
                 <!-- Tab Tất cả -->
                 <div id="tab-all" class="tab-pane fade show p-0 active">
-                    <!-- Filter checkboxes -->
                     <div class="d-flex justify-content-start align-items-center mb-3 flex-wrap gap-3">
                         <span class="text-muted small">Lọc theo:</span>
                         <div class="form-check form-check-inline">
@@ -44,14 +46,9 @@
                             <label class="form-check-label small" for="filter-sale-all">Giá tốt</label>
                         </div>
                     </div>
-                    <!-- Active filters display -->
-                    <div class="active-filters mb-3 text-start" data-category="all" style="display: none;">
-                        <span class="text-muted small">Đang xem:</span>
-                        <span class="filter-tags"></span>
-                    </div>
                     <div class="row g-4">
                         <div class="col-lg-12">
-                            <div class="row g-4 products-grid" data-category="all" data-show-category-badge="true">
+                            <div class="row g-4 products-grid" data-category="all">
                                 @if (products.Any())
                                 {
                                     @foreach (var product in products)
@@ -70,52 +67,120 @@
                     </div>
                 </div>
 
-                <!-- Tabs cho từng Category -->
-                @foreach (var category in categories.Take(4))
+                <!-- Tabs cho từng danh mục cha -->
+                @foreach (var parentCat in parentCategories.Take(4))
                 {
-                    var categoryProducts = products.Where(p => p.CategoryId == category.Id).ToList();
-                    <div id="tab-@category.Id" class="tab-pane fade show p-0">
-                        <!-- Filter checkboxes -->
-                        <div class="d-flex justify-content-start align-items-center mb-3 flex-wrap gap-3">
-                            <span class="text-muted small">Lọc theo:</span>
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-featured-@category.Id" data-filter="featured" data-category="@category.Id">
-                                <label class="form-check-label small" for="filter-featured-@category.Id">Nổi bật</label>
+                    var parentProducts = products.Where(p => p.CategoryId == parentCat.Id || (p.Category?.ParentId == parentCat.Id)).ToList();
+                    var childCategories = parentCat.Children?.Where(c => c.IsActive && !c.IsDeleted).OrderBy(c => c.SortOrder).ToList() ?? new List<Category>();
+                    
+                    <div id="tab-@parentCat.Id" class="tab-pane fade show p-0">
+                        <!-- Sub-tab: Tất cả sản phẩm của danh mục cha -->
+                        <div id="subtab-@parentCat.Id-all" class="subtab-pane active">
+                            <div class="d-flex justify-content-start align-items-center mb-3 flex-wrap gap-3">
+                                <span class="text-muted small">Lọc theo:</span>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input filter-checkbox" type="checkbox" id="filter-featured-@parentCat.Id" data-filter="featured" data-category="@parentCat.Id">
+                                    <label class="form-check-label small" for="filter-featured-@parentCat.Id">Nổi bật</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input filter-checkbox" type="checkbox" id="filter-sale-@parentCat.Id" data-filter="sale" data-category="@parentCat.Id">
+                                    <label class="form-check-label small" for="filter-sale-@parentCat.Id">Giá tốt</label>
+                                </div>
                             </div>
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-sale-@category.Id" data-filter="sale" data-category="@category.Id">
-                                <label class="form-check-label small" for="filter-sale-@category.Id">Giá tốt</label>
-                            </div>
-                        </div>
-                        <!-- Active filters display -->
-                        <div class="active-filters mb-3 text-start" data-category="@category.Id" style="display: none;">
-                            <span class="text-muted small">Đang xem:</span>
-                            <span class="filter-tags"></span>
-                        </div>
-                        <div class="row g-4">
-                            <div class="col-lg-12">
-                                <div class="row g-4 products-grid" data-category="@category.Id" data-show-category-badge="false">
-                                    @if (categoryProducts.Any())
-                                    {
-                                        @foreach (var product in categoryProducts)
+                            <div class="row g-4">
+                                <div class="col-lg-12">
+                                    <div class="row g-4 products-grid" data-category="@parentCat.Id">
+                                        @if (parentProducts.Any())
                                         {
-                                            <partial name="_ProductCard" model="product" view-data='new ViewDataDictionary(ViewData) { { "ShowCategoryBadge", false } }' />
+                                            @foreach (var product in parentProducts)
+                                            {
+                                                <partial name="_ProductCard" model="product" view-data='new ViewDataDictionary(ViewData) { { "ShowCategoryBadge", true } }' />
+                                            }
                                         }
-                                    }
-                                    else
-                                    {
-                                        <div class="col-12 text-center no-products">
-                                            <p>Chưa có sản phẩm trong danh mục này.</p>
-                                        </div>
-                                    }
+                                        else
+                                        {
+                                            <div class="col-12 text-center no-products">
+                                                <p>Chưa có sản phẩm trong danh mục này.</p>
+                                            </div>
+                                        }
+                                    </div>
                                 </div>
                             </div>
                         </div>
+                        
+                        <!-- Sub-tabs cho từng danh mục con -->
+                        @foreach (var childCat in childCategories)
+                        {
+                            var childProducts = products.Where(p => p.CategoryId == childCat.Id).ToList();
+                            <div id="subtab-@childCat.Id" class="subtab-pane" style="display: none;">
+                                <div class="d-flex justify-content-start align-items-center mb-3 flex-wrap gap-3">
+                                    <span class="text-muted small">Lọc theo:</span>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input filter-checkbox" type="checkbox" id="filter-featured-@childCat.Id" data-filter="featured" data-category="@childCat.Id">
+                                        <label class="form-check-label small" for="filter-featured-@childCat.Id">Nổi bật</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input filter-checkbox" type="checkbox" id="filter-sale-@childCat.Id" data-filter="sale" data-category="@childCat.Id">
+                                        <label class="form-check-label small" for="filter-sale-@childCat.Id">Giá tốt</label>
+                                    </div>
+                                </div>
+                                <div class="row g-4">
+                                    <div class="col-lg-12">
+                                        <div class="row g-4 products-grid" data-category="@childCat.Id">
+                                            @if (childProducts.Any())
+                                            {
+                                                @foreach (var product in childProducts)
+                                                {
+                                                    <partial name="_ProductCard" model="product" view-data='new ViewDataDictionary(ViewData) { { "ShowCategoryBadge", false } }' />
+                                                }
+                                            }
+                                            else
+                                            {
+                                                <div class="col-12 text-center no-products">
+                                                    <p>Chưa có sản phẩm trong danh mục này.</p>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
                     </div>
                 }
             </div>
         </div>
     </div>
+</div>
+
+<!-- Template cho sub-category tabs (ẩn hoàn toàn) -->
+<div style="display: none;">
+@foreach (var parentCat in parentCategories.Take(4))
+{
+    var childCategories = parentCat.Children?.Where(c => c.IsActive && !c.IsDeleted).OrderBy(c => c.SortOrder).ToList() ?? new List<Category>();
+    if (childCategories.Any())
+    {
+        <ul class="nav nav-pills d-inline-flex text-center mb-5 sub-category-tabs" id="subTabs-@parentCat.Id" data-parent-id="@parentCat.Id" data-parent-name="@parentCat.Name">
+            <li class="nav-item">
+                <a class="d-flex m-2 py-2 bg-light rounded-pill back-to-main" href="#" data-back="true">
+                    <span class="text-dark" style="width: 130px;">Quay lại</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="d-flex m-2 py-2 bg-light rounded-pill active" data-bs-toggle="pill" href="#subtab-@parentCat.Id-all" data-subtab-target="subtab-@parentCat.Id-all">
+                    <span class="text-dark" style="width: 130px;">Tất cả @parentCat.Name</span>
+                </a>
+            </li>
+            @foreach (var childCat in childCategories)
+            {
+                <li class="nav-item">
+                    <a class="d-flex py-2 m-2 bg-light rounded-pill" data-bs-toggle="pill" href="#subtab-@childCat.Id" data-subtab-target="subtab-@childCat.Id">
+                        <span class="text-dark" style="width: 130px;">@childCat.Name</span>
+                    </a>
+                </li>
+            }
+        </ul>
+    }
+}
 </div>
 
 <style>
@@ -137,30 +202,166 @@
 .filter-tag .remove-filter:hover {
     opacity: 0.7;
 }
-.featured-ribbon {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    background: linear-gradient(135deg, #81c408 0%, #5a9a00 100%);
-    color: white;
-    padding: 4px 12px;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    z-index: 10;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+
+/* Active state cho tabs - màu xanh mặc định */
+#mainCategoryTabs .nav-item a.active,
+#mainCategoryTabs .nav-item a.active:hover,
+#mainCategoryTabs .nav-item a.active:focus,
+.sub-category-tabs .nav-item a.active,
+.sub-category-tabs .nav-item a.active:hover,
+.sub-category-tabs .nav-item a.active:focus,
+#activeSubTabs .nav-item a.active,
+#activeSubTabs .nav-item a.active:hover,
+#activeSubTabs .nav-item a.active:focus {
+    background-color: #81c408 !important;
 }
-.category-badge {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    z-index: 10;
+#mainCategoryTabs .nav-item a.active .text-dark,
+#mainCategoryTabs .nav-item a.active:hover .text-dark,
+.sub-category-tabs .nav-item a.active .text-dark,
+.sub-category-tabs .nav-item a.active:hover .text-dark,
+#activeSubTabs .nav-item a.active .text-dark,
+#activeSubTabs .nav-item a.active:hover .text-dark {
+    color: white !important;
 }
+
+/* Hover cho main category tabs */
+#mainCategoryTabs .nav-item a {
+    transition: all 0.3s ease;
+}
+#mainCategoryTabs .nav-item a:hover:not(.active) {
+    background-color: #81c408 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(129, 196, 8, 0.3);
+}
+#mainCategoryTabs .nav-item a:hover:not(.active) .text-dark {
+    color: white !important;
+}
+
+/* Hover cho sub-category tabs - bao gồm cả active */
+.sub-category-tabs .nav-item a,
+#activeSubTabs .nav-item a {
+    transition: all 0.3s ease;
+}
+.sub-category-tabs .nav-item a:hover,
+#activeSubTabs .nav-item a:hover {
+    background-color: #81c408 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(129, 196, 8, 0.3);
+}
+.sub-category-tabs .nav-item a:hover .text-dark,
+#activeSubTabs .nav-item a:hover .text-dark {
+    color: white !important;
+}
+
+/* Hover cho nút Quay lại */
+.back-to-main {
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+.back-to-main:hover {
+    background-color: #81c408 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(129, 196, 8, 0.3);
+}
+.back-to-main:hover .text-dark {
+    color: white !important;
+}
+</style>
 </style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Handle filter checkbox changes
+    var tabsContainer = document.getElementById('tabsContainer');
+    var mainCategoryTabs = document.getElementById('mainCategoryTabs');
+    
+    // Xử lý khi click vào main category tab
+    document.querySelectorAll('#mainCategoryTabs a[data-bs-toggle="pill"]').forEach(function(tab) {
+        tab.addEventListener('shown.bs.tab', function(e) {
+            var categoryId = this.getAttribute('data-category-id');
+            
+            // Nếu có categoryId, thay thế main tabs bằng sub-tabs
+            if (categoryId) {
+                var subTabsTemplate = document.getElementById('subTabs-' + categoryId);
+                if (subTabsTemplate) {
+                    // Clone sub-tabs
+                    var clonedSubTabs = subTabsTemplate.cloneNode(true);
+                    clonedSubTabs.style.display = 'flex';
+                    clonedSubTabs.id = 'activeSubTabs';
+                    
+                    // Thay thế main tabs bằng sub-tabs
+                    tabsContainer.innerHTML = '';
+                    tabsContainer.appendChild(clonedSubTabs);
+                    
+                    // Gắn sự kiện cho sub-tabs
+                    attachSubTabEvents(clonedSubTabs);
+                    
+                    // Hiển thị sub-tab đầu tiên (Tất cả)
+                    var firstSubTab = clonedSubTabs.querySelector('a[data-subtab-target]');
+                    if (firstSubTab) {
+                        var targetId = firstSubTab.getAttribute('data-subtab-target');
+                        showSubTab(targetId);
+                    }
+                }
+            }
+        });
+    });
+    
+    function attachSubTabEvents(subTabsElement) {
+        // Xử lý nút "Quay lại"
+        var backButton = subTabsElement.querySelector('.back-to-main');
+        if (backButton) {
+            backButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Khôi phục main tabs
+                tabsContainer.innerHTML = '';
+                tabsContainer.appendChild(mainCategoryTabs);
+                mainCategoryTabs.style.display = 'flex';
+                
+                // Kích hoạt tab "Tất cả"
+                var allTab = mainCategoryTabs.querySelector('a[href="#tab-all"]');
+                if (allTab) {
+                    var bsTab = new bootstrap.Tab(allTab);
+                    bsTab.show();
+                }
+            });
+        }
+        
+        // Xử lý click vào sub-tabs
+        subTabsElement.querySelectorAll('a[data-subtab-target]').forEach(function(tab) {
+            tab.addEventListener('click', function(e) {
+                e.preventDefault();
+                var targetId = this.getAttribute('data-subtab-target');
+                showSubTab(targetId);
+                
+                // Cập nhật active state
+                subTabsElement.querySelectorAll('a[data-subtab-target]').forEach(function(link) {
+                    link.classList.remove('active');
+                });
+                this.classList.add('active');
+            });
+        });
+    }
+    
+    function showSubTab(targetId) {
+        // Ẩn tất cả subtab-pane trong parent tab hiện tại
+        var parentTab = document.querySelector('.tab-pane.active');
+        if (parentTab) {
+            parentTab.querySelectorAll('.subtab-pane').forEach(function(pane) {
+                pane.style.display = 'none';
+                pane.classList.remove('active');
+            });
+            
+            // Hiển thị subtab-pane được chọn
+            var targetPane = document.getElementById(targetId);
+            if (targetPane) {
+                targetPane.style.display = 'block';
+                targetPane.classList.add('active');
+            }
+        }
+    }
+    
+    // Filter functionality
     document.querySelectorAll('.filter-checkbox').forEach(function(checkbox) {
         checkbox.addEventListener('change', function() {
             var categoryId = this.getAttribute('data-category');
@@ -169,15 +370,19 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     function applyFilters(categoryId) {
-        var tabPane = document.querySelector('#tab-' + categoryId) || document.querySelector('#tab-all');
-        var productsGrid = tabPane.querySelector('.products-grid');
-        var productItems = productsGrid.querySelectorAll('.product-card-wrapper');
-        var activeFiltersDiv = tabPane.querySelector('.active-filters');
-        var filterTagsSpan = activeFiltersDiv.querySelector('.filter-tags');
+        var productsGrid = document.querySelector('.subtab-pane.active .products-grid[data-category="' + categoryId + '"]');
+        if (!productsGrid) {
+            productsGrid = document.querySelector('.tab-pane.active .products-grid[data-category="' + categoryId + '"]');
+        }
+        if (!productsGrid) return;
         
-        // Get active filters
-        var featuredChecked = tabPane.querySelector('.filter-checkbox[data-filter="featured"]').checked;
-        var saleChecked = tabPane.querySelector('.filter-checkbox[data-filter="sale"]').checked;
+        var productItems = productsGrid.querySelectorAll('.product-card-wrapper');
+        var filterContainer = productsGrid.closest('.subtab-pane, .tab-pane');
+        var featuredCheckbox = filterContainer.querySelector('.filter-checkbox[data-filter="featured"][data-category="' + categoryId + '"]');
+        var saleCheckbox = filterContainer.querySelector('.filter-checkbox[data-filter="sale"][data-category="' + categoryId + '"]');
+        
+        var featuredChecked = featuredCheckbox ? featuredCheckbox.checked : false;
+        var saleChecked = saleCheckbox ? saleCheckbox.checked : false;
         
         var hasVisibleProducts = false;
         
@@ -186,7 +391,6 @@ document.addEventListener('DOMContentLoaded', function() {
             var isSale = item.getAttribute('data-sale') === 'true';
             var show = true;
             
-            // Apply filters (AND logic)
             if (featuredChecked && !isFeatured) show = false;
             if (saleChecked && !isSale) show = false;
             
@@ -198,10 +402,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        // Update active filters display
-        updateActiveFiltersDisplay(activeFiltersDiv, filterTagsSpan, featuredChecked, saleChecked, categoryId);
-        
-        // Show/hide no products message
+        // Hiển thị/ẩn thông báo không có sản phẩm
         var filteredMsg = productsGrid.querySelector('.no-products-filtered');
         if (!hasVisibleProducts) {
             if (!filteredMsg) {
@@ -214,54 +415,5 @@ document.addEventListener('DOMContentLoaded', function() {
             if (filteredMsg) filteredMsg.remove();
         }
     }
-    
-    function updateActiveFiltersDisplay(container, tagsSpan, featuredChecked, saleChecked, categoryId) {
-        var tags = [];
-        
-        if (featuredChecked) {
-            tags.push('<span class="filter-tag">Nổi bật <span class="remove-filter" data-filter="featured" data-category="' + categoryId + '">×</span></span>');
-        }
-        if (saleChecked) {
-            tags.push('<span class="filter-tag">Giá tốt <span class="remove-filter" data-filter="sale" data-category="' + categoryId + '">×</span></span>');
-        }
-        
-        if (tags.length > 0) {
-            tagsSpan.innerHTML = tags.join('');
-            container.style.display = '';
-            
-            // Add click handlers for remove buttons
-            container.querySelectorAll('.remove-filter').forEach(function(btn) {
-                btn.addEventListener('click', function() {
-                    var filter = this.getAttribute('data-filter');
-                    var catId = this.getAttribute('data-category');
-                    var tabPane = document.querySelector('#tab-' + catId) || document.querySelector('#tab-all');
-                    var checkbox = tabPane.querySelector('.filter-checkbox[data-filter="' + filter + '"]');
-                    if (checkbox) {
-                        checkbox.checked = false;
-                        applyFilters(catId);
-                    }
-                });
-            });
-        } else {
-            container.style.display = 'none';
-        }
-    }
-    
-    // Reset filters when main tab changes
-    document.querySelectorAll('[data-bs-toggle="pill"]').forEach(function(mainTab) {
-        mainTab.addEventListener('shown.bs.tab', function() {
-            var targetId = this.getAttribute('href');
-            var targetPane = document.querySelector(targetId);
-            if (targetPane) {
-                // Reset checkboxes
-                targetPane.querySelectorAll('.filter-checkbox').forEach(function(cb) {
-                    cb.checked = false;
-                });
-                // Reset display
-                var categoryId = targetId.replace('#tab-', '');
-                applyFilters(categoryId);
-            }
-        });
-    });
 });
 </script>
