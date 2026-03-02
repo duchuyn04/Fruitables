@@ -84,3 +84,36 @@ public class LoginRequest
     [Display(Name = "Ghi nhớ đăng nhập")]
     public bool RememberMe { get; set; }
 }
+
+/// <summary>
+/// Request model for forgot password (step 1: nhập email)
+/// </summary>
+public class ForgotPasswordRequest
+{
+    [Required(ErrorMessage = "Email không được để trống")]
+    [EmailAddress(ErrorMessage = "Email không đúng định dạng")]
+    [Display(Name = "Email")]
+    public string Email { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Request model for reset password (step 2: đặt lại mật khẩu mới)
+/// </summary>
+public class ResetPasswordRequest
+{
+    [Required]
+    public string Email { get; set; } = string.Empty;
+
+    [Required]
+    public string Token { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Mật khẩu mới không được để trống")]
+    [MinLength(6, ErrorMessage = "Mật khẩu phải có ít nhất 6 ký tự")]
+    [Display(Name = "Mật khẩu mới")]
+    public string NewPassword { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Xác nhận mật khẩu không được để trống")]
+    [Compare("NewPassword", ErrorMessage = "Mật khẩu xác nhận không khớp")]
+    [Display(Name = "Xác nhận mật khẩu mới")]
+    public string ConfirmPassword { get; set; } = string.Empty;
+}
