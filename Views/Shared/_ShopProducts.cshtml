@@ -88,3 +88,24 @@ else
         <a asp-controller="Shop" asp-action="Index" class="btn btn-primary">Xem tất cả sản phẩm</a>
     </div>
 }
+
+<style>
+/* Container ảnh - chiều cao cố định cho Shop page */
+.fruite-item .fruite-img {
+    height: 250px !important;
+    background-color: #f8f9fa !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: hidden !important;
+    border-radius: 8px 8px 0 0 !important;
+}
+
+/* Ảnh sản phẩm - hiển thị toàn bộ không bị cắt */
+.fruite-item .fruite-img img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: contain !important;
+    padding: 10px !important;
+}
+</style>
