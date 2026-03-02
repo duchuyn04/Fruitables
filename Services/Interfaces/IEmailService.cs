@@ -34,4 +34,12 @@ public interface IEmailService
         string customerEmail,
         string customerName,
         string reason);
+
+    /// <summary>
+    /// Sends a password reset link email to the user
+    /// </summary>
+    /// <param name="email">User's email address</param>
+    /// <param name="resetLink">The full URL link to reset password</param>
+    /// <returns>True if email was sent successfully</returns>
+    Task<bool> SendPasswordResetEmailAsync(string email, string resetLink);
 }

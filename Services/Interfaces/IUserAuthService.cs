@@ -44,4 +44,19 @@ public interface IUserAuthService
     /// Verify password against BCrypt hash
     /// </summary>
     bool VerifyPassword(string password, string hash);
+
+    /// <summary>
+    /// Generate a password reset token, save to DB, and send reset email
+    /// </summary>
+    /// <param name="email">User's email address</param>
+    /// <param name="resetCallbackUrl">The full URL of the reset-password page</param>
+    /// <returns>True if token generated and email sent (or email not found - for security)</returns>
+    Task<bool> GeneratePasswordResetTokenAsync(string email, string resetCallbackUrl);
+
+    /// <summary>
+    /// Validate token and reset user's password
+    /// </summary>
+    /// <param name="request">Reset password request containing email, token and new password</param>
+    /// <returns>True if reset successful, false if token invalid/expired</returns>
+    Task<bool> ResetPasswordAsync(ResetPasswordRequest request);
 }

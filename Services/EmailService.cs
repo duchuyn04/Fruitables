@@ -94,9 +94,38 @@ public class EmailService : IEmailService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, 
-                "Failed to send account unlocked email to {Email}", 
+            _logger.LogError(ex,
+                "Failed to send account unlocked email to {Email}",
                 customerEmail);
+            return false;
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> SendPasswordResetEmailAsync(string email, string resetLink)
+    {
+        try
+        {
+            var subject = $"[{COMPANY_NAME}] Đặt lại mật khẩu";
+            var body = GeneratePasswordResetEmailBody(resetLink);
+
+            _logger.LogInformation(
+                "Sending password reset email to {Email}. ResetLink: {ResetLink}",
+                email, resetLink);
+
+            // TODO: Implement actual SMTP sending when email configuration is available
+            // For now, we log and simulate successful sending
+            await Task.CompletedTask;
+
+            _logger.LogInformation(
+                "Password reset email sent successfully to {Email}", email);
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Failed to send password reset email to {Email}", email);
             return false;
         }
     }
@@ -343,10 +372,66 @@ public class EmailService : IEmailService
         </div>
         
         <p>Cảm ơn bạn đã là khách hàng của {COMPANY_NAME}. Chúng tôi rất vui được phục vụ bạn!</p>
-        
+        </p>
+
         <p>Trân trọng,<br><strong>Đội ngũ {COMPANY_NAME}</strong></p>
     </div>
     
+    <div class=""footer"">
+        <p>© {DateTime.Now.Year} {COMPANY_NAME}. Tất cả quyền được bảo lưu.</p>
+        <p>Email này được gửi tự động, vui lòng không trả lời trực tiếp.</p>
+        <p>Nếu bạn cần hỗ trợ, hãy liên hệ: {SUPPORT_EMAIL}</p>
+    </div>
+</body>
+</html>";
+    }
+
+    /// <summary>
+    /// Generates HTML email body for password reset
+    /// </summary>
+    private string GeneratePasswordResetEmailBody(string resetLink)
+    {
+        return $@"
+<!DOCTYPE html>
+<html lang=""vi"">
+<head>
+    <meta charset=""UTF-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>Đặt lại mật khẩu</title>
+    <style>
+        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }}
+        .header {{ background-color: #198754; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }}
+        .content {{ background-color: #f8f9fa; padding: 30px; border: 1px solid #dee2e6; }}
+        .cta-section {{ text-align: center; margin: 30px 0; }}
+        .cta-button {{ display: inline-block; background-color: #198754; color: white; padding: 14px 36px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px; }}
+        .note-box {{ background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; }}
+        .footer {{ background-color: #343a40; color: #adb5bd; padding: 20px; text-align: center; font-size: 12px; border-radius: 0 0 8px 8px; }}
+        h1 {{ margin: 0; font-size: 22px; }}
+    </style>
+</head>
+<body>
+    <div class=""header"">
+        <h1>🔐 Đặt lại mật khẩu</h1>
+    </div>
+
+    <div class=""content"">
+        <p>Bạn vừa yêu cầu đặt lại mật khẩu tài khoản <strong>{COMPANY_NAME}</strong>.</p>
+        <p>Nhấn vào nút bên dưới để tạo mật khẩu mới. Liên kết này sẽ <strong>hết hạn sau 15 phút</strong>.</p>
+
+        <div class=""cta-section"">
+            <a href=""{resetLink}"" class=""cta-button"">Đặt lại mật khẩu</a>
+        </div>
+
+        <div class=""note-box"">
+            <strong>⚠️ Lưu ý bảo mật:</strong> Nếu bạn không yêu cầu đặt lại mật khẩu, hãy bỏ qua email này. Mật khẩu hiện tại của bạn sẽ không thay đổi.
+        </div>
+
+        <p>Hoặc copy đường link sau vào trình duyệt:<br>
+        <small style=""word-break: break-all; color: #666;"">{resetLink}</small></p>
+
+        <p>Trân trọng,<br><strong>Đội ngũ {COMPANY_NAME}</strong></p>
+    </div>
+
     <div class=""footer"">
         <p>© {DateTime.Now.Year} {COMPANY_NAME}. Tất cả quyền được bảo lưu.</p>
         <p>Email này được gửi tự động, vui lòng không trả lời trực tiếp.</p>

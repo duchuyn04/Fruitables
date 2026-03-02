@@ -12,10 +12,12 @@ namespace Fruitables.Services;
 public class UserAuthService : IUserAuthService
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IEmailService _emailService;
 
-    public UserAuthService(IUnitOfWork unitOfWork)
+    public UserAuthService(IUnitOfWork unitOfWork, IEmailService emailService)
     {
         _unitOfWork = unitOfWork;
+        _emailService = emailService;
     }
 
     public async Task<RegistrationResult> RegisterAsync(RegisterRequest request)
@@ -188,5 +190,57 @@ public class UserAuthService : IUserAuthService
         {
             return false;
         }
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> GeneratePasswordResetTokenAsync(string email, string resetCallbackUrl)
+    {
+        // Always return true for security (don't reveal whether email exists)
+        var user = await GetUserByEmailAsync(email.Trim().ToLower());
+        if (user == null)
+            return true;
+
+        // Generate a secure random token
+        var token = Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N");
+
+        // Save token & expiry (15 minutes) to DB
+        user.ResetPasswordToken = token;
+        user.ResetPasswordTokenExpiresAt = DateTime.UtcNow.AddMinutes(15);
+        user.UpdatedAt = DateTime.UtcNow;
+        await _unitOfWork.SaveChangesAsync();
+
+        // Build reset link and send email
+        var resetLink = $"{resetCallbackUrl}?email={Uri.EscapeDataString(user.Email)}&token={Uri.EscapeDataString(token)}";
+        await _emailService.SendPasswordResetEmailAsync(user.Email, resetLink);
+
+        return true;
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> ResetPasswordAsync(ResetPasswordRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Token))
+            return false;
+
+        var user = await GetUserByEmailAsync(request.Email.Trim().ToLower());
+        if (user == null)
+            return false;
+
+        // Validate token
+        if (user.ResetPasswordToken != request.Token)
+            return false;
+
+        // Validate expiry
+        if (user.ResetPasswordTokenExpiresAt == null || user.ResetPasswordTokenExpiresAt < DateTime.UtcNow)
+            return false;
+
+        // Hash and save new password, clear token
+        user.Password = HashPassword(request.NewPassword);
+        user.ResetPasswordToken = null;
+        user.ResetPasswordTokenExpiresAt = null;
+        user.UpdatedAt = DateTime.UtcNow;
+        await _unitOfWork.SaveChangesAsync();
+
+        return true;
     }
 }
