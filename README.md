@@ -24,12 +24,6 @@ Fruitables là một hệ thống thương mại điện tử chuyên về bán 
 - **JavaScript**: Vanilla JS, jQuery
 - **UI Components**: Custom components với ViewComponents
 
-### Testing
-- **Framework**: xUnit
-- **Property-Based Testing**: FsCheck
-- **Mocking**: Moq
-- **Coverage**: Hơn 80 test files với unit tests và property tests
-
 ### Libraries & Tools
 - **ClosedXML**: Xuất báo cáo Excel
 - **Memory Cache**: Caching dữ liệu thường xuyên truy cập
