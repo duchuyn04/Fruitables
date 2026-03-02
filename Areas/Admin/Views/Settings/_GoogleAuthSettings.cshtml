@@ -1,0 +1,61 @@
+@model Fruitables.Areas.Admin.ViewModels.GoogleAuthSettingsViewModel
+
+<form asp-action="SaveGoogleAuth" method="post">
+    @Html.AntiForgeryToken()
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-light">
+            <h5 class="mb-0"><i class="fab fa-google me-2"></i>Cấu hình Google Authentication</h5>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-info d-flex align-items-start gap-2 mb-4" role="alert">
+                <i class="fas fa-info-circle mt-1 flex-shrink-0"></i>
+                <small>
+                    Cho phép người dùng đăng nhập bằng tài khoản Google.
+                    Tạo Client ID và Secret tại <a href="https://console.cloud.google.com/apis/credentials" target="_blank">Google Cloud Console</a>.
+                </small>
+            </div>
+
+            <div class="mb-4">
+                <div class="form-check form-switch">
+                    <input asp-for="IsEnabled" class="form-check-input" type="checkbox" role="switch" />
+                    <label asp-for="IsEnabled" class="form-check-label fw-semibold">
+                        Bật đăng nhập bằng Google
+                    </label>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="ClientId" class="form-label">Client ID</label>
+                <input asp-for="ClientId" class="form-control" placeholder="xxxxxxxxxx.apps.googleusercontent.com" autocomplete="off" />
+                <span asp-validation-for="ClientId" class="text-danger small"></span>
+                <div class="form-text">Lấy từ Google Cloud Console → Credentials → OAuth 2.0 Client IDs.</div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="ClientSecret" class="form-label">
+                    Client Secret <small class="text-muted">(để trống nếu không đổi)</small>
+                </label>
+                <input asp-for="ClientSecret" class="form-control" type="password" placeholder="••••••••" autocomplete="new-password" />
+                <span asp-validation-for="ClientSecret" class="text-danger small"></span>
+            </div>
+
+            <div class="alert alert-warning d-flex align-items-start gap-2 mt-3" role="alert">
+                <i class="fas fa-exclamation-triangle mt-1 flex-shrink-0"></i>
+                <small>
+                    <strong>Lưu ý:</strong> Trong Google Cloud Console, hãy thêm Redirect URI sau vào OAuth Client:
+                    <br /><code>@(Context.Request.Scheme)://@(Context.Request.Host)/signin-google</code>
+                </small>
+            </div>
+        </div>
+        <div class="card-footer bg-light">
+            <button type="submit" class="btn btn-success">
+                <i class="fas fa-save me-1"></i>Lưu cài đặt Google Auth
+            </button>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

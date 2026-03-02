@@ -1,0 +1,76 @@
+@model Fruitables.Areas.Admin.ViewModels.SmtpSettingsViewModel
+
+<form asp-action="SaveSmtp" method="post">
+    @Html.AntiForgeryToken()
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-light">
+            <h5 class="mb-0"><i class="fas fa-paper-plane me-2"></i>Cấu hình Email (SMTP)</h5>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-info d-flex align-items-start gap-2 mb-4" role="alert">
+                <i class="fas fa-info-circle mt-1 flex-shrink-0"></i>
+                <small>Dùng để gửi email Quên mật khẩu, Thông báo tài khoản... Với Gmail: Host <code>smtp.gmail.com</code>, Port <code>587</code>, Password là <strong>Mật khẩu ứng dụng</strong> (App Password).</small>
+            </div>
+
+            <div class="row">
+                <div class="col-md-8 mb-3">
+                    <label asp-for="Host" class="form-label">SMTP Host</label>
+                    <input asp-for="Host" class="form-control" placeholder="smtp.gmail.com" />
+                    <span asp-validation-for="Host" class="text-danger small"></span>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label asp-for="Port" class="form-label">Port</label>
+                    <input asp-for="Port" class="form-control" type="number" placeholder="587" />
+                    <span asp-validation-for="Port" class="text-danger small"></span>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="Username" class="form-label">Tên đăng nhập</label>
+                    <input asp-for="Username" class="form-control" placeholder="email@gmail.com" autocomplete="off" />
+                    <span asp-validation-for="Username" class="text-danger small"></span>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label asp-for="Password" class="form-label">
+                        Mật khẩu <small class="text-muted">(để trống nếu không đổi)</small>
+                    </label>
+                    <input asp-for="Password" class="form-control" type="password" placeholder="••••••••" autocomplete="new-password" />
+                    <span asp-validation-for="Password" class="text-danger small"></span>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="SenderName" class="form-label">Tên người gửi</label>
+                    <input asp-for="SenderName" class="form-control" placeholder="Fruitables" />
+                    <span asp-validation-for="SenderName" class="text-danger small"></span>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label asp-for="SenderEmail" class="form-label">Email người gửi</label>
+                    <input asp-for="SenderEmail" class="form-control" type="email" placeholder="noreply@fruitables.com" />
+                    <span asp-validation-for="SenderEmail" class="text-danger small"></span>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <div class="form-check">
+                    <input asp-for="EnableSsl" class="form-check-input" type="checkbox" />
+                    <label asp-for="EnableSsl" class="form-check-label">
+                        Bật SSL/TLS <small class="text-muted">(khuyến nghị cho Port 587/465)</small>
+                    </label>
+                </div>
+            </div>
+        </div>
+        <div class="card-footer bg-light">
+            <button type="submit" class="btn btn-success">
+                <i class="fas fa-save me-1"></i>Lưu cài đặt SMTP
+            </button>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
