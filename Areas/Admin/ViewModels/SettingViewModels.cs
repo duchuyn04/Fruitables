@@ -40,23 +40,10 @@ public class GoogleAuthSettingsViewModel
     public bool IsEnabled { get; set; } = true;
 }
 
-// Cấu hình thông tin cơ bản của website
-public class GeneralSettingsViewModel
-{
-    [Required(ErrorMessage = "Vui lòng nhập tên website")]
-    public string SiteName { get; set; } = string.Empty;
-
-    public string? SupportEmail { get; set; }
-
-    public string? SupportPhone { get; set; }
-
-    public string? SiteDescription { get; set; }
-}
-
-// ViewModel tổng hợp để truyền cả 3 nhóm cài đặt vào View
+// Cấu hình thông tin cơ bản của website (đã có sẵn trong Fruitables.ViewModels.GeneralSettingsViewModel)
+// SettingsIndexViewModel gom các nhóm cài đặt mới (Smtp, GoogleAuth) vào 1 View
 public class SettingsIndexViewModel
 {
     public SmtpSettingsViewModel Smtp { get; set; } = new();
     public GoogleAuthSettingsViewModel GoogleAuth { get; set; } = new();
-    public GeneralSettingsViewModel General { get; set; } = new();
 }

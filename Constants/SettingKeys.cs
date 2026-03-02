@@ -54,6 +54,20 @@ namespace Fruitables.Constants
         // Danh sách quận/huyện theo khu vực (JSON array)
         public const string Zone1Districts = "zone1_districts";
         public const string Zone2Districts = "zone2_districts";
+
+        // SMTP Email Settings
+        public const string SmtpHost = "smtp_host";
+        public const string SmtpPort = "smtp_port";
+        public const string SmtpUsername = "smtp_username";
+        public const string SmtpPassword = "smtp_password";
+        public const string SmtpEnableSsl = "smtp_enable_ssl";
+        public const string SmtpSenderName = "smtp_sender_name";
+        public const string SmtpSenderEmail = "smtp_sender_email";
+
+        // Google OAuth Settings
+        public const string GoogleAuthClientId = "google_auth_client_id";
+        public const string GoogleAuthClientSecret = "google_auth_client_secret";
+        public const string GoogleAuthIsEnabled = "google_auth_is_enabled";
     }
 
     /// <summary>
@@ -67,5 +81,7 @@ namespace Fruitables.Constants
         public const string Social = "Social";
         public const string Banner = "Banner";
         public const string Shipping = "Shipping";
+        public const string Smtp = "Smtp";
+        public const string GoogleAuth = "GoogleAuth";
     }
 }

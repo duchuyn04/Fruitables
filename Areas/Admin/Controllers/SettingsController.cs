@@ -4,6 +4,7 @@ using Fruitables.Services.Interfaces;
 using Fruitables.ViewModels;
 using Fruitables.Constants;
 using Fruitables.Models;
+using Fruitables.Areas.Admin.ViewModels;
 using System.Text.Json;
 
 namespace Fruitables.Areas.Admin.Controllers
@@ -38,6 +39,8 @@ namespace Fruitables.Areas.Admin.Controllers
                 "social" => View(await GetSocialViewModel()),
                 "banner" => View(await GetBannerViewModel()),
                 "shipping" => View(await GetShippingViewModel()),
+                "smtp" => View(await GetSmtpViewModel()),
+                "googleauth" => View(await GetGoogleAuthViewModel()),
                 _ => View(await GetGeneralViewModel())
             };
         }
@@ -83,6 +86,20 @@ namespace Fruitables.Areas.Admin.Controllers
         {
             ViewBag.ActiveTab = "shipping";
             return View("Index", await GetShippingViewModel());
+        }
+
+        // GET: Admin/Settings/Smtp
+        public async Task<IActionResult> Smtp()
+        {
+            ViewBag.ActiveTab = "smtp";
+            return View("Index", await GetSmtpViewModel());
+        }
+
+        // GET: Admin/Settings/GoogleAuth
+        public async Task<IActionResult> GoogleAuth()
+        {
+            ViewBag.ActiveTab = "googleauth";
+            return View("Index", await GetGoogleAuthViewModel());
         }
 
         // POST: Admin/Settings/SaveGeneral
@@ -367,6 +384,78 @@ namespace Fruitables.Areas.Admin.Controllers
             return RedirectToAction(nameof(Index), new { tab = "shipping" });
         }
 
+        // POST: Admin/Settings/SaveSmtp
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveSmtp(SmtpSettingsViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                ViewBag.ActiveTab = "smtp";
+                return View("Index", model);
+            }
+
+            var settings = new Dictionary<string, string?>
+            {
+                { SettingKeys.SmtpHost, model.Host },
+                { SettingKeys.SmtpPort, model.Port.ToString() },
+                { SettingKeys.SmtpUsername, model.Username },
+                { SettingKeys.SmtpEnableSsl, model.EnableSsl.ToString() },
+                { SettingKeys.SmtpSenderName, model.SenderName },
+                { SettingKeys.SmtpSenderEmail, model.SenderEmail }
+            };
+
+            // Chỉ lưu password nếu người dùng nhập mới (không ghi đè bằng chuỗi rỗng)
+            if (!string.IsNullOrWhiteSpace(model.Password))
+                settings[SettingKeys.SmtpPassword] = model.Password;
+
+            var result = await _settingsService.SaveSettingsAsync(settings, SettingGroups.Smtp);
+
+            if (!result.Success)
+            {
+                TempData["Error"] = result.ErrorMessage;
+                ViewBag.ActiveTab = "smtp";
+                return View("Index", model);
+            }
+
+            TempData["Success"] = "Cài đặt SMTP đã được lưu!";
+            return RedirectToAction(nameof(Index), new { tab = "smtp" });
+        }
+
+        // POST: Admin/Settings/SaveGoogleAuth
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveGoogleAuth(GoogleAuthSettingsViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                ViewBag.ActiveTab = "googleauth";
+                return View("Index", model);
+            }
+
+            var settings = new Dictionary<string, string?>
+            {
+                { SettingKeys.GoogleAuthClientId, model.ClientId },
+                { SettingKeys.GoogleAuthIsEnabled, model.IsEnabled.ToString() }
+            };
+
+            // Chỉ lưu client secret nếu người dùng nhập mới
+            if (!string.IsNullOrWhiteSpace(model.ClientSecret))
+                settings[SettingKeys.GoogleAuthClientSecret] = model.ClientSecret;
+
+            var result = await _settingsService.SaveSettingsAsync(settings, SettingGroups.GoogleAuth);
+
+            if (!result.Success)
+            {
+                TempData["Error"] = result.ErrorMessage;
+                ViewBag.ActiveTab = "googleauth";
+                return View("Index", model);
+            }
+
+            TempData["Success"] = "Cài đặt Google Authentication đã được lưu!";
+            return RedirectToAction(nameof(Index), new { tab = "googleauth" });
+        }
+
         #region Private Helper Methods
 
         private async Task<GeneralSettingsViewModel> GetGeneralViewModel()
@@ -448,10 +537,8 @@ namespace Fruitables.Areas.Admin.Controllers
         /// </summary>
         private async Task<ShippingSettingsViewModel> GetShippingViewModel()
         {
-            // Get current shipping config
+            // Lấy cấu hình phí ship và danh sách quận hiện tại
             var config = await _shippingService.GetShippingConfigAsync();
-            
-            // Get all districts from Ho Chi Minh City (province code 79)
             var allDistricts = await _vietnamAddressService.GetDistrictsByProvinceAsync(79);
             var districtNames = allDistricts.Select(d => d.Name).OrderBy(n => n).ToList();
 
@@ -465,6 +552,28 @@ namespace Fruitables.Areas.Admin.Controllers
                 Zone1Districts = config.Zone1Districts,
                 Zone2Districts = config.Zone2Districts,
                 AllDistricts = districtNames
+            };
+        }
+
+        private async Task<SmtpSettingsViewModel> GetSmtpViewModel()
+        {
+            return new SmtpSettingsViewModel
+            {
+                Host = await _settingsService.GetSettingAsync(SettingKeys.SmtpHost) ?? string.Empty,
+                Port = int.TryParse(await _settingsService.GetSettingAsync(SettingKeys.SmtpPort), out var port) ? port : 587,
+                Username = await _settingsService.GetSettingAsync(SettingKeys.SmtpUsername) ?? string.Empty,
+                EnableSsl = bool.TryParse(await _settingsService.GetSettingAsync(SettingKeys.SmtpEnableSsl), out var ssl) ? ssl : true,
+                SenderName = await _settingsService.GetSettingAsync(SettingKeys.SmtpSenderName) ?? string.Empty,
+                SenderEmail = await _settingsService.GetSettingAsync(SettingKeys.SmtpSenderEmail) ?? string.Empty
+            };
+        }
+
+        private async Task<GoogleAuthSettingsViewModel> GetGoogleAuthViewModel()
+        {
+            return new GoogleAuthSettingsViewModel
+            {
+                ClientId = await _settingsService.GetSettingAsync(SettingKeys.GoogleAuthClientId) ?? string.Empty,
+                IsEnabled = bool.TryParse(await _settingsService.GetSettingAsync(SettingKeys.GoogleAuthIsEnabled), out var enabled) ? enabled : false
             };
         }
 
