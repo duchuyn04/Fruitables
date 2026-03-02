@@ -8,9 +8,6 @@ using Fruitables.ViewModels;
 
 namespace Fruitables.Controllers;
 
-/// <summary>
-/// Controller for user authentication (register, login, logout)
-/// </summary>
 public class AccountController : Controller
 {
     private readonly IUserAuthService _userAuthService;
@@ -22,9 +19,6 @@ public class AccountController : Controller
         _googleAuthService = googleAuthService;
     }
 
-    /// <summary>
-    /// GET: /Account/Register - Display registration form
-    /// </summary>
     [HttpGet]
     public IActionResult Register()
     {
@@ -35,9 +29,6 @@ public class AccountController : Controller
         return View(new RegisterRequest());
     }
 
-    /// <summary>
-    /// POST: /Account/Register - Process registration
-    /// </summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Register(RegisterRequest model)
@@ -65,9 +56,6 @@ public class AccountController : Controller
     }
 
 
-    /// <summary>
-    /// GET: /Account/Login - Display login form
-    /// </summary>
     [HttpGet]
     public IActionResult Login(string? returnUrl = null)
     {
@@ -80,10 +68,6 @@ public class AccountController : Controller
         return View(new LoginRequest());
     }
 
-    /// <summary>
-    /// POST: /Account/Login - Process login
-    /// Giỏ hàng được merge từ localStorage bằng JavaScript
-    /// </summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Login(LoginRequest model, string? returnUrl = null)
@@ -144,10 +128,6 @@ public class AccountController : Controller
         return Redirect(redirectUrl);
     }
 
-    /// <summary>
-    /// POST: /Account/Logout - Process logout
-    /// Giỏ hàng được lưu trên localStorage nên không bị mất
-    /// </summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Logout()
@@ -156,20 +136,15 @@ public class AccountController : Controller
         return RedirectToAction("Index", "Home");
     }
 
-    /// <summary>
-    /// GET: /Account/GoogleLogin - Redirect to Google for authentication
-    /// </summary>
     [HttpGet]
-    public IActionResult GoogleLogin(string? returnUrl = null)
+    public async Task<IActionResult> GoogleLogin(string? returnUrl = null)
     {
         if (User.Identity?.IsAuthenticated == true)
-        {
             return RedirectToHome();
-        }
 
-        if (!_googleAuthService.IsGoogleAuthEnabled())
+        if (!await _googleAuthService.IsGoogleAuthEnabledAsync())
         {
-            TempData["ErrorMessage"] = "Đăng nhập Google chưa được cấu hình";
+            TempData["ErrorMessage"] = "Đăng nhập Google chưa được bật. Vui lòng liên hệ quản trị viên.";
             return RedirectToAction(nameof(Login));
         }
 
@@ -178,9 +153,6 @@ public class AccountController : Controller
         return Challenge(properties, GoogleDefaults.AuthenticationScheme);
     }
 
-    /// <summary>
-    /// GET: /Account/GoogleCallback - Handle Google OAuth callback
-    /// </summary>
     [HttpGet]
     public async Task<IActionResult> GoogleCallback(string? returnUrl = null)
     {
@@ -251,9 +223,6 @@ public class AccountController : Controller
         return RedirectToAction("Index", "Home");
     }
 
-    /// <summary>
-    /// GET: /Account/ForgotPassword - Display forgot password form
-    /// </summary>
     [HttpGet]
     public IActionResult ForgotPassword()
     {
@@ -263,10 +232,6 @@ public class AccountController : Controller
         return View(new ForgotPasswordRequest());
     }
 
-    /// <summary>
-    /// POST: /Account/ForgotPassword - Send reset email
-    /// Always shows success message (security: don't reveal if email exists)
-    /// </summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ForgotPassword(ForgotPasswordRequest model)
@@ -300,9 +265,6 @@ public class AccountController : Controller
         return View(new ResetPasswordRequest { Email = email, Token = token });
     }
 
-    /// <summary>
-    /// POST: /Account/ResetPassword - Process password reset
-    /// </summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ResetPassword(ResetPasswordRequest model)

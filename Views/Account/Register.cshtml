@@ -3,7 +3,7 @@
 @{
     ViewData["Title"] = "Đăng ký";
     Layout = "~/Views/Shared/_AuthLayout.cshtml";
-    var isGoogleEnabled = GoogleAuthService.IsGoogleAuthEnabled();
+    var isGoogleEnabled = await GoogleAuthService.IsGoogleAuthEnabledAsync();
 }
 
 <!-- Toast Container -->
