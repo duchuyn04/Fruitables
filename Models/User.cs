@@ -40,6 +40,12 @@ public class User
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
+    // Password Reset fields
+    [MaxLength(255)]
+    public string? ResetPasswordToken { get; set; }
+
+    public DateTime? ResetPasswordTokenExpiresAt { get; set; }
+
     // Lock info fields
     /// <summary>
     /// Loại khóa hiện tại (null nếu không bị khóa)
