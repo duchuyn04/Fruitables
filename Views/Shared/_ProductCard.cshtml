@@ -15,7 +15,7 @@
                     ?? "~/img/fruite-item-5.jpg";
             }
             <a asp-controller="Shop" asp-action="Detail" asp-route-id="@Model.Id">
-                <img src="@primaryImage" class="img-fluid w-100 rounded-top" alt="@Model.Name">
+                <img src="@primaryImage" class="img-fluid w-100 rounded-top product-image" alt="@Model.Name">
             </a>
         </div>
         @if (isFeatured)
@@ -71,6 +71,25 @@
 </div>
 
 <style>
+/* Container ảnh - chiều cao cố định */
+.fruite-img {
+    height: 250px;
+    background-color: #f8f9fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border-radius: 8px 8px 0 0;
+}
+
+/* Ảnh sản phẩm - hiển thị toàn bộ không bị cắt */
+.product-image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 10px;
+}
+
 /* Featured ribbon */
 .featured-ribbon {
     position: absolute;
