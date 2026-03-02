@@ -8,10 +8,6 @@ using System.Security.Claims;
 
 namespace Fruitables.Areas.Admin.Controllers;
 
-/// <summary>
-/// Controller for User Management in Admin Panel
-/// Requirements: 1.1, 2.1, 3.1, 4.1, 5.1, 6.1, 7.1, 7.2, 10.5, 10.6
-/// </summary>
 [Area("Admin")]
 [Authorize(Roles = "Admin,SuperAdmin")]
 public class UserController : Controller
@@ -27,11 +23,6 @@ public class UserController : Controller
         _rbacService = rbacService;
     }
 
-    /// <summary>
-    /// Display list of customers with filtering and pagination
-    /// GET: /Admin/User
-    /// Requirements: 1.1 - Display customer list (Admin + SuperAdmin)
-    /// </summary>
     public async Task<IActionResult> Index(
         string? searchTerm,
         bool? isActive,
@@ -51,23 +42,15 @@ public class UserController : Controller
 
         var result = await _userManagementService.GetCustomersAsync(filter);
 
-        // Store filter values for view
         ViewBag.SearchTerm = searchTerm;
         ViewBag.IsActive = isActive;
         ViewBag.SortBy = sortBy;
         ViewBag.SortDescending = sortDescending;
-        
-        // Check if current user is SuperAdmin for lock/unlock permissions
         ViewBag.CanLockAccount = _userManagementService.CanLockAccount(GetCurrentUserRole());
 
         return View(result);
     }
 
-    /// <summary>
-    /// Display detailed customer information
-    /// GET: /Admin/User/Detail/{id}
-    /// Requirements: 2.1 - Display customer details (Admin + SuperAdmin)
-    /// </summary>
     public async Task<IActionResult> Detail(int id)
     {
         var result = await _userManagementService.GetCustomerDetailAsync(id);
@@ -78,7 +61,6 @@ public class UserController : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        // Check if current user is SuperAdmin for lock/unlock permissions
         var currentUserRole = GetCurrentUserRole();
         ViewBag.CanLockAccount = _userManagementService.CanLockAccount(currentUserRole);
         ViewBag.CurrentUserRole = currentUserRole;
@@ -87,11 +69,6 @@ public class UserController : Controller
         return View(result.Data);
     }
 
-    /// <summary>
-    /// API to get customer purchase history
-    /// GET: /Admin/User/PurchaseHistory
-    /// Requirements: 3.1 - Get purchase history (Admin + SuperAdmin)
-    /// </summary>
     [HttpGet]
     public async Task<IActionResult> PurchaseHistory(
         int customerId,
@@ -117,17 +94,11 @@ public class UserController : Controller
         return Json(new { isValid = true, data = result.Data });
     }
 
-    /// <summary>
-    /// API to lock customer account
-    /// POST: /Admin/User/Lock
-    /// Requirements: 4.1 - Lock account (SuperAdmin only)
-    /// </summary>
     [HttpPost]
     [Authorize(Roles = "SuperAdmin")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Lock([FromBody] LockAccountRequest request)
     {
-        // Set admin info and capture IP/UserAgent
         request.AdminId = GetCurrentAdminId();
         request.AdminRole = GetCurrentUserRole();
         request.IpAddress = GetClientIpAddress();
@@ -152,17 +123,11 @@ public class UserController : Controller
         });
     }
 
-    /// <summary>
-    /// API to unlock customer account
-    /// POST: /Admin/User/Unlock
-    /// Requirements: 5.1 - Unlock account (SuperAdmin only)
-    /// </summary>
     [HttpPost]
     [Authorize(Roles = "SuperAdmin")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Unlock([FromBody] UnlockAccountRequest request)
     {
-        // Set admin info and capture IP/UserAgent
         request.AdminId = GetCurrentAdminId();
         request.AdminRole = GetCurrentUserRole();
         request.IpAddress = GetClientIpAddress();
@@ -187,11 +152,6 @@ public class UserController : Controller
         });
     }
 
-    /// <summary>
-    /// API to get account lock/unlock history
-    /// GET: /Admin/User/AccountLogs
-    /// Requirements: 6.1 - Get account logs (Admin + SuperAdmin)
-    /// </summary>
     [HttpGet]
     public async Task<IActionResult> AccountLogs(int customerId)
     {
@@ -205,11 +165,6 @@ public class UserController : Controller
         return Json(new { isValid = true, data = result.Data });
     }
 
-    /// <summary>
-    /// Get user's current roles
-    /// GET: /Admin/User/GetUserRoles
-    /// Requirements: 10.5 - Get user roles
-    /// </summary>
     [HttpGet]
     [RequirePermission("users.update")]
     public async Task<IActionResult> GetUserRoles(int userId)
@@ -233,11 +188,6 @@ public class UserController : Controller
         }
     }
 
-    /// <summary>
-    /// Get all available roles for assignment
-    /// GET: /Admin/User/GetAvailableRoles
-    /// Requirements: 10.5 - Get available roles
-    /// </summary>
     [HttpGet]
     [RequirePermission("users.update")]
     public async Task<IActionResult> GetAvailableRoles(int userId)
@@ -248,7 +198,6 @@ public class UserController : Controller
             var userRoles = await _rbacService.GetUserRolesAsync(userId);
             var userRoleIds = userRoles.Select(r => r.Id).ToHashSet();
             
-            // Filter out roles user already has
             var availableRoles = allRoles.Where(r => !userRoleIds.Contains(r.Id)).ToList();
             
             return Json(new
@@ -267,11 +216,6 @@ public class UserController : Controller
         }
     }
 
-    /// <summary>
-    /// API to assign a role to a user
-    /// POST: /Admin/User/AssignRole
-    /// Requirements: 10.5 - Assign role to user
-    /// </summary>
     [HttpPost]
     [RequirePermission("users.update")]
     [ValidateAntiForgeryToken]
@@ -298,11 +242,6 @@ public class UserController : Controller
         }
     }
 
-    /// <summary>
-    /// API to revoke a role from a user
-    /// POST: /Admin/User/RevokeRole
-    /// Requirements: 10.5 - Revoke role from user
-    /// </summary>
     [HttpPost]
     [RequirePermission("users.update")]
     [ValidateAntiForgeryToken]
@@ -329,11 +268,6 @@ public class UserController : Controller
         }
     }
 
-    /// <summary>
-    /// API to get user's effective permissions
-    /// GET: /Admin/User/GetEffectivePermissions
-    /// Requirements: 10.6 - Display effective permissions
-    /// </summary>
     [HttpGet]
     [RequirePermission("users.update")]
     public async Task<IActionResult> GetEffectivePermissions(int userId)
@@ -343,7 +277,6 @@ public class UserController : Controller
             var permissions = await _rbacService.GetUserPermissionsAsync(userId);
             var permissionsGrouped = await _rbacService.GetPermissionsGroupedByModuleAsync();
             
-            // Group effective permissions by module
             var effectiveByModule = new Dictionary<string, List<string>>();
             foreach (var permission in permissions)
             {
@@ -381,38 +314,26 @@ public class UserController : Controller
 
     #region Helper Methods
 
-    /// <summary>
-    /// Get current admin user ID from claims
-    /// </summary>
     private int GetCurrentAdminId()
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         return int.TryParse(userIdClaim, out var id) ? id : 0;
     }
 
-    /// <summary>
-    /// Get current user role from claims
-    /// </summary>
     private string GetCurrentUserRole()
     {
         return User.FindFirst(ClaimTypes.Role)?.Value ?? "Admin";
     }
 
-    /// <summary>
-    /// Get client IP address from request
-    /// Requirements: 6.3 - Log IP address
-    /// </summary>
     private string? GetClientIpAddress()
     {
-        // Check for forwarded IP first (in case behind proxy/load balancer)
+        // Check for forwarded IP first (behind proxy/load balancer)
         var forwardedFor = Request.Headers["X-Forwarded-For"].FirstOrDefault();
         if (!string.IsNullOrEmpty(forwardedFor))
         {
-            // X-Forwarded-For can contain multiple IPs, take the first one
             return forwardedFor.Split(',')[0].Trim();
         }
 
-        // Fall back to remote IP address
         return HttpContext.Connection.RemoteIpAddress?.ToString();
     }
 
