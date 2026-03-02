@@ -312,8 +312,6 @@ public class UserController : Controller
         }
     }
 
-    #region Helper Methods
-
     private int GetCurrentAdminId()
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -336,6 +334,4 @@ public class UserController : Controller
 
         return HttpContext.Connection.RemoteIpAddress?.ToString();
     }
-
-    #endregion
 }
