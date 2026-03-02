@@ -2,9 +2,48 @@
 @using Fruitables.ViewModels
 @{
     var model = Model as ShopViewModel;
-    var categories = model?.Categories ?? ViewBag.Categories as List<Category> ?? new List<Category>();
+    var categoryTree = model?.Categories != null 
+        ? BuildCategoryTree(model.Categories) 
+        : ViewBag.CategoryTree as List<CategoryTreeNode> ?? new List<CategoryTreeNode>();
     var featuredProducts = ViewBag.FeaturedProducts as List<Product> ?? new List<Product>();
     var selectedCategoryId = model?.SelectedCategoryId ?? ViewBag.CategoryId as int?;
+    
+    // Helper để build tree từ flat list (nếu cần)
+    List<CategoryTreeNode> BuildCategoryTree(List<Category> categories)
+    {
+        return categories
+            .Where(c => c.ParentId == null && !c.IsDeleted)
+            .OrderBy(c => c.SortOrder)
+            .Select(c => new CategoryTreeNode
+            {
+                Id = c.Id,
+                Name = c.Name,
+                Slug = c.Slug,
+                ProductCount = c.Products?.Count(p => p.IsActive) ?? 0,
+                Level = 0,
+                ParentId = c.ParentId,
+                Children = BuildChildren(categories, c.Id, 1)
+            })
+            .ToList();
+    }
+    
+    List<CategoryTreeNode> BuildChildren(List<Category> allCategories, int parentId, int level)
+    {
+        return allCategories
+            .Where(c => c.ParentId == parentId && !c.IsDeleted)
+            .OrderBy(c => c.SortOrder)
+            .Select(c => new CategoryTreeNode
+            {
+                Id = c.Id,
+                Name = c.Name,
+                Slug = c.Slug,
+                ProductCount = c.Products?.Count(p => p.IsActive) ?? 0,
+                Level = level,
+                ParentId = c.ParentId,
+                Children = BuildChildren(allCategories, c.Id, level + 1)
+            })
+            .ToList();
+    }
 }
 
 <div class="row g-4">
@@ -12,17 +51,9 @@
         <div class="mb-3">
             <h4>Categories</h4>
             <ul class="list-unstyled fruite-categorie">
-                @foreach (var category in categories)
+                @foreach (var category in categoryTree)
                 {
-                    var isActive = selectedCategoryId == category.Id;
-                    <li>
-                        <div class="d-flex justify-content-between fruite-name">
-                            <a asp-controller="Shop" asp-action="Index" asp-route-categoryId="@category.Id" class="@(isActive ? "text-primary fw-bold" : "")">
-                                <i class="fas fa-apple-alt me-2"></i>@category.Name
-                            </a>
-                            <span>(@(category.Products?.Count(p => p.IsActive) ?? 0))</span>
-                        </div>
-                    </li>
+                    @await Html.PartialAsync("_CategoryTreeItem", category)
                 }
             </ul>
         </div>

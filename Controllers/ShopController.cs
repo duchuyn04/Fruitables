@@ -44,7 +44,8 @@ public class ShopController : Controller
         if (product == null) return NotFound();
 
         ViewBag.RelatedProducts = await _productService.GetRelatedProductsAsync(id.Value, 4);
-        ViewBag.Categories = await _categoryService.GetAllCategoriesAsync();
+        // Lấy cây categories đầy đủ để hiển thị ở sidebar
+        ViewBag.CategoryTree = await _categoryService.GetCategoryTreeAsync();
         ViewBag.FeaturedProducts = await _productService.GetFeaturedProductsAsync(3);
 
         // Load review data

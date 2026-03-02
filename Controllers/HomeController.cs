@@ -27,7 +27,8 @@ public class HomeController : Controller
         var sessionId = GetSessionId();
         ViewBag.CartCount = await _cartService.GetCartCountAsync(sessionId);
         ViewBag.AllProducts = await _productService.GetAllProductsAsync();
-        ViewBag.Categories = await _categoryService.GetAllCategoriesAsync();
+        // Lấy categories cha để hiển thị tabs ở home
+        ViewBag.Categories = await _categoryService.GetParentCategoriesAsync();
         ViewBag.Testimonials = await _testimonialService.GetActiveTestimonialsAsync();
         return View();
     }

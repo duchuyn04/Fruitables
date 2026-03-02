@@ -1,0 +1,31 @@
+@model Fruitables.Models.CategoryTreeNode
+@{
+    var selectedCategoryId = ViewBag.CategoryId as int? ?? ViewBag.SelectedCategoryId as int?;
+    var isActive = selectedCategoryId == Model.Id;
+    var hasChildren = Model.Children != null && Model.Children.Any();
+}
+
+<li>
+    <div class="d-flex justify-content-between fruite-name" style="padding-left: @(Model.Level * 15)px">
+        <a asp-controller="Shop" asp-action="Index" asp-route-categoryId="@Model.Id" class="@(isActive ? "text-primary fw-bold" : "")">
+            @if (hasChildren)
+            {
+                <i class="fas fa-folder me-2"></i>
+            }
+            else
+            {
+                <i class="fas fa-apple-alt me-2"></i>
+            }
+            @Model.Name
+        </a>
+        <span>(@Model.ProductCount)</span>
+    </div>
+</li>
+
+@if (hasChildren)
+{
+    foreach (var child in Model.Children)
+    {
+        @await Html.PartialAsync("_CategoryTreeItem", child)
+    }
+}
