@@ -260,9 +260,26 @@
                         <label for="request_CategoryId" class="form-label">Danh mục <span class="text-danger">*</span></label>
                         <select name="request.CategoryId" id="request_CategoryId" class="form-select">
                             <option value="">-- Chọn danh mục --</option>
-                            @foreach (var category in Model.Categories)
-                            {
-                                <option value="@category.Id" selected="@(Model.Product.CategoryId == category.Id)">@category.Name</option>
+                            @{
+                                List<(int Id, string Name, int Level)> GetFlattenedCategories(List<Fruitables.Models.Category> categories, int? parentId, int level)
+                                {
+                                    var result = new List<(int, string, int)>();
+                                    var children = categories.Where(c => c.ParentId == parentId && !c.IsDeleted).OrderBy(c => c.SortOrder);
+                                    foreach (var category in children)
+                                    {
+                                        result.Add((category.Id, category.Name, level));
+                                        result.AddRange(GetFlattenedCategories(categories, category.Id, level + 1));
+                                    }
+                                    return result;
+                                }
+                                
+                                var flatCategories = GetFlattenedCategories(Model.Categories, null, 0);
+                                foreach (var cat in flatCategories)
+                                {
+                                    var indent = cat.Level > 0 ? new string('\u00A0', (cat.Level - 1) * 4) + "└── " : "";
+                                    var isSelected = Model.Product.CategoryId == cat.Id;
+                                    <option value="@cat.Id" selected="@isSelected">@Html.Raw(indent)@cat.Name</option>
+                                }
                             }
                         </select>
                     </div>

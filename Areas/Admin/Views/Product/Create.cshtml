@@ -174,9 +174,25 @@
                         <label asp-for="Product.CategoryId" class="form-label">Danh mục <span class="text-danger">*</span></label>
                         <select asp-for="Product.CategoryId" class="form-select">
                             <option value="">-- Chọn danh mục --</option>
-                            @foreach (var category in Model.Categories)
-                            {
-                                <option value="@category.Id">@category.Name</option>
+                            @{
+                                List<(int Id, string Name, int Level)> GetFlattenedCategories(List<Fruitables.Models.Category> categories, int? parentId, int level)
+                                {
+                                    var result = new List<(int, string, int)>();
+                                    var children = categories.Where(c => c.ParentId == parentId && !c.IsDeleted).OrderBy(c => c.SortOrder);
+                                    foreach (var category in children)
+                                    {
+                                        result.Add((category.Id, category.Name, level));
+                                        result.AddRange(GetFlattenedCategories(categories, category.Id, level + 1));
+                                    }
+                                    return result;
+                                }
+                                
+                                var flatCategories = GetFlattenedCategories(Model.Categories, null, 0);
+                                foreach (var cat in flatCategories)
+                                {
+                                    var indent = cat.Level > 0 ? new string('\u00A0', (cat.Level - 1) * 4) + "└── " : "";
+                                    <option value="@cat.Id">@Html.Raw(indent)@cat.Name</option>
+                                }
                             }
                         </select>
                         <span asp-validation-for="Product.CategoryId" class="text-danger"></span>
