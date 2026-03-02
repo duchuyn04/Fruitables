@@ -93,6 +93,11 @@ Fruitables.Tests/                 # Test project
 **Chức năng**:
 - Đăng ký, đăng nhập với email/password
 - Đăng nhập với Google OAuth
+- **Quên mật khẩu & Reset password**:
+  - Gửi email với link reset password
+  - Token có thời hạn (configurable)
+  - Xác thực token trước khi reset
+  - Mã hóa password mới với BCrypt
 - **Hệ thống RBAC (Role-Based Access Control)**:
   - Quản lý Roles (vai trò) động
   - Quản lý Permissions (quyền) chi tiết
@@ -335,6 +340,18 @@ Fruitables.Tests/                 # Test project
 - Cấu hình social media links
 - Cấu hình banner và features
 - Cấu hình phí vận chuyển theo vùng
+- **Cấu hình email settings**:
+  - SMTP server configuration
+  - Email templates
+  - Sender information
+- **Cấu hình security settings**:
+  - Password reset token expiration
+  - Session timeout
+  - Rate limiting thresholds
+- **Cấu hình application keys**:
+  - Google OAuth credentials
+  - API keys cho third-party services
+  - Encryption keys
 - Upload logo và hình ảnh
 
 **Services**:
@@ -344,6 +361,9 @@ Fruitables.Tests/                 # Test project
 **Models**:
 - `Setting`: Key-value settings
 - `Shipping`: Cấu hình phí ship
+
+**Constants**:
+- `SettingKeys`: Định nghĩa các key chuẩn cho settings
 
 ### 9. Module Liên Hệ
 **Trạng thái**: ✅ Hoàn thành
@@ -602,6 +622,10 @@ dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=opencover
 - `POST /Account/Login`: Xử lý đăng nhập
 - `GET /Account/Register`: Đăng ký
 - `POST /Account/Register`: Xử lý đăng ký
+- **`GET /Account/ForgotPassword`**: Form quên mật khẩu
+- **`POST /Account/ForgotPassword`**: Gửi email reset password
+- **`GET /Account/ResetPassword`**: Form reset password (với token)
+- **`POST /Account/ResetPassword`**: Xử lý reset password
 
 ### Admin APIs
 - `GET /Admin/Dashboard`: Dashboard
@@ -610,6 +634,9 @@ dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=opencover
 - `GET /Admin/User`: Quản lý người dùng
 - `GET /Admin/Revenue`: Thống kê doanh thu
 - `GET /Admin/Settings`: Cấu hình hệ thống
+- **`POST /Admin/Settings/UpdateEmailSettings`**: Cập nhật cấu hình email
+- **`POST /Admin/Settings/UpdateSecuritySettings`**: Cập nhật cấu hình bảo mật
+- **`POST /Admin/Settings/UpdateApiKeys`**: Cập nhật API keys
 - **`GET /Admin/Role`**: Quản lý roles (RBAC)
 - **`GET /Admin/Permission`**: Quản lý permissions (RBAC)
 - **`GET /Admin/RbacAudit`**: Xem audit logs (RBAC)
@@ -625,12 +652,26 @@ dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=opencover
 
 Dự án này được phát triển cho mục đích học tập và thương mại.
 
-**Phiên bản**: 2.1.0  
+**Phiên bản**: 2.2.0  
 **Cập nhật lần cuối**: Tháng 2, 2026
 
 ---
 
 ## 🆕 Changelog
+
+### Version 2.2.0 (Feb 2026)
+- ✨ **NEW**: Forgot Password & Reset Password functionality
+  - Email-based password reset with secure tokens
+  - Configurable token expiration time
+  - Token validation and one-time use
+  - BCrypt password encryption
+- ⚙️ **NEW**: Enhanced Settings Management
+  - Email settings configuration (SMTP, templates)
+  - Security settings (token expiration, session timeout)
+  - API keys management (Google OAuth, third-party services)
+  - Encryption keys configuration
+- 🔒 **SECURITY**: Improved password reset security with time-limited tokens
+- 📧 **EMAIL**: Email service integration for password reset notifications
 
 ### Version 2.1.0 (Feb 2026)
 - ✨ **NEW**: Complete Product Comments System
