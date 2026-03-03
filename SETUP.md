@@ -1,211 +1,324 @@
-# 🚀 Setup Guide - Fruitables E-commerce
+# 🚀 Hướng Dẫn Cài Đặt - Fruitables E-commerce
 
-## 📋 Prerequisites
+## 📋 Yêu Cầu Hệ Thống
 
-- .NET 8.0 SDK
-- SQL Server (LocalDB or Full)
-- Visual Studio 2022 or VS Code
-- Git
+Trước khi bắt đầu, bạn cần cài đặt các phần mềm sau:
+
+- **.NET 8.0 SDK** - [Tải tại đây](https://dotnet.microsoft.com/download/dotnet/8.0)
+- **SQL Server** (LocalDB hoặc bản đầy đủ) - [Tải SQL Server Express](https://www.microsoft.com/sql-server/sql-server-downloads)
+- **Visual Studio 2022** hoặc **VS Code** - [Tải Visual Studio](https://visualstudio.microsoft.com/)
+- **Git** - [Tải Git](https://git-scm.com/downloads)
 
 ---
 
-## 🔧 Initial Setup
+## 🔧 Các Bước Cài Đặt
 
-### 1. Clone Repository
+### Bước 1: Tải Mã Nguồn
+
+Mở **Command Prompt** hoặc **Terminal** và chạy lệnh:
 
 ```bash
 git clone https://github.com/duchuy19012004/Fruitables.git
 cd Fruitables
 ```
 
-### 2. Configure Database Connection
+### Bước 2: Cấu Hình Kết Nối Database
 
-Copy the example settings file:
+#### 2.1. Tạo File Cấu Hình
+
+Sao chép file mẫu:
 
 ```bash
-cp appsettings.example.json appsettings.json
+copy appsettings.example.json appsettings.json
 ```
 
-Edit `appsettings.json` and update the connection string:
+#### 2.2. Chỉnh Sửa Connection String
+
+Mở file `appsettings.json` và sửa phần connection string:
 
 ```json
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Server=YOUR_SERVER_NAME;Database=FruitablesDb;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True"
+    "DefaultConnection": "Server=TÊN_SERVER;Database=FruitablesDb;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True"
   }
 }
 ```
 
-Replace `YOUR_SERVER_NAME` with:
-- `(localdb)\\mssqllocaldb` for LocalDB
-- `.` or `localhost` for local SQL Server
-- Your server name for remote SQL Server
+**Thay `TÊN_SERVER` bằng:**
+- `(localdb)\\mssqllocaldb` - nếu dùng LocalDB (đi kèm Visual Studio)
+- `.` hoặc `localhost` - nếu dùng SQL Server cài trên máy
+- Tên server của bạn - nếu dùng SQL Server từ xa
 
-### 3. Restore Dependencies
+**Ví dụ với LocalDB:**
+```json
+"DefaultConnection": "Server=(localdb)\\mssqllocaldb;Database=FruitablesDb;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True"
+```
+
+### Bước 3: Cài Đặt Các Package Cần Thiết
 
 ```bash
 dotnet restore
 ```
 
-### 4. Apply Database Migrations
+Lệnh này sẽ tải về tất cả các thư viện cần thiết cho project.
+
+### Bước 4: Tạo Database
+
+Chạy lệnh sau để tạo database và các bảng:
 
 ```bash
 dotnet ef database update
 ```
 
-This will create the database and all tables including RBAC system.
+Lệnh này sẽ:
+- Tạo database `FruitablesDb`
+- Tạo tất cả các bảng (Users, Products, Orders, Categories, v.v.)
+- Tạo hệ thống phân quyền RBAC
 
-### 5. Run the Application
+### Bước 5: Chạy Ứng Dụng
 
+#### Cách 1: Dùng Command Line
 ```bash
 dotnet run
 ```
 
-Or press F5 in Visual Studio.
+#### Cách 2: Dùng Visual Studio
+- Mở file `Fruitables.sln`
+- Nhấn **F5** hoặc click nút **Run**
 
-The application will be available at:
+Ứng dụng sẽ chạy tại:
 - HTTPS: `https://localhost:5001`
 - HTTP: `http://localhost:5000`
 
 ---
 
-## 🔐 RBAC System Setup
+## 🔐 Thiết Lập Hệ Thống Phân Quyền (RBAC)
 
-After first run, you need to migrate users to the RBAC system:
+### Cách 1: Chạy Script SQL (Khuyến Nghị)
 
-### Option 1: Via Web UI (Recommended)
+1. Mở file `seed-rbac-data.sql` (nếu có trong project)
+2. Mở **SQL Server Management Studio** (SSMS)
+3. Kết nối đến database `FruitablesDb`
+4. Chạy script để tạo:
+   - 3 roles: Customer, Admin, SuperAdmin
+   - 34 permissions
+   - 3 tài khoản test
 
-1. Login with an admin account
-2. Navigate to: `/Admin/Diagnostics/Migration`
-3. Click "Run Migration"
-4. Logout and login again
+**Tài khoản mặc định sau khi chạy script:**
+- **Customer**: customer@gmail.com / Password123!
+- **Admin**: admin@gmail.com / Password123!
+- **SuperAdmin**: superadmin@gmail.com / Password123!
 
-### Option 2: Via Diagnostics Page
+### Cách 2: Qua Giao Diện Web
 
-1. Navigate to: `/Admin/Diagnostics`
-2. Review system status
-3. Follow the instructions to run migration
+1. Đăng nhập với tài khoản admin
+2. Truy cập: `http://localhost:5000/Admin/Diagnostics/Migration`
+3. Click nút **"Run Migration"**
+4. Đăng xuất và đăng nhập lại
 
 ---
 
-## 👤 Default Admin Account
-
-After running migrations, you should have default admin users. Check your seed data or create one manually in the database.
-
----
-
-## 📁 Project Structure
+## 📁 Cấu Trúc Project
 
 ```
 Fruitables/
-├── Areas/Admin/          # Admin panel
-│   ├── Controllers/      # Admin controllers
-│   └── Views/           # Admin views
-├── Controllers/         # Public controllers
-├── Models/             # Data models
+├── Areas/Admin/          # Trang quản trị
+│   ├── Controllers/      # Controllers cho admin
+│   └── Views/           # Giao diện admin
+├── Controllers/         # Controllers công khai
+├── Models/             # Models dữ liệu
 ├── Services/           # Business logic
-├── Repositories/       # Data access
+├── Repositories/       # Truy xuất dữ liệu
 ├── ViewModels/         # View models
-├── Views/              # Public views
-├── wwwroot/            # Static files
+├── Views/              # Giao diện công khai
+├── wwwroot/            # File tĩnh (CSS, JS, images)
 └── Data/               # Database context
 ```
 
 ---
 
-## 🔑 Key Features
+## 🎯 Các Tính Năng Chính
 
-- **RBAC System**: Role-Based Access Control with fine-grained permissions
-- **User Management**: Lock/unlock accounts, manage roles
-- **Order Management**: Complete order lifecycle with status tracking
-- **Product Management**: Categories, products, variants
-- **Revenue Statistics**: Detailed analytics and reports
-- **Address Management**: Vietnam address system with provinces/districts/wards
-- **Shipping Configuration**: Flexible shipping fee calculation
-- **Review System**: Product reviews with moderation
+### Dành Cho Khách Hàng
+- 🛒 Mua sắm trực tuyến với giỏ hàng
+- 🔍 Tìm kiếm và lọc sản phẩm
+- 📦 Theo dõi đơn hàng
+- ⭐ Đánh giá sản phẩm
+- 👤 Quản lý tài khoản cá nhân
+- 📍 Quản lý địa chỉ giao hàng
+
+### Dành Cho Admin
+- 👥 **Quản lý người dùng**: Khóa/mở khóa tài khoản, phân quyền
+- � **Quản lý đơn hàng**: Xử lý đơn hàng, cập nhật trạng thái
+- 🏷️ **Quản lý sản phẩm**: Thêm/sửa/xóa sản phẩm, danh mục
+- 💰 **Thống kê doanh thu**: Báo cáo chi tiết theo ngày/tháng/năm
+- 🔐 **Hệ thống RBAC**: Phân quyền chi tiết theo chức năng
+- ⭐ **Quản lý đánh giá**: Kiểm duyệt review sản phẩm
+- 🚚 **Cấu hình vận chuyển**: Thiết lập phí ship
 
 ---
 
-## 🛠️ Development
+## 🛠️ Lệnh Hữu Ích Cho Developer
 
-### Build
-
+### Build Project
 ```bash
 dotnet build
 ```
 
-### Run Tests
-
+### Chạy Tests
 ```bash
 dotnet test
 ```
 
-### Create Migration
-
+### Tạo Migration Mới
 ```bash
-dotnet ef migrations add MigrationName
+dotnet ef migrations add TenMigration
 ```
 
-### Update Database
-
+### Cập Nhật Database
 ```bash
 dotnet ef database update
 ```
 
----
-
-## 📝 Configuration Files
-
-- `appsettings.json` - Main configuration (NOT in Git)
-- `appsettings.example.json` - Template for configuration
-- `appsettings.Development.json` - Development overrides (NOT in Git)
-
-**Important:** Never commit `appsettings.json` or `appsettings.Development.json` to Git as they contain sensitive information.
+### Xóa Database (Cẩn thận!)
+```bash
+dotnet ef database drop
+```
 
 ---
 
-## 🚨 Troubleshooting
+## � Các File Cấu Hình
 
-### Database Connection Issues
+| File | Mô Tả | Commit vào Git? |
+|------|-------|-----------------|
+| `appsettings.json` | Cấu hình chính (chứa connection string) | ❌ KHÔNG |
+| `appsettings.example.json` | File mẫu cho cấu hình | ✅ CÓ |
+| `appsettings.Development.json` | Cấu hình cho môi trường dev | ❌ KHÔNG |
 
-1. Check SQL Server is running
-2. Verify connection string in `appsettings.json`
-3. Ensure database user has proper permissions
-
-### Migration Issues
-
-1. Delete the database and run migrations again
-2. Check migration files for errors
-3. Use `/Admin/Diagnostics` page to check system status
-
-### RBAC Permission Issues
-
-1. Navigate to `/Admin/Diagnostics/Migration`
-2. Run RBAC migration
-3. Logout and login again
-4. Check user has proper roles assigned
+**⚠️ Quan trọng:** Không bao giờ commit file `appsettings.json` hoặc `appsettings.Development.json` vào Git vì chứa thông tin nhạy cảm!
 
 ---
 
-## 📞 Support
+## 🚨 Xử Lý Lỗi Thường Gặp
 
-For issues or questions:
-1. Check the diagnostics page: `/Admin/Diagnostics`
-2. Review error logs
-3. Contact the development team
+### Lỗi: Không Kết Nối Được Database
+
+**Nguyên nhân:**
+- SQL Server chưa chạy
+- Connection string sai
+- Không có quyền truy cập database
+
+**Giải pháp:**
+1. Kiểm tra SQL Server đã chạy chưa:
+   - Mở **Services** (Windows + R → `services.msc`)
+   - Tìm **SQL Server** và đảm bảo đang chạy
+2. Kiểm tra lại connection string trong `appsettings.json`
+3. Thử kết nối bằng SSMS để test
+
+### Lỗi: Migration Thất Bại
+
+**Giải pháp:**
+1. Xóa database và chạy lại:
+   ```bash
+   dotnet ef database drop
+   dotnet ef database update
+   ```
+2. Kiểm tra file migration có lỗi không
+3. Xem log chi tiết trong console
+
+### Lỗi: Không Có Quyền Truy Cập (403 Forbidden)
+
+**Giải pháp:**
+1. Truy cập: `http://localhost:5000/Admin/Diagnostics/Migration`
+2. Chạy RBAC migration
+3. Đăng xuất và đăng nhập lại
+4. Kiểm tra user đã được gán role chưa
+
+### Lỗi: Port 5000 Đã Được Sử Dụng
+
+**Giải pháp:**
+1. Đổi port trong `Properties/launchSettings.json`
+2. Hoặc tắt ứng dụng đang dùng port 5000
 
 ---
 
-## 🔒 Security Notes
+## 💡 Hướng Dẫn Sử Dụng Nhanh
 
-- Always use HTTPS in production
-- Keep `appsettings.json` secure and never commit it
-- Regularly update dependencies
-- Use strong passwords for admin accounts
-- Enable two-factor authentication (if implemented)
+### Cho Người Dùng Mới
+
+1. **Đăng ký tài khoản:**
+   - Truy cập trang chủ
+   - Click "Đăng ký"
+   - Điền thông tin và xác nhận
+
+2. **Mua hàng:**
+   - Duyệt sản phẩm
+   - Thêm vào giỏ hàng
+   - Thanh toán và điền địa chỉ giao hàng
+
+3. **Theo dõi đơn hàng:**
+   - Vào "Tài khoản" → "Lịch sử đơn hàng"
+   - Xem chi tiết và trạng thái đơn
+
+### Cho Admin
+
+1. **Đăng nhập admin:**
+   - Truy cập: `http://localhost:5000/Admin`
+   - Đăng nhập với tài khoản admin
+
+2. **Quản lý sản phẩm:**
+   - Vào "Products" → "Create"
+   - Điền thông tin và upload ảnh
+   - Lưu sản phẩm
+
+3. **Xử lý đơn hàng:**
+   - Vào "Orders"
+   - Click vào đơn hàng cần xử lý
+   - Cập nhật trạng thái
+
+---
+
+## 🔒 Lưu Ý Bảo Mật
+
+- ✅ Luôn dùng HTTPS trong production
+- ✅ Giữ `appsettings.json` an toàn, không commit vào Git
+- ✅ Cập nhật dependencies thường xuyên
+- ✅ Dùng mật khẩu mạnh cho tài khoản admin
+- ✅ Đổi mật khẩu mặc định sau khi cài đặt
+- ✅ Backup database định kỳ
+
+---
+
+## 📞 Hỗ Trợ
+
+Nếu gặp vấn đề:
+
+1. **Kiểm tra trang Diagnostics:**
+   - Truy cập: `http://localhost:5000/Admin/Diagnostics`
+   - Xem trạng thái hệ thống
+
+2. **Xem log lỗi:**
+   - Kiểm tra console khi chạy `dotnet run`
+   - Xem file log (nếu có)
+
+3. **Liên hệ:**
+   - Email: duchuy19012004@gmail.com
+   - GitHub Issues: [Tạo issue mới](https://github.com/duchuy19012004/Fruitables/issues)
+
+---
+
+## 📚 Tài Liệu Thêm
+
+- [ASP.NET Core Documentation](https://docs.microsoft.com/aspnet/core)
+- [Entity Framework Core](https://docs.microsoft.com/ef/core)
+- [SQL Server Documentation](https://docs.microsoft.com/sql)
 
 ---
 
 ## 📄 License
 
-[Your License Here]
+MIT License - Xem file LICENSE để biết thêm chi tiết.
+
+---
+
+**Chúc bạn sử dụng project thành công! 🎉**
