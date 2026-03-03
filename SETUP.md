@@ -94,27 +94,27 @@ dotnet run
 
 ## 🔐 Thiết Lập Hệ Thống Phân Quyền (RBAC)
 
-### Cách 1: Chạy Script SQL (Khuyến Nghị)
+⚠️ **QUAN TRỌNG**: Sau khi chạy `dotnet ef database update`, bạn cần seed dữ liệu RBAC để hệ thống hoạt động.
 
-1. Mở file `seed-rbac-data.sql` (nếu có trong project)
-2. Mở **SQL Server Management Studio** (SSMS)
-3. Kết nối đến database `FruitablesDb`
-4. Chạy script để tạo:
-   - 3 roles: Customer, Admin, SuperAdmin
-   - 34 permissions
-   - 3 tài khoản test
+### Cách Đơn Giản Nhất (Khuyến Nghị) ⭐
 
-**Tài khoản mặc định sau khi chạy script:**
-- **Customer**: customer@gmail.com / Password123!
-- **Admin**: admin@gmail.com / Password123!
-- **SuperAdmin**: superadmin@gmail.com / Password123!
-
-### Cách 2: Qua Giao Diện Web
-
-1. Đăng nhập với tài khoản admin
+1. Chạy ứng dụng: `dotnet run`
 2. Truy cập: `http://localhost:5000/Admin/Diagnostics/Migration`
 3. Click nút **"Run Migration"**
-4. Đăng xuất và đăng nhập lại
+4. Hệ thống sẽ tự động tạo:
+   - 3 Roles: Customer, Admin, SuperAdmin
+   - 34 Permissions
+   - 3 tài khoản test
+
+**Tài khoản mặc định sau khi chạy migration:**
+
+| Role | Email | Password |
+|------|-------|----------|
+| **Customer** | customer@gmail.com | Customer@123 |
+| **Admin** | admin@gmail.com | Admin@123 |
+| **SuperAdmin** | superadmin@gmail.com | Admin@123 |
+
+⚠️ **Lưu ý bảo mật:** Đổi mật khẩu ngay sau khi đăng nhập lần đầu!
 
 ---
 
