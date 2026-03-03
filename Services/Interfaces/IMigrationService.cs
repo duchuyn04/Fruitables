@@ -47,6 +47,11 @@ public interface IMigrationService
     /// Reset all RBAC data to default seed data
     /// </summary>
     Task ResetToDefaultSeedDataAsync();
+    
+    /// <summary>
+    /// Seed default test users (Customer, Admin, SuperAdmin)
+    /// </summary>
+    Task SeedDefaultUsersAsync();
 }
 
 /// <summary>

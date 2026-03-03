@@ -39,7 +39,15 @@ public class MigrationService : IMigrationService
         {
             _logger.LogInformation("Starting RBAC migration...");
 
-            // Get all users from database with their role mappings
+            // Step 1: Seed default roles, permissions, and mappings
+            await SeedDefaultRolesAsync();
+            await SeedDefaultPermissionsAsync();
+            await SeedRolePermissionMappingsAsync();
+            
+            // Step 2: Seed default test users
+            await SeedDefaultUsersAsync();
+
+            // Step 3: Migrate existing users
             var users = await _unitOfWork.Users
                 .Query()
                 .Include(u => u.UserRoleMappings)
@@ -437,6 +445,120 @@ public class MigrationService : IMigrationService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error resetting to default seed data");
+            throw;
+        }
+    }
+    
+    public async Task SeedDefaultUsersAsync()
+    {
+        try
+        {
+            _logger.LogInformation("Seeding default test users...");
+
+            // Check if test users already exist
+            var testEmails = new[] { "customer@gmail.com", "admin@gmail.com", "superadmin@gmail.com" };
+            var existingUsers = await _unitOfWork.Users
+                .Query()
+                .Where(u => testEmails.Contains(u.Email))
+                .ToListAsync();
+
+            if (existingUsers.Any())
+            {
+                _logger.LogInformation("Test users already exist, skipping seed");
+                return;
+            }
+
+            // Get roles
+            var customerRole = await _unitOfWork.Roles.FirstOrDefaultAsync(r => r.Name == "Customer");
+            var adminRole = await _unitOfWork.Roles.FirstOrDefaultAsync(r => r.Name == "Admin");
+            var superAdminRole = await _unitOfWork.Roles.FirstOrDefaultAsync(r => r.Name == "SuperAdmin");
+
+            if (customerRole == null || adminRole == null || superAdminRole == null)
+            {
+                throw new InvalidOperationException("Default roles must be seeded before creating test users");
+            }
+
+            // Password hashes for "Customer@123" and "Admin@123"
+            var customerPasswordHash = BCrypt.Net.BCrypt.HashPassword("Customer@123");
+            var adminPasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin@123");
+
+            // Create test users
+            var testUsers = new[]
+            {
+                new User
+                {
+                    Name = "Nguyễn Văn A",
+                    Email = "customer@gmail.com",
+                    Password = customerPasswordHash,
+                    Role = UserRole.Customer,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                },
+                new User
+                {
+                    Name = "Admin User",
+                    Email = "admin@gmail.com",
+                    Password = adminPasswordHash,
+                    Role = UserRole.Admin,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                },
+                new User
+                {
+                    Name = "Super Admin",
+                    Email = "superadmin@gmail.com",
+                    Password = adminPasswordHash,
+                    Role = UserRole.SuperAdmin,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                }
+            };
+
+            // Add users to database
+            foreach (var user in testUsers)
+            {
+                await _unitOfWork.Users.AddAsync(user);
+            }
+            
+            await _unitOfWork.SaveChangesAsync();
+            _logger.LogInformation("Test users created successfully");
+
+            // Now assign RBAC roles to the newly created users
+            var createdUsers = await _unitOfWork.Users
+                .Query()
+                .Where(u => testEmails.Contains(u.Email))
+                .ToListAsync();
+
+            foreach (var user in createdUsers)
+            {
+                int roleId;
+                if (user.Email == "customer@gmail.com")
+                    roleId = customerRole.Id;
+                else if (user.Email == "admin@gmail.com")
+                    roleId = adminRole.Id;
+                else
+                    roleId = superAdminRole.Id;
+
+                var userRoleMapping = new UserRoleMapping
+                {
+                    UserId = user.Id,
+                    RoleId = roleId,
+                    AssignedAt = DateTime.UtcNow,
+                    AssignedByAdminId = null // System seed
+                };
+
+                await _unitOfWork.UserRoleMappings.AddAsync(userRoleMapping);
+            }
+
+            await _unitOfWork.SaveChangesAsync();
+            _logger.LogInformation("RBAC roles assigned to test users successfully");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error seeding default test users");
             throw;
         }
     }
