@@ -6,10 +6,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Fruitables.Services;
 
-/// <summary>
-/// Implementation of Migration Service for RBAC system
-/// Handles migration from legacy UserRole enum to RBAC system
-/// </summary>
 public class MigrationService : IMigrationService
 {
     private readonly IUnitOfWork _unitOfWork;
@@ -25,8 +21,6 @@ public class MigrationService : IMigrationService
         _rbacService = rbacService;
         _logger = logger;
     }
-
-    // ==================== Các thao tác migration ====================
     
     public async Task<MigrationResult> MigrateToRbacAsync()
     {
@@ -215,8 +209,6 @@ public class MigrationService : IMigrationService
             };
         }
     }
-    
-    // ==================== Các thao tác seed ====================
     
     public async Task SeedDefaultRolesAsync()
     {
