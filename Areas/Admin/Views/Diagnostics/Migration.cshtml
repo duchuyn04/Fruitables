@@ -1,0 +1,181 @@
+@{
+    ViewData["Title"] = "RBAC Migration";
+    var status = ViewBag.Status as dynamic;
+}
+
+<div class="container-fluid pt-4 px-4">
+    <div class="row g-4">
+        <div class="col-12">
+            <div class="bg-light rounded h-100 p-4">
+                <h3 class="mb-4">🔐 RBAC Migration Tool</h3>
+                
+                @if (status != null)
+                {
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5>📊 Trạng Thái Migration</h5>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td><strong>Trạng thái:</strong></td>
+                                    <td>
+                                        @if (status.IsCompleted)
+                                        {
+                                            <span class="badge bg-success">✓ Đã hoàn thành</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-warning">⚠ Chưa hoàn thành</span>
+                                        }
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Tổng số users:</strong></td>
+                                    <td>@status.TotalUsers</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Users đã migrate:</strong></td>
+                                    <td>@status.MigratedUsers</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Ngày migrate cuối:</strong></td>
+                                    <td>@(status.LastMigrationDate?.ToString("dd/MM/yyyy HH:mm:ss") ?? "Chưa có")</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                }
+
+                <div class="card">
+                    <div class="card-header">
+                        <h5>🚀 Chạy Migration</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>Migration sẽ thực hiện các công việc sau:</p>
+                        <ul>
+                            <li>✅ Tạo 3 Roles: Customer, Admin, SuperAdmin</li>
+                            <li>✅ Tạo 34 Permissions cho hệ thống</li>
+                            <li>✅ Gán permissions cho từng role</li>
+                            <li>✅ Tạo 3 tài khoản test với mật khẩu đã hash</li>
+                            <li>✅ Migrate tất cả users hiện có sang hệ thống RBAC</li>
+                        </ul>
+
+                        <div class="alert alert-info">
+                            <strong>ℹ️ Lưu ý:</strong> Sau khi chạy migration thành công, vui lòng đăng xuất và đăng nhập lại để hệ thống cập nhật quyền.
+                        </div>
+
+                        <form method="post" action="@Url.Action("RunMigration", "Diagnostics")" id="migrationForm">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-primary btn-lg" id="runMigrationBtn">
+                                <i class="fas fa-play-circle"></i> Run Migration
+                            </button>
+                        </form>
+
+                        <div id="migrationResult" class="mt-3" style="display: none;">
+                            <div class="alert" role="alert" id="resultContent"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h5>🔐 Tài Khoản Mặc Định</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>Sau khi chạy migration, bạn có thể đăng nhập bằng các tài khoản sau:</p>
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Role</th>
+                                    <th>Email</th>
+                                    <th>Password</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><span class="badge bg-info">Customer</span></td>
+                                    <td>customer@gmail.com</td>
+                                    <td><code>Customer@123</code></td>
+                                </tr>
+                                <tr>
+                                    <td><span class="badge bg-warning">Admin</span></td>
+                                    <td>admin@gmail.com</td>
+                                    <td><code>Admin@123</code></td>
+                                </tr>
+                                <tr>
+                                    <td><span class="badge bg-danger">SuperAdmin</span></td>
+                                    <td>superadmin@gmail.com</td>
+                                    <td><code>Admin@123</code></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div class="alert alert-warning">
+                            <strong>⚠️ Bảo mật:</strong> Đổi mật khẩu ngay sau khi đăng nhập lần đầu!
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById('migrationForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const btn = document.getElementById('runMigrationBtn');
+            const resultDiv = document.getElementById('migrationResult');
+            const resultContent = document.getElementById('resultContent');
+            
+            // Disable button
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang chạy migration...';
+            
+            // Hide previous result
+            resultDiv.style.display = 'none';
+            
+            // Submit form
+            fetch(this.action, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams(new FormData(this))
+            })
+            .then(response => response.text())
+            .then(data => {
+                // Show result
+                resultDiv.style.display = 'block';
+                
+                if (data.includes('✓')) {
+                    resultContent.className = 'alert alert-success';
+                } else {
+                    resultContent.className = 'alert alert-danger';
+                }
+                
+                resultContent.innerHTML = '<pre>' + data + '</pre>';
+                
+                // Re-enable button
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-play-circle"></i> Run Migration';
+                
+                // Reload page after 2 seconds if successful
+                if (data.includes('✓')) {
+                    setTimeout(() => {
+                        location.reload();
+                    }, 2000);
+                }
+            })
+            .catch(error => {
+                resultDiv.style.display = 'block';
+                resultContent.className = 'alert alert-danger';
+                resultContent.textContent = '✗ Lỗi: ' + error.message;
+                
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-play-circle"></i> Run Migration';
+            });
+        });
+    </script>
+}
