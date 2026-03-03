@@ -66,8 +66,8 @@
                 {
                     <input type="hidden" name="categoryId" value="@selectedCategoryId" />
                 }
-                <input type="range" class="form-range w-100" id="rangeInput" name="maxPrice" min="0" max="500" value="@(model?.MaxPrice ?? 500)" oninput="amount.value=rangeInput.value">
-                <output id="amount" name="amount" for="rangeInput">@(model?.MaxPrice ?? 500)</output>
+                <input type="range" class="form-range w-100" id="rangeInput" name="maxPrice" min="0" max="5000000" step="100000" value="@(model?.MaxPrice ?? 5000000)">
+                <output id="amount" name="amount" for="rangeInput">@((model?.MaxPrice ?? 5000000).ToString("N0"))</output> VNĐ
                 <button type="submit" class="btn btn-sm btn-primary mt-2">Filter</button>
             </form>
         </div>
@@ -96,12 +96,12 @@
                     <div class="d-flex mb-2">
                         @if (product.SalePrice.HasValue)
                         {
-                            <h5 class="fw-bold me-2">@product.SalePrice.Value.ToString("F2") $</h5>
-                            <h5 class="text-danger text-decoration-line-through">@product.Price.ToString("F2") $</h5>
+                            <h5 class="fw-bold me-2">@product.SalePrice.Value.ToString("N0")đ</h5>
+                            <h5 class="text-danger text-decoration-line-through">@product.Price.ToString("N0")đ</h5>
                         }
                         else
                         {
-                            <h5 class="fw-bold me-2">@product.Price.ToString("F2") $</h5>
+                            <h5 class="fw-bold me-2">@product.Price.ToString("N0")đ</h5>
                         }
                     </div>
                 </div>
@@ -120,3 +120,18 @@
         </div>
     </div>
 </div>
+
+<script>
+    // Format price range output
+    document.addEventListener('DOMContentLoaded', function() {
+        const rangeInput = document.getElementById('rangeInput');
+        const amountOutput = document.getElementById('amount');
+        
+        if (rangeInput && amountOutput) {
+            rangeInput.addEventListener('input', function() {
+                const value = parseInt(this.value);
+                amountOutput.textContent = value.toLocaleString('vi-VN');
+            });
+        }
+    });
+</script>
