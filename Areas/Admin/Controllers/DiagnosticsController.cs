@@ -168,9 +168,10 @@ public class DiagnosticsController : Controller
     }
 
     /// <summary>
-    /// Chạy migration RBAC nhanh
+    /// Chạy migration RBAC nhanh - Không cần phân quyền
     /// </summary>
     [HttpPost]
+    [AllowAnonymous]
     public async Task<IActionResult> RunMigration()
     {
         try
@@ -197,9 +198,10 @@ public class DiagnosticsController : Controller
     }
 
     /// <summary>
-    /// Trang migration với form để chạy migration
+    /// Trang migration với form để chạy migration - Không cần phân quyền
     /// </summary>
     [HttpGet]
+    [AllowAnonymous]
     public async Task<IActionResult> Migration()
     {
         var status = await _migrationService.GetMigrationStatusAsync();
