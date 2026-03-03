@@ -114,8 +114,6 @@ dotnet run
 | **Admin** | admin@gmail.com | Admin@123 |
 | **SuperAdmin** | superadmin@gmail.com | Admin@123 |
 
-⚠️ **Lưu ý bảo mật:** Đổi mật khẩu ngay sau khi đăng nhập lần đầu!
-
 ---
 
 ## 📁 Cấu Trúc Project
