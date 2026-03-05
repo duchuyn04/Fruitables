@@ -181,10 +181,129 @@ public class ReviewController : Controller
             return StatusCode(500, new { canReview = false });
         }
     }
+    /// <summary>
+    /// Kiểm tra chi tiết quyền review của user (dùng để debug)
+    /// </summary>
+    [HttpGet("check-permission/{productId}")]
+    public async Task<IActionResult> CheckPermission(int productId)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            var permission = await _reviewService.GetReviewPermissionAsync(userId, productId);
+            var hasPurchased = await _reviewService.CheckVerifiedPurchaseAsync(userId, productId);
+
+            return Ok(new
+            {
+                userId,
+                productId,
+                permission = permission.ToString(),
+                canReview = permission == ReviewPermission.Allowed,
+                hasPurchased
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking permission for product {ProductId}", productId);
+            return StatusCode(500, new { error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Debug: Xem đơn hàng của user có chứa sản phẩm nào
+    /// </summary>
+    [HttpGet("debug-orders/{productId}")]
+    public async Task<IActionResult> DebugOrders(int productId)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            
+            // Lấy tất cả đơn hàng của user
+            var orders = await _reviewService.GetUserOrdersWithProductAsync(userId, productId);
+
+            return Ok(new
+            {
+                userId,
+                productId,
+                orders
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error debugging orders for user {UserId} and product {ProductId}", GetCurrentUserId(), productId);
+            return StatusCode(500, new { error = ex.Message });
+        }
+    }
+
+    
+    // Lấy danh sách review qua AJAX (không reload trang)
+    [HttpGet("GetReviews")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetReviews(int productId, string sortBy = "newest", int page = 1)
+    {
+        try
+        {
+            ReviewSortBy sortByEnum = ReviewSortBy.Newest;
+            if (!string.IsNullOrEmpty(sortBy) && Enum.TryParse<ReviewSortBy>(sortBy, true, out var parsedSort))
+            {
+                sortByEnum = parsedSort;
+            }
+
+            var userId = GetCurrentUserIdOrZero();
+            var filter = new ReviewFilterDto
+            {
+                ProductId = productId,
+                Page = page,
+                PageSize = 10,
+                SortBy = sortByEnum
+            };
+
+            var reviews = await _reviewService.GetProductReviewsAsync(filter, userId);
+
+            return Json(new
+            {
+                success = true,
+                totalCount = reviews.TotalCount,
+                totalPages = reviews.TotalPages,
+                currentPage = reviews.CurrentPage,
+                items = reviews.Items.Select(r => new
+                {
+                    r.Id,
+                    r.UserName,
+                    r.UserAvatar,
+                    r.Rating,
+                    r.Comment,
+                    r.IsOwner,
+                    r.IsVerifiedPurchase,
+                    r.HelpfulCount,
+                    createdAt = r.CreatedAt.ToString("dd/MM/yyyy HH:mm"),
+                    updatedAt = r.UpdatedAt.HasValue && r.UpdatedAt.Value != r.CreatedAt
+                        ? r.UpdatedAt.Value.ToString("dd/MM/yyyy HH:mm")
+                        : (string?)null
+                })
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting reviews for product {ProductId}", productId);
+            return StatusCode(500, new { success = false, message = "Có lỗi xảy ra khi tải đánh giá" });
+        }
+    }
 
     private int GetCurrentUserId()
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         return int.Parse(userIdClaim ?? "0");
+    }
+
+    private int GetCurrentUserIdOrZero()
+    {
+        if (User.Identity?.IsAuthenticated == true)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (int.TryParse(userIdClaim, out var userId)) return userId;
+        }
+        return 0;
     }
 }

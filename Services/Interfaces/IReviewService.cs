@@ -14,6 +14,7 @@ public interface IReviewService
     Task<PagedResult<ReviewViewModel>> GetProductReviewsAsync(ReviewFilterDto filter, int? currentUserId = null);
     Task<ReviewStatistics> GetProductReviewStatisticsAsync(int productId);
     Task<bool> CanUserReviewProductAsync(int userId, int productId);
+    Task<ReviewPermission> GetReviewPermissionAsync(int userId, int productId);
     Task<bool> ReportReviewAsync(int reviewId, ReportReviewDto dto, int userId);
     Task<bool> MarkReviewHelpfulAsync(int reviewId, int userId);
     
@@ -29,4 +30,5 @@ public interface IReviewService
     // Internal operations
     Task RecalculateProductRatingAsync(int productId);
     Task<bool> CheckVerifiedPurchaseAsync(int userId, int productId);
+    Task<object> GetUserOrdersWithProductAsync(int userId, int productId);
 }

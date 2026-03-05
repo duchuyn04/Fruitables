@@ -14,7 +14,7 @@ public class ReviewService : IReviewService
     private readonly IMemoryCache _cache;
     private readonly ILogger<ReviewService> _logger;
     
-    private const int MAX_REVIEWS_PER_DAY = 5;
+    private const int MAX_REVIEWS_PER_DAY = 100; // Tăng lên cho môi trường test
     private const int EDIT_TIME_LIMIT_HOURS = 24;
     private const int AUTO_HIDE_REPORT_THRESHOLD = 5;
     private const string RATING_CACHE_KEY_PREFIX = "product_rating_";
@@ -782,10 +782,14 @@ public class ReviewService : IReviewService
     {
         try
         {
-            // Check if user has completed order containing this product
+            // Check if user has an order containing this product
+            // Allow review for all orders except Cancelled and Returned
             var hasOrdered = await _unitOfWork.Orders
                 .Query()
-                .Where(o => o.UserId == userId && o.Status == OrderStatus.Delivered)
+                .Include(o => o.Items)
+                .Where(o => o.UserId == userId &&
+                       o.Status != OrderStatus.Cancelled &&
+                       o.Status != OrderStatus.Returned)
                 .SelectMany(o => o.Items)
                 .AnyAsync(oi => oi.ProductId == productId);
 
@@ -796,6 +800,81 @@ public class ReviewService : IReviewService
             _logger.LogError(ex, "Error checking verified purchase for user {UserId} and product {ProductId}", 
                 userId, productId);
             return false;
+        }
+    }
+
+    /// <summary>
+    /// Kiểm tra chi tiết lý do user không thể review: đã review, chưa mua, hay được phép.
+    /// </summary>
+    public async Task<ReviewPermission> GetReviewPermissionAsync(int userId, int productId)
+    {
+        try
+        {
+            // Đã đánh giá rồi
+            var hasReviewed = await _unitOfWork.ReviewRepository.HasUserReviewedProductAsync(userId, productId);
+            if (hasReviewed)
+                return ReviewPermission.AlreadyReviewed;
+
+            // Chưa mua hàng
+            var hasPurchased = await CheckVerifiedPurchaseAsync(userId, productId);
+            if (!hasPurchased)
+                return ReviewPermission.NotPurchased;
+
+            // Vượt rate limit
+            var today = DateTime.UtcNow.Date;
+            var reviewCountToday = await _unitOfWork.ReviewRepository.CountUserReviewsInPeriodAsync(userId, today);
+            if (reviewCountToday >= MAX_REVIEWS_PER_DAY)
+                return ReviewPermission.RateLimitExceeded;
+
+            return ReviewPermission.Allowed;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting review permission for user {UserId} and product {ProductId}", userId, productId);
+            return ReviewPermission.NotPurchased;
+        }
+    }
+    /// <summary>
+    /// Debug: Lấy tất cả đơn hàng của user có chứa sản phẩm
+    /// </summary>
+    public async Task<object> GetUserOrdersWithProductAsync(int userId, int productId)
+    {
+        try
+        {
+            var allOrders = await _unitOfWork.Orders
+                .Query()
+                .Include(o => o.Items)
+                .Where(o => o.UserId == userId)
+                .Select(o => new
+                {
+                    o.Id,
+                    o.OrderNumber,
+                    Status = o.Status.ToString(),
+                    o.CreatedAt,
+                    Items = o.Items.Select(i => new
+                    {
+                        i.ProductId,
+                        i.ProductName,
+                        i.Quantity
+                    }).ToList(),
+                    HasProduct = o.Items.Any(i => i.ProductId == productId)
+                })
+                .ToListAsync();
+
+            var validOrders = allOrders.Where(o => o.HasProduct).ToList();
+
+            return new
+            {
+                totalOrders = allOrders.Count,
+                ordersWithProduct = validOrders.Count,
+                allOrders,
+                validOrders
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting user orders for debug");
+            throw;
         }
     }
 
