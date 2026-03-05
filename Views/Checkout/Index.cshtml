@@ -313,7 +313,7 @@
                                             }
                                         </div>
                                         <!-- Hidden field for shipping method (for form submission) -->
-                                        <input type="hidden" asp-for="ShippingMethod" value="ZoneBased" />
+                                        <input type="hidden" asp-for="ShippingMethod" value="FlatRate" />
                                     </td>
                                 </tr>
                                 <tr>
@@ -437,6 +437,12 @@
                     // Enable form fields
                     enableAddressForm(true);
                     
+                    // Re-enable jQuery validation for required fields
+                    var form = $('form');
+                    if (form.data('validator')) {
+                        form.validate().resetForm();
+                    }
+                    
                     // Re-initialize address handler for new address
                     addressHandler.init();
                 } else if (selectedValue) {
@@ -470,6 +476,8 @@
                     $('#FullNameInput').val(fullName);
                     $('#FirstName').val(fullName);
                     $('#Mobile').val(phone);
+                    
+                    // Update select values (even though hidden)
                     $('#ProvinceCode').val(provinceCode);
                     $('#provinceName').val(provinceName);
                     $('#DistrictCode').val(districtCode);
@@ -478,6 +486,28 @@
                     $('#wardName').val(wardName);
                     $('#StreetAddress').val(streetAddress);
                     $('#StreetAddressInput').val(streetAddress);
+                    
+                    // Also update the actual select elements to ensure they have the right value
+                    $('#provinceSelect').val(provinceCode);
+                    $('#districtSelect').val(districtCode);
+                    $('#wardSelect').val(wardCode);
+                    
+                    // Remove validation from hidden fields when using saved address
+                    $('#FirstName, #Mobile, #ProvinceCode, #DistrictCode, #WardCode, #StreetAddress').each(function() {
+                        $(this).rules('remove');
+                        $(this).removeClass('input-validation-error');
+                        $(this).next('.field-validation-error').removeClass('field-validation-error').addClass('field-validation-valid').text('');
+                    });
+                    
+                    // Log for debugging
+                    console.log('Filled address fields:', {
+                        fullName: fullName,
+                        phone: phone,
+                        provinceCode: provinceCode,
+                        districtCode: districtCode,
+                        wardCode: wardCode,
+                        streetAddress: streetAddress
+                    });
                     
                     // Update shipping based on selected address district (Requirements 4.1, 6.1)
                     if (districtName) {
@@ -541,11 +571,39 @@
             // **Validates: Requirements 4.2, 5.1, 5.3**
             $('form').on('submit', function(e) {
                 var selectedAddressId = $('#addressSelect').val();
+                var form = $(this);
                 
                 // If using saved address, skip validation (data already filled)
                 if (selectedAddressId && selectedAddressId !== 'new' && selectedAddressId !== '') {
-                    return true;
+                    console.log('Using saved address, bypassing all validation');
+                    
+                    // Prevent default first
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                    
+                    // Enable all address fields before submit to ensure values are sent
+                    $('#provinceSelect, #districtSelect, #wardSelect').prop('disabled', false);
+                    
+                    // Remove all validation
+                    form.removeData('validator');
+                    form.removeData('unobtrusiveValidation');
+                    
+                    // Submit the form directly using native submit
+                    console.log('Submitting form directly');
+                    form[0].submit();
+                    
+                    return false;
                 }
+                
+                console.log('Validating new address form');
+                
+                // Re-enable jQuery validation for new address
+                if (form.data('validator')) {
+                    form.data('validator').settings.ignore = ':hidden:not(select)';
+                }
+                
+                // Enable all address fields before validation
+                $('#provinceSelect, #districtSelect, #wardSelect').prop('disabled', false);
                 
                 // Clear all previous errors first
                 clearAllFieldErrors();

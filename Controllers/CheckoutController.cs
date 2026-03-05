@@ -15,6 +15,7 @@ public class CheckoutController : Controller
     private readonly IUnitOfWork _unitOfWork;
     private readonly IVietnamAddressService _vietnamAddressService;
     private readonly IShippingService _shippingService;
+    private readonly ILogger<CheckoutController> _logger;
     
     // Session keys for shipping snapshot (Requirements 6.1, 6.2, 6.3)
     private const string ShippingFeeSnapshotKey = "ShippingFeeSnapshot";
@@ -28,7 +29,8 @@ public class CheckoutController : Controller
         IAddressService addressService,
         IUnitOfWork unitOfWork,
         IVietnamAddressService vietnamAddressService,
-        IShippingService shippingService)
+        IShippingService shippingService,
+        ILogger<CheckoutController> logger)
     {
         _cartService = cartService;
         _orderService = orderService;
@@ -36,6 +38,7 @@ public class CheckoutController : Controller
         _unitOfWork = unitOfWork;
         _vietnamAddressService = vietnamAddressService;
         _shippingService = shippingService;
+        _logger = logger;
     }
 
     public async Task<IActionResult> Index()
@@ -121,8 +124,22 @@ public class CheckoutController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> PlaceOrder(CheckoutViewModel model)
     {
+        _logger.LogInformation("PlaceOrder called - SelectedAddressId: {AddressId}, PaymentMethod: {Payment}", 
+            model.SelectedAddressId, model.PaymentMethod);
+        
         var sessionId = GetSessionId();
         var userId = GetCurrentUserId();
+        
+        // If using saved address, remove validation for address fields
+        if (model.SelectedAddressId.HasValue)
+        {
+            ModelState.Remove(nameof(model.FirstName));
+            ModelState.Remove(nameof(model.ProvinceCode));
+            ModelState.Remove(nameof(model.DistrictCode));
+            ModelState.Remove(nameof(model.WardCode));
+            ModelState.Remove(nameof(model.StreetAddress));
+            ModelState.Remove(nameof(model.Mobile));
+        }
         
         // Get district from selected address or model
         string? district = null;
@@ -140,6 +157,13 @@ public class CheckoutController : Controller
 
         if (!ModelState.IsValid)
         {
+            // Log validation errors for debugging
+            var errors = ModelState
+                .Where(x => x.Value?.Errors.Count > 0)
+                .Select(x => $"{x.Key}: {string.Join(", ", x.Value.Errors.Select(e => e.ErrorMessage))}")
+                .ToList();
+            _logger.LogWarning("PlaceOrder validation failed: {Errors}", string.Join(" | ", errors));
+            
             // Reload addresses for display
             if (userId.HasValue)
             {
