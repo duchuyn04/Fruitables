@@ -20,7 +20,8 @@ builder.Services.AddControllersWithViews(options =>
 {
     // Register RequirePermissionFilter globally
     options.Filters.Add<RequirePermissionFilter>();
-});
+})
+.AddRazorRuntimeCompilation(); // Enable runtime compilation for development
 
 // Add DbContext
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
