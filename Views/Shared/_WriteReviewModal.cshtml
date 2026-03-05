@@ -40,12 +40,12 @@
                         <label for="comment" class="form-label">Nhận xét <span class="text-danger">*</span></label>
                         <textarea class="form-control" id="comment" name="comment" rows="4" 
                                   placeholder="Chia sẻ trải nghiệm của bạn về sản phẩm này..." 
-                                  required minlength="10" maxlength="1000"></textarea>
+                                  required minlength="5" maxlength="1000"></textarea>
                         <div class="d-flex justify-content-between mt-1">
-                            <small class="text-muted">Tối thiểu 10 ký tự</small>
+                            <small class="text-muted">Tối thiểu 5 ký tự</small>
                             <small class="text-muted"><span id="charCount">0</span>/1000</small>
                         </div>
-                        <div class="invalid-feedback" id="commentError">Nhận xét phải có ít nhất 10 ký tự</div>
+                        <div class="invalid-feedback" id="commentError">Nhận xét phải có ít nhất 5 ký tự</div>
                     </div>
 
                     <!-- Alert for errors -->
@@ -152,7 +152,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         const comment = commentField.value.trim();
-        if (comment.length < 10) {
+        if (comment.length < 5) {
             commentField.classList.add('is-invalid');
             return;
         }
@@ -187,11 +187,88 @@ document.addEventListener('DOMContentLoaded', function() {
             if (result.success) {
                 reviewSuccess.textContent = result.message || 'Đánh giá đã được gửi thành công!';
                 reviewSuccess.classList.remove('d-none');
-                
-                // Reload page after 1.5 seconds
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1500);
+
+                if (isEdit) {
+                    // Cập nhật trực tiếp DOM — không reload trang
+                    const ratingVal = parseInt(rating.value);
+                    const commentVal = comment;
+                    const editBtn = document.querySelector(`.edit-review-btn[data-review-id="${reviewId}"]`);
+                    if (editBtn) {
+                        editBtn.setAttribute('data-rating', ratingVal);
+                        editBtn.setAttribute('data-comment', commentVal);
+                        const reviewItem = editBtn.closest('.review-item');
+                        if (reviewItem) {
+                            // Update stars
+                            const starEls = reviewItem.querySelectorAll('.review-rating .fa-star');
+                            starEls.forEach((s, idx) => {
+                                s.classList.toggle('text-warning', idx < ratingVal);
+                                s.classList.toggle('text-muted', idx >= ratingVal);
+                            });
+                            // Update comment text
+                            const commentEl = reviewItem.querySelector('.review-comment');
+                            if (commentEl) commentEl.textContent = commentVal;
+                            // Add/update "edited" label
+                            let editedEl = reviewItem.querySelector('.fst-italic');
+                            const now = new Date();
+                            const pad = n => String(n).padStart(2,'0');
+                            const nowStr = `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+                            if (!editedEl) {
+                                editedEl = document.createElement('small');
+                                editedEl.className = 'text-muted fst-italic';
+                                const actionsDiv = reviewItem.querySelector('.review-actions');
+                                if (actionsDiv) reviewItem.querySelector('.review-content').insertBefore(editedEl, actionsDiv);
+                            }
+                            editedEl.textContent = `Đã chỉnh sửa: ${nowStr}`;
+                        }
+                    }
+                    // Re-enable button trước khi đóng modal
+                    submitBtn.disabled = false;
+                    submitBtn.querySelector('.btn-text').textContent = 'Cập nhật';
+                    submitBtn.querySelector('.spinner-border').classList.add('d-none');
+
+                    setTimeout(() => {
+                        const modalEl = document.getElementById('writeReviewModal');
+                        const bsModal = bootstrap.Modal.getInstance(modalEl);
+                        if (bsModal) bsModal.hide();
+                    }, 800);
+                } else {
+                    // Tạo mới — dùng AJAX refresh, không reload trang
+                    const productId = document.getElementById('productId').value;
+
+                    // Reset button
+                    submitBtn.disabled = false;
+                    submitBtn.querySelector('.btn-text').textContent = 'Gửi đánh giá';
+                    submitBtn.querySelector('.spinner-border').classList.add('d-none');
+
+                    // Đóng modal
+                    setTimeout(async () => {
+                        const modalEl = document.getElementById('writeReviewModal');
+                        const bsModal = bootstrap.Modal.getInstance(modalEl);
+                        if (bsModal) bsModal.hide();
+
+                        // AJAX refresh danh sách review
+                        if (productId && typeof sortReviews === 'function') {
+                            const sortEl = document.getElementById('reviewSort');
+                            const currentSort = sortEl ? sortEl.value : 'newest';
+                            await sortReviews(currentSort);
+                        }
+
+                        // Ẩn nút "Viết đánh giá", hiện thông báo đã đánh giá
+                        const writeBtn = document.querySelector('[data-bs-target="#writeReviewModal"]');
+                        if (writeBtn) {
+                            const wrapper = writeBtn.closest('.mb-4') || writeBtn.parentElement;
+                            if (wrapper) {
+                                wrapper.innerHTML = `<div class="alert alert-info mb-4">
+                                    <i class="fa fa-info-circle"></i> Bạn đã đánh giá sản phẩm này hoặc chưa mua hàng.
+                                </div>`;
+                            }
+                        }
+
+                        // Hiện header nếu bị ẩn
+                        const header = document.getElementById('reviewsHeader');
+                        if (header) header.style.display = '';
+                    }, 600);
+                }
             } else {
                 reviewError.textContent = result.message || 'Có lỗi xảy ra. Vui lòng thử lại.';
                 reviewError.classList.remove('d-none');

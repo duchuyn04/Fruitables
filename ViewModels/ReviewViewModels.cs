@@ -189,6 +189,17 @@ public enum ReviewErrorCode
 }
 
 /// <summary>
+/// Trạng thái quyền viết đánh giá của user đối với 1 sản phẩm
+/// </summary>
+public enum ReviewPermission
+{
+    Allowed,          // Được phép viết đánh giá
+    AlreadyReviewed,  // Đã đánh giá rồi
+    NotPurchased,     // Chưa mua sản phẩm này
+    RateLimitExceeded // Vượt giới hạn đánh giá trong ngày
+}
+
+/// <summary>
 /// ViewModel for review report
 /// </summary>
 public class ReviewReportViewModel

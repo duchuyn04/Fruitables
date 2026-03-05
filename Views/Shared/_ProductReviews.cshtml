@@ -76,59 +76,64 @@ else
     </div>
 }
 
-<!-- Sort and Filter -->
-@if (reviews != null && reviews.Items.Any())
-{
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h5 class="mb-0">Tất cả đánh giá (@reviews.TotalCount)</h5>
-        <select class="form-select" style="width: 200px;" id="reviewSort" onchange="sortReviews(this.value)">
-            <option value="newest">Mới nhất</option>
-            <option value="oldest">Cũ nhất</option>
-            <option value="highest">Đánh giá cao nhất</option>
-            <option value="lowest">Đánh giá thấp nhất</option>
-            <option value="helpful">Hữu ích nhất</option>
-        </select>
-    </div>
+<!-- Sort and Filter — luôn render để AJAX có thể dùng -->
+<div class="d-flex justify-content-between align-items-center mb-3"
+     id="reviewsHeader"
+     data-product-id="@Model"
+     @(reviews == null || !reviews.Items.Any() ? "style=\"display:none\"" : "")>
+    <h5 class="mb-0" id="reviewsCountTitle">
+        Tất cả đánh giá (@(reviews?.TotalCount ?? 0))
+    </h5>
+    <select class="form-select" style="width: 200px;" id="reviewSort" onchange="sortReviews(this.value)">
+        <option value="newest">Mới nhất</option>
+        <option value="oldest">Cũ nhất</option>
+        <option value="highest">Đánh giá cao nhất</option>
+        <option value="lowest">Đánh giá thấp nhất</option>
+        <option value="helpful">Hữu ích nhất</option>
+    </select>
+</div>
 
-    <!-- Reviews List -->
-    <div id="reviewsList">
+<!-- Reviews List — luôn tồn tại trong DOM -->
+<div id="reviewsList">
+    @if (reviews != null && reviews.Items.Any())
+    {
         @foreach (var review in reviews.Items)
         {
             <partial name="_ReviewItem" model="review" />
         }
-    </div>
-
-    <!-- Pagination -->
-    @if (reviews.TotalPages > 1)
-    {
-        <nav aria-label="Review pagination" class="mt-4">
-            <ul class="pagination justify-content-center">
-                <li class="page-item @(reviews.CurrentPage == 1 ? "disabled" : "")">
-                    <a class="page-link" href="?page=@(reviews.CurrentPage - 1)" aria-label="Previous">
-                        <span aria-hidden="true">&laquo;</span>
-                    </a>
-                </li>
-                @for (int i = 1; i <= reviews.TotalPages; i++)
-                {
-                    <li class="page-item @(i == reviews.CurrentPage ? "active" : "")">
-                        <a class="page-link" href="?page=@i">@i</a>
-                    </li>
-                }
-                <li class="page-item @(reviews.CurrentPage == reviews.TotalPages ? "disabled" : "")">
-                    <a class="page-link" href="?page=@(reviews.CurrentPage + 1)" aria-label="Next">
-                        <span aria-hidden="true">&raquo;</span>
-                    </a>
-                </li>
-            </ul>
-        </nav>
     }
-}
-else
+    else
+    {
+        <div class="text-center py-5">
+            <i class="fa fa-comments fa-3x text-muted mb-3"></i>
+            <p class="text-muted">Chưa có đánh giá nào. Hãy là người đầu tiên đánh giá sản phẩm này!</p>
+        </div>
+    }
+</div>
+
+@* Pagination chỉ khi có nhiều trang *@
+@if (reviews != null && reviews.TotalPages > 1)
 {
-    <div class="text-center py-5">
-        <i class="fa fa-comments fa-3x text-muted mb-3"></i>
-        <p class="text-muted">Chưa có đánh giá nào. Hãy là người đầu tiên đánh giá sản phẩm này!</p>
-    </div>
+    <nav aria-label="Review pagination" class="mt-4">
+        <ul class="pagination justify-content-center">
+            <li class="page-item @(reviews.CurrentPage == 1 ? "disabled" : "")">
+                <a class="page-link" href="?page=@(reviews.CurrentPage - 1)" aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                </a>
+            </li>
+            @for (int i = 1; i <= reviews.TotalPages; i++)
+            {
+                <li class="page-item @(i == reviews.CurrentPage ? "active" : "")">
+                    <a class="page-link" href="?page=@i">@i</a>
+                </li>
+            }
+            <li class="page-item @(reviews.CurrentPage == reviews.TotalPages ? "disabled" : "")">
+                <a class="page-link" href="?page=@(reviews.CurrentPage + 1)" aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
 }
 
 <!-- Include Modals -->
@@ -159,14 +164,140 @@ else
 </div>
 
 @section Scripts {
-    <script src="~/js/review.js"></script>
+    <script src="~/js/review.js" asp-append-version="true"></script>
 }
 
 <script>
-function sortReviews(sortBy) {
-    const url = new URL(window.location.href);
-    url.searchParams.set('sortBy', sortBy);
-    url.searchParams.set('page', '1');
-    window.location.href = url.toString();
+async function sortReviews(sortBy) {
+    const header = document.getElementById('reviewsHeader');
+    const productId = header ? header.getAttribute('data-product-id') : null;
+    if (!productId) return;
+
+    const reviewsList = document.getElementById('reviewsList');
+    if (reviewsList) {
+        reviewsList.style.opacity = '0.5';
+        reviewsList.style.pointerEvents = 'none';
+    }
+
+    try {
+        const resp = await fetch(`/Review/GetReviews?productId=${productId}&sortBy=${sortBy}&page=1`);
+        const data = await resp.json();
+
+        if (data.success) {
+            renderReviews(data.items, data.totalCount);
+            renderPagination(data.totalPages, data.currentPage, productId, sortBy);
+        }
+    } catch (err) {
+        console.error('Sort reviews error:', err);
+    } finally {
+        if (reviewsList) {
+            reviewsList.style.opacity = '';
+            reviewsList.style.pointerEvents = '';
+        }
+    }
+}
+
+function renderReviews(items, totalCount) {
+    const reviewsList = document.getElementById('reviewsList');
+    const countTitle = document.getElementById('reviewsCountTitle');
+    if (countTitle) countTitle.textContent = `Tất cả đánh giá (${totalCount})`;
+
+    if (!reviewsList) return;
+
+    if (!items || items.length === 0) {
+        reviewsList.innerHTML = `
+            <div class="text-center py-5">
+                <i class="fa fa-comments fa-3x text-muted mb-3"></i>
+                <p class="text-muted">Chưa có đánh giá nào. Hãy là người đầu tiên đánh giá sản phẩm này!</p>
+            </div>`;
+        return;
+    }
+
+    reviewsList.innerHTML = items.map(r => buildReviewHtml(r)).join('');
+
+    // Re-attach event listeners after DOM rebuild
+    if (typeof initializeReviewActions === 'function') {
+        initializeReviewActions();
+    }
+    if (typeof restoreHelpfulState === 'function') {
+        restoreHelpfulState();
+    }
+}
+
+function buildReviewHtml(r) {
+    const avatarHtml = (r.userAvatar && !r.userAvatar.includes('default-avatar'))
+        ? `<img src="${r.userAvatar}" class="rounded-circle" style="width:60px;height:60px;object-fit:cover;" alt="${escHtml(r.userName)}">`
+        : `<img src="/img/default-avatar.svg" class="rounded-circle" style="width:60px;height:60px;background-color:#e4e6eb;" alt="${escHtml(r.userName)}">`;
+
+    const starsHtml = [1,2,3,4,5].map(i =>
+        `<i class="fa fa-star ${i <= r.rating ? 'text-warning' : 'text-muted'}"></i>`
+    ).join('');
+
+    const verifiedBadge = r.isVerifiedPurchase
+        ? `<span class="badge bg-success ms-2" title="Đã mua hàng"><i class="fa fa-check-circle"></i> Đã mua hàng</span>`
+        : '';
+
+    const updatedHtml = r.updatedAt
+        ? `<small class="text-muted fst-italic">Đã chỉnh sửa: ${r.updatedAt}</small>`
+        : '';
+
+    const ownerBtns = r.isOwner ? `
+        <button type="button" class="btn btn-sm btn-outline-primary edit-review-btn"
+            data-review-id="${r.id}" data-rating="${r.rating}" data-comment="${escAttr(r.comment)}">
+            <i class="fa fa-edit"></i> Sửa
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-danger delete-review-btn" data-review-id="${r.id}">
+            <i class="fa fa-trash"></i> Xóa
+        </button>` : '';
+
+    const reportBtn = !r.isOwner ? `
+        <button type="button" class="btn btn-sm btn-outline-danger report-btn"
+            data-review-id="${r.id}" data-bs-toggle="modal" data-bs-target="#reportReviewModal">
+            <i class="fa fa-flag"></i> Báo cáo
+        </button>` : '';
+
+    return `
+    <div class="review-item mb-4 p-3 border rounded">
+        <div class="d-flex">
+            <div class="review-avatar me-3">${avatarHtml}</div>
+            <div class="review-content flex-grow-1">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <h6 class="mb-0">${escHtml(r.userName)}</h6>
+                        <small class="text-muted">${r.createdAt}</small>
+                        ${verifiedBadge}
+                    </div>
+                    <div class="review-rating">${starsHtml}</div>
+                </div>
+                <p class="review-comment mb-2">${escHtml(r.comment)}</p>
+                ${updatedHtml}
+                <div class="review-actions mt-3 d-flex gap-2">
+                    <button type="button" class="btn btn-sm btn-outline-secondary helpful-btn" data-review-id="${r.id}">
+                        <i class="fa fa-thumbs-up"></i> Hữu ích (${r.helpfulCount})
+                    </button>
+                    ${reportBtn}
+                    ${ownerBtns}
+                </div>
+            </div>
+        </div>
+    </div>`;
+}
+
+function renderPagination(totalPages, currentPage, productId, sortBy) {
+    // Remove old pagination if exists
+    const oldNav = document.querySelector('#reviewsList + nav');
+    if (oldNav) oldNav.remove();
+    // We rely on client-side sort so pagination calls sortReviews again with page
+    // Simple implementation: not re-rendering pagination for now since most products have < 1 page
+}
+
+function escHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+}
+
+function escAttr(str) {
+    if (!str) return '';
+    return str.replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
 </script>

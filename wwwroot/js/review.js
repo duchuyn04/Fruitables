@@ -154,9 +154,25 @@ async function executeDelete(btn, reviewId) {
                 setTimeout(() => {
                     reviewItem.remove();
                     
-                    // Reload page if no reviews left
-                    if (document.querySelectorAll('.review-item').length === 0) {
-                        window.location.reload();
+                    const remaining = document.querySelectorAll('.review-item').length;
+
+                    // Update count title
+                    const countTitle = document.getElementById('reviewsCountTitle');
+                    if (countTitle) countTitle.textContent = `Tất cả đánh giá (${remaining})`;
+
+                    // Show empty state if no reviews left (no reload needed)
+                    if (remaining === 0) {
+                        const reviewsList = document.getElementById('reviewsList');
+                        if (reviewsList) {
+                            reviewsList.innerHTML = `
+                                <div class="text-center py-5">
+                                    <i class="fa fa-comments fa-3x text-muted mb-3"></i>
+                                    <p class="text-muted">Chưa có đánh giá nào. Hãy là người đầu tiên đánh giá sản phẩm này!</p>
+                                </div>`;
+                        }
+                        // Also hide the sort header
+                        const header = document.getElementById('reviewsHeader');
+                        if (header) header.style.display = 'none';
                     }
                 }, 300);
             }
