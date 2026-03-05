@@ -11,26 +11,11 @@ public class OrderAdminService : IOrderAdminService
 {
     private readonly ApplicationDbContext _context;
     private readonly IOrderLogService _logService;
-    private readonly IWebHostEnvironment _environment;
 
-    // Valid file extensions for audit log attachments (Requirements: 10.2)
-    private static readonly string[] ValidAttachmentExtensions = { ".jpg", ".jpeg", ".png", ".pdf" };
-    private static readonly string[] ValidAttachmentContentTypes = 
-    { 
-        "image/jpeg", 
-        "image/jpg", 
-        "image/png", 
-        "application/pdf" 
-    };
-    
-    // Max file size: 5MB (Requirements: 10.2)
-    private const long MaxAttachmentFileSize = 5 * 1024 * 1024;
-
-    public OrderAdminService(ApplicationDbContext context, IOrderLogService logService, IWebHostEnvironment environment)
+    public OrderAdminService(ApplicationDbContext context, IOrderLogService logService)
     {
         _context = context;
         _logService = logService;
-        _environment = environment;
     }
 
     public async Task<OrderListResult> GetOrdersAsync(OrderListRequest request)
@@ -473,29 +458,6 @@ public class OrderAdminService : IOrderAdminService
 
             await _context.SaveChangesAsync();
 
-            // Get admin info for audit log (Requirement 9.1)
-            var admin = await _context.Users.FindAsync(adminId);
-            var adminName = admin?.Name ?? "Unknown";
-            var adminEmail = admin?.Email ?? "unknown@unknown.com";
-
-            // Create audit log entry (Requirement 9.1)
-            var auditLog = new OrderStatusAuditLog
-            {
-                OrderId = order.Id,
-                AdminId = adminId,
-                AdminName = adminName,
-                AdminEmail = adminEmail,
-                CreatedAt = DateTime.UtcNow,
-                OldOrderStatus = oldOrderStatus,
-                NewOrderStatus = request.NewOrderStatus,
-                OldPaymentStatus = oldPaymentStatus,
-                NewPaymentStatus = request.NewPaymentStatus,
-                Notes = request.Notes
-            };
-
-            _context.OrderStatusAuditLogs.Add(auditLog);
-            await _context.SaveChangesAsync();
-
             // Also log to existing OrderStatusHistory for backward compatibility
             if (oldOrderStatus != request.NewOrderStatus)
             {
@@ -523,111 +485,36 @@ public class OrderAdminService : IOrderAdminService
         }
     }
 
-    /// <summary>
-    /// Gets audit logs for an order, sorted by most recent first
-    /// Requirements: 9.2, 9.3
-    /// </summary>
-    public async Task<List<OrderStatusAuditLog>> GetAuditLogsAsync(int orderId)
+    public async Task<List<OrderNote>> GetOrderNotesAsync(int orderId)
     {
-        return await _context.OrderStatusAuditLogs
-            .Include(a => a.Attachments)
-            .Where(a => a.OrderId == orderId)
-            .OrderByDescending(a => a.CreatedAt)
+        return await _context.OrderNotes
+            .Where(n => n.OrderId == orderId)
+            .OrderByDescending(n => n.CreatedAt)
             .ToListAsync();
     }
 
-    /// <summary>
-    /// Validates if a file is a valid attachment type (JPG, PNG, PDF)
-    /// Requirements: 10.2
-    /// </summary>
-    public bool IsValidAttachmentFile(IFormFile file)
+    public async Task<OrderNote> AddOrderNoteAsync(int orderId, string content, int adminId, string adminName)
     {
-        if (file == null || file.Length == 0)
-            return false;
-
-        // Check extension
-        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
-        if (!ValidAttachmentExtensions.Contains(extension))
-            return false;
-
-        // Check content type
-        if (!ValidAttachmentContentTypes.Contains(file.ContentType.ToLowerInvariant()))
-            return false;
-
-        return true;
-    }
-
-    /// <summary>
-    /// Validates if a file size is within the allowed limit (5MB)
-    /// Requirements: 10.2
-    /// </summary>
-    public bool IsValidAttachmentFileSize(IFormFile file)
-    {
-        if (file == null)
-            return false;
-
-        return file.Length <= MaxAttachmentFileSize;
-    }
-
-    /// <summary>
-    /// Saves an attachment file and creates an AuditLogAttachment record
-    /// Requirements: 10.2, 10.3
-    /// - 10.2: Validate file type (JPG, PNG, PDF) and size (max 5MB)
-    /// - 10.3: Save file and link to audit log entry
-    /// </summary>
-    public async Task<AuditLogAttachment> SaveAuditLogAttachmentAsync(int auditLogId, IFormFile file)
-    {
-        // Validate file type (Requirements: 10.2)
-        if (!IsValidAttachmentFile(file))
+        var note = new OrderNote
         {
-            throw new InvalidOperationException("File không phải định dạng hợp lệ. Chỉ chấp nhận: JPG, PNG, PDF");
-        }
-
-        // Validate file size (Requirements: 10.2)
-        if (!IsValidAttachmentFileSize(file))
-        {
-            throw new InvalidOperationException("File vượt quá kích thước cho phép (5MB)");
-        }
-
-        // Verify audit log exists
-        var auditLog = await _context.OrderStatusAuditLogs.FindAsync(auditLogId);
-        if (auditLog == null)
-        {
-            throw new InvalidOperationException("Audit log không tồn tại");
-        }
-
-        // Create upload directory if not exists
-        var uploadPath = Path.Combine(_environment.WebRootPath, "uploads", "audit-attachments");
-        if (!Directory.Exists(uploadPath))
-        {
-            Directory.CreateDirectory(uploadPath);
-        }
-
-        // Generate unique filename
-        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
-        var uniqueFileName = $"{Guid.NewGuid()}{extension}";
-        var physicalPath = Path.Combine(uploadPath, uniqueFileName);
-
-        // Save file to disk
-        using (var stream = new FileStream(physicalPath, FileMode.Create))
-        {
-            await file.CopyToAsync(stream);
-        }
-
-        // Create attachment record (Requirements: 10.3)
-        var attachment = new AuditLogAttachment
-        {
-            AuditLogId = auditLogId,
-            FileName = file.FileName,
-            FilePath = $"/uploads/audit-attachments/{uniqueFileName}",
-            ContentType = file.ContentType,
-            FileSize = file.Length,
-            UploadedAt = DateTime.UtcNow
+            OrderId = orderId,
+            AdminId = adminId,
+            AdminName = adminName,
+            Content = content,
+            CreatedAt = DateTime.UtcNow
         };
-
-        _context.AuditLogAttachments.Add(attachment);
+        _context.OrderNotes.Add(note);
         await _context.SaveChangesAsync();
+        return note;
+    }
 
-        return attachment;
+    public async Task<bool> DeleteOrderNoteAsync(int noteId, int adminId)
+    {
+        var note = await _context.OrderNotes.FindAsync(noteId);
+        if (note == null || note.AdminId != adminId)
+            return false;
+        _context.OrderNotes.Remove(note);
+        await _context.SaveChangesAsync();
+        return true;
     }
 }

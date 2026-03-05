@@ -39,13 +39,8 @@ public interface IOrderAdminService
     StatusCombinationRule GetStatusCombinationRule(OrderStatus orderStatus, PaymentMethod paymentMethod);
     PaymentStatus[] GetAllowedPaymentStatuses(OrderStatus orderStatus, PaymentMethod paymentMethod);
     
-    // Audit Log
-    // Requirements: 9.2, 9.3
-    Task<List<OrderStatusAuditLog>> GetAuditLogsAsync(int orderId);
-    
-    // Attachment Handling
-    // Requirements: 10.2, 10.3
-    Task<AuditLogAttachment> SaveAuditLogAttachmentAsync(int auditLogId, IFormFile file);
-    bool IsValidAttachmentFile(IFormFile file);
-    bool IsValidAttachmentFileSize(IFormFile file);
+    // Order Notes (Internal comments by admin)
+    Task<List<OrderNote>> GetOrderNotesAsync(int orderId);
+    Task<OrderNote> AddOrderNoteAsync(int orderId, string content, int adminId, string adminName);
+    Task<bool> DeleteOrderNoteAsync(int noteId, int adminId);
 }

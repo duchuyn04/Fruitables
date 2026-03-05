@@ -151,137 +151,6 @@
                 </div>
             </div>
 
-            <!-- Audit Log Timeline - Requirements: 9.2, 9.3 -->
-            <!-- Hiển thị danh sách audit logs, sắp xếp mới nhất lên trên -->
-            @{
-                var auditLogs = ViewBag.AuditLogs as List<OrderStatusAuditLog>;
-            }
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-clipboard-list me-2"></i>Nhật ký thay đổi (Audit Log)</h5>
-                </div>
-                <div class="card-body">
-                    @if (auditLogs?.Any() == true)
-                    {
-                        <div class="audit-timeline">
-                            @foreach (var log in auditLogs)
-                            {
-                                var logTimeVN = TimeZoneInfo.ConvertTimeFromUtc(log.CreatedAt, vnTimeZone);
-                                <div class="audit-timeline-item">
-                                    <div class="audit-timeline-marker"></div>
-                                    <div class="audit-timeline-content">
-                                        <!-- Thời gian và Người thực hiện - Requirement 9.4 -->
-                                        <div class="d-flex justify-content-between align-items-start mb-2">
-                                            <div>
-                                                <span class="fw-bold text-primary">@log.AdminName</span>
-                                                <small class="text-muted d-block">@log.AdminEmail</small>
-                                            </div>
-                                            <small class="text-muted">
-                                                <i class="fas fa-clock me-1"></i>@logTimeVN.ToString("dd/MM/yyyy HH:mm:ss")
-                                            </small>
-                                        </div>
-                                        
-                                        <!-- Trạng thái cũ → Trạng thái mới (với badges) - Requirement 9.4 -->
-                                        <div class="mb-2">
-                                            <div class="d-flex align-items-center flex-wrap gap-1 mb-1">
-                                                <span class="small text-muted me-1">Đơn hàng:</span>
-                                                <span class="badge @GetStatusBadgeClass(log.OldOrderStatus) badge-sm">
-                                                    @GetStatusDisplayName(log.OldOrderStatus)
-                                                </span>
-                                                <i class="fas fa-arrow-right mx-1 text-muted small"></i>
-                                                <span class="badge @GetStatusBadgeClass(log.NewOrderStatus) badge-sm">
-                                                    @GetStatusDisplayName(log.NewOrderStatus)
-                                                </span>
-                                            </div>
-                                            <div class="d-flex align-items-center flex-wrap gap-1">
-                                                <span class="small text-muted me-1">Thanh toán:</span>
-                                                <span class="badge @GetPaymentStatusBadgeClass(log.OldPaymentStatus) badge-sm">
-                                                    @GetPaymentStatusDisplayName(log.OldPaymentStatus)
-                                                </span>
-                                                <i class="fas fa-arrow-right mx-1 text-muted small"></i>
-                                                <span class="badge @GetPaymentStatusBadgeClass(log.NewPaymentStatus) badge-sm">
-                                                    @GetPaymentStatusDisplayName(log.NewPaymentStatus)
-                                                </span>
-                                            </div>
-                                        </div>
-                                        
-                                        <!-- Ghi chú (nếu có) - Requirement 9.4 -->
-                                        @if (!string.IsNullOrEmpty(log.Notes))
-                                        {
-                                            <div class="audit-notes mt-2 p-2 bg-light rounded">
-                                                <i class="fas fa-comment-alt me-1 text-muted"></i>
-                                                <span class="small">@log.Notes</span>
-                                            </div>
-                                        }
-                                        
-                                        <!-- Attachments (nếu có) - Requirement 10.4 -->
-                                        <!-- Link/thumbnail cho file đính kèm -->
-                                        @if (log.Attachments?.Any() == true)
-                                        {
-                                            <div class="audit-attachments mt-2">
-                                                <small class="text-muted d-block mb-2">
-                                                    <i class="fas fa-paperclip me-1"></i>Tệp đính kèm (@log.Attachments.Count):
-                                                </small>
-                                                <div class="d-flex flex-wrap gap-2">
-                                                    @foreach (var attachment in log.Attachments)
-                                                    {
-                                                        var isImage = attachment.ContentType.StartsWith("image/");
-                                                        var fileSizeKB = attachment.FileSize / 1024.0;
-                                                        var fileSizeDisplay = fileSizeKB >= 1024 
-                                                            ? $"{(fileSizeKB / 1024):F1} MB" 
-                                                            : $"{fileSizeKB:F0} KB";
-                                                        
-                                                        @if (isImage)
-                                                        {
-                                                            <!-- Image attachment with thumbnail preview -->
-                                                            <a href="@attachment.FilePath" target="_blank" 
-                                                               class="attachment-card text-decoration-none" 
-                                                               title="@attachment.FileName (@fileSizeDisplay) - Nhấn để xem ảnh gốc">
-                                                                <div class="attachment-thumbnail-wrapper">
-                                                                    <img src="@attachment.FilePath" alt="@attachment.FileName" 
-                                                                         class="attachment-thumbnail-img">
-                                                                    <div class="attachment-overlay">
-                                                                        <i class="fas fa-search-plus"></i>
-                                                                    </div>
-                                                                </div>
-                                                                <div class="attachment-info">
-                                                                    <span class="attachment-name text-truncate">@attachment.FileName</span>
-                                                                    <span class="attachment-size">@fileSizeDisplay</span>
-                                                                </div>
-                                                            </a>
-                                                        }
-                                                        else
-                                                        {
-                                                            <!-- PDF/Document attachment -->
-                                                            <a href="@attachment.FilePath" target="_blank" 
-                                                               class="attachment-card attachment-card-pdf text-decoration-none"
-                                                               title="@attachment.FileName (@fileSizeDisplay) - Nhấn để tải xuống">
-                                                                <div class="attachment-icon-wrapper">
-                                                                    <i class="fas fa-file-pdf fa-2x text-danger"></i>
-                                                                </div>
-                                                                <div class="attachment-info">
-                                                                    <span class="attachment-name text-truncate">@attachment.FileName</span>
-                                                                    <span class="attachment-size">@fileSizeDisplay</span>
-                                                                </div>
-                                                            </a>
-                                                        }
-                                                    }
-                                                </div>
-                                            </div>
-                                        }
-                                    </div>
-                                </div>
-                            }
-                        </div>
-                    }
-                    else
-                    {
-                        <p class="text-muted mb-0">
-                            <i class="fas fa-info-circle me-1"></i>Chưa có nhật ký thay đổi
-                        </p>
-                    }
-                </div>
-            </div>
         </div>
         <div class="col-lg-4">
             <!-- Customer Info -->
@@ -331,10 +200,22 @@
                 </div>
             </div>
 
-            <!-- Payment Info -->
+            <!-- Payment Info + Action -->
             <div class="card mb-4">
-                <div class="card-header">
+                <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0"><i class="fas fa-credit-card me-2"></i>Thanh toán</h5>
+                    @if (Model.PaymentStatus == PaymentStatus.Pending)
+                    {
+                        <span class="badge bg-warning text-dark">Chưa thanh toán</span>
+                    }
+                    else if (Model.PaymentStatus == PaymentStatus.Paid)
+                    {
+                        <span class="badge bg-success">Đã thanh toán</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-info">Đã hoàn tiền</span>
+                    }
                 </div>
                 <div class="card-body">
                     <p class="mb-1">
@@ -350,78 +231,75 @@
                             <strong>Ghi chú:</strong> @Model.Notes
                         </p>
                     }
+                    @if (Model.PaymentStatus == PaymentStatus.Pending &&
+                         Model.Status != OrderStatus.Cancelled &&
+                         Model.Status != OrderStatus.Returned)
+                    {
+                        <hr class="my-3">
+                        <button type="button" class="btn btn-success w-100"
+                                onclick="openPaymentModal()">
+                            <i class="fas fa-check-circle me-1"></i> Xác nhận đã thu tiền
+                        </button>
+                    }
                 </div>
             </div>
 
-            <!-- Actions - Combined Status Update Form -->
-            <!-- Requirements: 1.1, 1.3, 7.4 - Single form with OrderStatus, PaymentStatus, Notes and one Save button -->
+            <!-- Order Action Buttons -->
             <div class="card">
                 <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-cogs me-2"></i>Cập nhật trạng thái</h5>
+                    <h5 class="mb-0"><i class="fas fa-bolt me-2"></i>Thao tác đơn hàng</h5>
                 </div>
-                <div class="card-body">
-                    <!-- Payment Method Display (Read-only) - Requirement 7.4 -->
-                    <div class="mb-3">
-                        <label class="form-label">Phương thức thanh toán</label>
-                        <input type="text" class="form-control" value="@GetPaymentMethodDisplayName(Model.PaymentMethod)" readonly disabled>
-                    </div>
-
-                    <!-- Combined Status Update Form - Requirements: 1.1, 1.3 -->
-                    <form asp-action="UpdateCombinedStatus" method="post" enctype="multipart/form-data" id="statusForm">
-                        <input type="hidden" name="OrderId" value="@Model.Id">
-                        <input type="hidden" id="paymentMethodValue" value="@((int)Model.PaymentMethod)">
-                        <input type="hidden" id="currentOrderStatus" value="@((int)Model.Status)">
-                        <input type="hidden" id="currentPaymentStatus" value="@((int)Model.PaymentStatus)">
-
-                        <!-- Order Status -->
-                        <div class="mb-3">
-                            <label class="form-label">Trạng thái đơn hàng</label>
-                            <select name="NewOrderStatus" class="form-select" id="orderStatusSelect">
-                                @foreach (OrderStatus s in Enum.GetValues(typeof(OrderStatus)))
-                                {
-                                    <option value="@((int)s)" 
-                                            data-status="@s"
-                                            selected="@(Model.Status == s)">
-                                        @GetStatusDisplayName(s)
-                                    </option>
-                                }
-                            </select>
-                        </div>
-
-                        <!-- Payment Status -->
-                        <div class="mb-3">
-                            <label class="form-label">Trạng thái thanh toán</label>
-                            <select name="NewPaymentStatus" class="form-select" id="paymentStatusSelect">
-                                @foreach (PaymentStatus ps in Enum.GetValues(typeof(PaymentStatus)))
-                                {
-                                    <option value="@((int)ps)" 
-                                            data-status="@ps"
-                                            selected="@(Model.PaymentStatus == ps)">
-                                        @GetPaymentStatusDisplayName(ps)
-                                    </option>
-                                }
-                            </select>
-                        </div>
-
-                        <!-- Notes -->
-                        <div class="mb-3">
-                            <label class="form-label">Ghi chú</label>
-                            <textarea name="Notes" class="form-control" rows="2" placeholder="Ghi chú (tùy chọn)"></textarea>
-                        </div>
-
-                        <!-- Attachments - Requirement 10.1: Show when Cancelled or Returned -->
-                        <div class="mb-3" id="attachmentSection" style="display: none;">
-                            <label class="form-label">Đính kèm bằng chứng</label>
-                            <input type="file" name="Attachments" class="form-control" id="attachmentInput"
-                                   multiple accept=".jpg,.jpeg,.png,.pdf">
-                            <small class="text-muted">Chấp nhận: JPG, PNG, PDF. Tối đa 5MB/file</small>
-                        </div>
-
-                        <!-- Single Save Button - Requirement 1.3 -->
-                        <button type="submit" class="btn btn-primary w-100" id="saveStatusBtn">
-                            <i class="fas fa-save me-1"></i> Lưu thay đổi
+                <div class="card-body d-grid gap-2">
+                    @if (Model.Status == OrderStatus.Pending)
+                    {
+                        <button type="button" class="btn btn-info text-white"
+                                onclick="confirmAction(@((int)OrderStatus.Processing), 'Duyệt đơn và bắt đầu xử lý?', false)">
+                            <i class="fas fa-check me-1"></i> Duyệt đơn & Chuẩn bị hàng
                         </button>
-                    </form>
+                        <button type="button" class="btn btn-danger"
+                                onclick="openCancelModal()">
+                            <i class="fas fa-times me-1"></i> Hủy đơn hàng
+                        </button>
+                    }
+                    else if (Model.Status == OrderStatus.Processing)
+                    {
+                        <button type="button" class="btn btn-primary"
+                                onclick="confirmAction(@((int)OrderStatus.Shipped), 'Xác nhận đã giao cho đơn vị vận chuyển?', false)">
+                            <i class="fas fa-shipping-fast me-1"></i> Giao cho vận chuyển
+                        </button>
+                        <button type="button" class="btn btn-danger"
+                                onclick="openCancelModal()">
+                            <i class="fas fa-times me-1"></i> Hủy đơn hàng
+                        </button>
+                    }
+                    else if (Model.Status == OrderStatus.Shipped)
+                    {
+                        <button type="button" class="btn btn-success"
+                                onclick="confirmAction(@((int)OrderStatus.Delivered), 'Xác nhận khách đã nhận được hàng?', false)">
+                            <i class="fas fa-box-open me-1"></i> Xác nhận đã giao hàng
+                        </button>
+                        <button type="button" class="btn btn-warning text-dark"
+                                onclick="openReturnModal()">
+                            <i class="fas fa-undo me-1"></i> Giao thất bại / Hoàn hàng
+                        </button>
+                    }
+                    else if (Model.Status == OrderStatus.Delivered)
+                    {
+                        <button type="button" class="btn btn-warning text-dark"
+                                onclick="openReturnModal()">
+                            <i class="fas fa-undo me-1"></i> Xử lý trả hàng
+                        </button>
+                        <p class="text-muted small mb-0 text-center">
+                            <i class="fas fa-check-circle text-success me-1"></i>Đơn hàng đã hoàn thành
+                        </p>
+                    }
+                    else if (Model.Status == OrderStatus.Cancelled || Model.Status == OrderStatus.Returned)
+                    {
+                        <div class="text-center text-muted py-2">
+                            <i class="fas fa-lock fa-2x mb-2 d-block"></i>
+                            <small>Đơn hàng đã kết thúc, không thể thay đổi trạng thái.</small>
+                        </div>
+                    }
                 </div>
             </div>
         </div>
@@ -485,26 +363,186 @@
     };
 }
 
-<!-- Confirmation Modal - Requirements: 8.1, 8.2 -->
-<!-- Modal với message động và nút Xác nhận/Hủy bỏ -->
-<div class="modal fade" id="confirmationModal" tabindex="-1" aria-labelledby="confirmationModalLabel" aria-hidden="true">
+<!-- ===== MODALS ===== -->
+
+<!-- Modal: Xác nhận hành động thông thường (Duyệt / Giao hàng / Đã giao) -->
+<div class="modal fade" id="actionModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header bg-warning">
-                <h5 class="modal-title" id="confirmationModalLabel">
-                    <i class="fas fa-exclamation-triangle me-2"></i>Xác nhận thao tác
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-question-circle me-2"></i>Xác nhận</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body" id="confirmationMessage">
-                <!-- Dynamic message will be inserted here -->
-            </div>
+            <div class="modal-body" id="actionMessage"></div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="cancelConfirmBtn">
-                    <i class="fas fa-times me-1"></i>Hủy bỏ
-                </button>
-                <button type="button" class="btn btn-danger" id="confirmBtn">
-                    <i class="fas fa-check me-1"></i>Xác nhận
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <form id="actionForm" method="post" asp-area="Admin" asp-controller="Order" asp-action="UpdateStatus">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="orderId" value="@Model.Id">
+                    <input type="hidden" name="newStatus" id="actionTargetStatus">
+                    <textarea name="notes" class="form-control mt-2" id="actionNotes" rows="2"
+                              placeholder="Ghi chú (không bắt buộc)" style="display:none;"></textarea>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-check me-1"></i>Xác nhận</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Hủy đơn hàng (cần note + file) -->
+<div class="modal fade" id="cancelModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-danger">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="fas fa-times-circle me-2"></i>Hủy đơn hàng</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-danger fw-bold">⚠️ Thao tác này không thể hoàn tác. Kho hàng sẽ được hoàn trả.</p>
+                <form id="cancelForm" method="post" enctype="multipart/form-data"
+                      asp-area="Admin" asp-controller="Order" asp-action="UpdateStatus">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="orderId" value="@Model.Id">
+                    <input type="hidden" name="newStatus" value="@((int)OrderStatus.Cancelled)">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Lý do hủy <span class="text-danger">*</span></label>
+                        <textarea name="notes" class="form-control" rows="3" required
+                                  placeholder="Nhập lý do hủy đơn hàng..."></textarea>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Đính kèm bằng chứng (nếu có)</label>
+                        <input type="file" name="Attachments" class="form-control"
+                               multiple accept=".jpg,.jpeg,.png,.pdf">
+                        <small class="text-muted">JPG, PNG, PDF. Tối đa 5MB/file</small>
+                    </div>
+                    <div class="d-flex gap-2 justify-content-end">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy bỏ</button>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-times me-1"></i>Xác nhận hủy đơn
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Hoàn hàng (cần note + file) -->
+<div class="modal fade" id="returnModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-warning">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title"><i class="fas fa-undo me-2"></i>Xử lý Hoàn hàng / Trả hàng</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted">Sau khi xác nhận, trạng thái thanh toán sẽ chuyển sang <strong>Đã hoàn tiền</strong>.</p>
+                <form id="returnForm" method="post" enctype="multipart/form-data"
+                      asp-area="Admin" asp-controller="Order" asp-action="UpdateStatus">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="orderId" value="@Model.Id">
+                    <input type="hidden" name="newStatus" value="@((int)OrderStatus.Returned)">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Lý do hoàn hàng <span class="text-danger">*</span></label>
+                        <textarea name="notes" class="form-control" rows="3" required
+                                  placeholder="Nhập lý do hoàn hàng..."></textarea>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Đính kèm bằng chứng (nếu có)</label>
+                        <input type="file" name="Attachments" class="form-control"
+                               multiple accept=".jpg,.jpeg,.png,.pdf">
+                        <small class="text-muted">JPG, PNG, PDF. Tối đa 5MB/file</small>
+                    </div>
+                    <div class="d-flex gap-2 justify-content-end">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy bỏ</button>
+                        <button type="submit" class="btn btn-warning text-dark">
+                            <i class="fas fa-undo me-1"></i>Xác nhận hoàn hàng
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Xác nhận đã thu tiền -->
+<div class="modal fade" id="paymentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-success">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="fas fa-check-circle me-2"></i>Xác nhận Thu tiền</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Bạn xác nhận đã nhận được <strong>@Model.Total.ToString("N0")đ</strong> từ khách hàng?</p>
+                <form id="paymentForm" method="post"
+                      asp-area="Admin" asp-controller="Order" asp-action="UpdatePaymentStatus">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="orderId" value="@Model.Id">
+                    <input type="hidden" name="newPaymentStatus" value="@((int)PaymentStatus.Paid)">
+                    <div class="mb-3">
+                        <label class="form-label">Ghi chú (không bắt buộc)</label>
+                        <textarea name="notes" class="form-control" rows="2"
+                                  placeholder="VD: Thu tiền mặt qua shipper lúc 14:30..."></textarea>
+                    </div>
+                    <div class="d-flex gap-2 justify-content-end">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-check me-1"></i>Xác nhận đã thu tiền
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@{
+    var orderNotes = ViewBag.OrderNotes as List<Fruitables.Models.OrderNote> ?? new List<Fruitables.Models.OrderNote>();
+    var currentAdminId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
+}
+
+<!-- Internal Notes Card -->
+<div class="card mb-4" id="notesCard">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-sticky-note me-2"></i>Ghi chú nội bộ</h5>
+    </div>
+    <div class="card-body">
+        <!-- Existing notes list -->
+        <div id="notesList">
+            @if (!orderNotes.Any())
+            {
+                <p class="text-muted small mb-3" id="emptyNotesMsg">Chưa có ghi chú nào.</p>
+            }
+            @foreach (var note in orderNotes)
+            {
+                <div class="note-item border-start border-3 border-primary ps-3 mb-3" data-note-id="@note.Id">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <strong class="small">@note.AdminName</strong>
+                            <span class="text-muted small ms-2">@note.CreatedAt.AddHours(7).ToString("HH:mm dd/MM/yyyy")</span>
+                        </div>
+                        @if (note.AdminId == currentAdminId)
+                        {
+                            <button type="button" class="btn btn-link btn-sm text-danger p-0 delete-note-btn"
+                                    data-note-id="@note.Id" title="Xóa ghi chú">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        }
+                    </div>
+                    <p class="mb-0 mt-1 small">@note.Content</p>
+                </div>
+            }
+        </div>
+
+        <!-- Add new note form -->
+        <div class="mt-3">
+            <textarea class="form-control form-control-sm mb-2" id="noteContent" rows="2"
+                      placeholder="Nhập ghi chú nội bộ..." maxlength="1000"></textarea>
+            <div class="d-flex justify-content-between align-items-center">
+                <small class="text-muted"><span id="noteCharCount">0</span>/1000</small>
+                <button type="button" class="btn btn-sm btn-primary" id="addNoteBtn">
+                    <i class="fas fa-plus me-1"></i>Thêm ghi chú
                 </button>
             </div>
         </div>
@@ -512,31 +550,9 @@
 </div>
 
 @section Scripts {
+
     <style>
-        /* Requirement 6.6: Style disabled options with gray color */
-        #orderStatusSelect option:disabled {
-            color: #999;
-            background-color: #f5f5f5;
-        }
-        #orderStatusSelect option.disabled-transition {
-            color: #999 !important;
-            background-color: #f5f5f5 !important;
-        }
-        /* Style for locked payment status field */
-        #paymentStatusSelect:disabled {
-            background-color: #e9ecef;
-            cursor: not-allowed;
-        }
-        #paymentStatusSelect option:disabled {
-            color: #999;
-            background-color: #f5f5f5;
-        }
-        
-        /* ============================================
-           Audit Log Timeline Styles - Requirements: 9.2, 9.4
-           Timeline markers, connectors, and responsive design
-           ============================================ */
-        
+
         /* Main Timeline Container */
         .audit-timeline {
             position: relative;
@@ -1033,333 +1049,108 @@
         }
     </style>
     <script>
-        // OrderStatus enum values
-        const OrderStatus = {
-            Pending: 0,
-            Processing: 1,
-            Shipped: 2,
-            Delivered: 3,
-            Cancelled: 4,
-            Returned: 5
-        };
-
-        // PaymentStatus enum values
-        const PaymentStatus = {
-            Pending: 0,
-            Paid: 1,
-            Refunded: 2
-        };
-
-        // PaymentMethod enum values
-        const PaymentMethod = {
-            COD: 0,
-            BankTransfer: 1,
-            Paypal: 2,
-            Check: 3
-        };
-
-        // State Transition Rules - Requirement 6.6
-        // Based on design.md: Ma trận chuyển đổi trạng thái hợp lệ (State Transition)
-        const stateTransitionRules = {
-            // Pending: can go to Processing, Shipped, Delivered, Cancelled
-            [OrderStatus.Pending]: {
-                allowedTransitions: [OrderStatus.Pending, OrderStatus.Processing, OrderStatus.Shipped, OrderStatus.Delivered, OrderStatus.Cancelled],
-                disabledTransitions: [OrderStatus.Returned]
-            },
-            // Processing: can go to Shipped, Delivered, Cancelled (cannot go back to Pending)
-            [OrderStatus.Processing]: {
-                allowedTransitions: [OrderStatus.Processing, OrderStatus.Shipped, OrderStatus.Delivered, OrderStatus.Cancelled],
-                disabledTransitions: [OrderStatus.Pending, OrderStatus.Returned]
-            },
-            // Shipped: can go to Delivered, Cancelled (cannot go back to Pending, Processing)
-            [OrderStatus.Shipped]: {
-                allowedTransitions: [OrderStatus.Shipped, OrderStatus.Delivered, OrderStatus.Cancelled],
-                disabledTransitions: [OrderStatus.Pending, OrderStatus.Processing, OrderStatus.Returned]
-            },
-            // Delivered: can go to Returned, Cancelled (cannot go back to Pending, Processing, Shipped)
-            [OrderStatus.Delivered]: {
-                allowedTransitions: [OrderStatus.Delivered, OrderStatus.Returned, OrderStatus.Cancelled],
-                disabledTransitions: [OrderStatus.Pending, OrderStatus.Processing, OrderStatus.Shipped]
-            },
-            // Cancelled: Terminal state - cannot transition to any other state
-            [OrderStatus.Cancelled]: {
-                allowedTransitions: [OrderStatus.Cancelled],
-                disabledTransitions: [OrderStatus.Pending, OrderStatus.Processing, OrderStatus.Shipped, OrderStatus.Delivered, OrderStatus.Returned]
-            },
-            // Returned: Terminal state - cannot transition to any other state
-            [OrderStatus.Returned]: {
-                allowedTransitions: [OrderStatus.Returned],
-                disabledTransitions: [OrderStatus.Pending, OrderStatus.Processing, OrderStatus.Shipped, OrderStatus.Delivered, OrderStatus.Cancelled]
-            }
-        };
-
-        // Get current order status from hidden field
-        function getCurrentOrderStatus() {
-            return parseInt(document.getElementById('currentOrderStatus').value);
+        // ===== Modal helpers =====
+        function confirmAction(newStatus, message, showNotes) {
+            document.getElementById('actionMessage').textContent = message;
+            document.getElementById('actionTargetStatus').value = newStatus;
+            const notesEl = document.getElementById('actionNotes');
+            notesEl.style.display = showNotes ? '' : 'none';
+            new bootstrap.Modal(document.getElementById('actionModal')).show();
         }
 
-        // Get payment method from hidden field
-        function getPaymentMethod() {
-            return parseInt(document.getElementById('paymentMethodValue').value);
+        function openCancelModal() {
+            new bootstrap.Modal(document.getElementById('cancelModal')).show();
         }
 
-        // Get current payment status from hidden field
-        function getCurrentPaymentStatus() {
-            return parseInt(document.getElementById('currentPaymentStatus').value);
+        function openReturnModal() {
+            new bootstrap.Modal(document.getElementById('returnModal')).show();
         }
 
-        // Initialize state transition dropdown - Requirement 6.6
-        // Disable invalid options based on current status
-        function initializeStateTransitionDropdown() {
-            const currentStatus = getCurrentOrderStatus();
-            const orderStatusSelect = document.getElementById('orderStatusSelect');
-            const options = orderStatusSelect.querySelectorAll('option');
-            const rule = stateTransitionRules[currentStatus];
-
-            if (!rule) return;
-
-            options.forEach(option => {
-                const statusValue = parseInt(option.value);
-                
-                // Check if this transition is disabled
-                if (rule.disabledTransitions.includes(statusValue)) {
-                    option.disabled = true;
-                    option.classList.add('disabled-transition');
-                } else {
-                    option.disabled = false;
-                    option.classList.remove('disabled-transition');
-                }
-            });
+        function openPaymentModal() {
+            new bootstrap.Modal(document.getElementById('paymentModal')).show();
         }
 
-        // Get Status Combination Rule based on OrderStatus and PaymentMethod
-        // Requirements: 7.1, 7.2, 7.3, 7.4
-        // Based on design.md: Ma trận tổ hợp trạng thái hợp lệ theo Payment Method
-        function getStatusCombinationRule(orderStatus, paymentMethod) {
-            // Terminal states - same for all payment methods
-            
-            // Delivered: Auto-set Paid, Lock - Requirement 2.1
-            if (orderStatus === OrderStatus.Delivered) {
-                return {
-                    allowedPaymentStatuses: [PaymentStatus.Paid],
-                    autoSetPaymentStatus: PaymentStatus.Paid,
-                    isPaymentLocked: true
-                };
-            }
-            
-            // Returned: Auto-set Refunded, Lock - Requirement 2.2
-            if (orderStatus === OrderStatus.Returned) {
-                return {
-                    allowedPaymentStatuses: [PaymentStatus.Refunded],
-                    autoSetPaymentStatus: PaymentStatus.Refunded,
-                    isPaymentLocked: true
-                };
-            }
-            
-            // Cancelled: Allow Pending or Refunded, Not locked - Requirement 2.3
-            if (orderStatus === OrderStatus.Cancelled) {
-                return {
-                    allowedPaymentStatuses: [PaymentStatus.Pending, PaymentStatus.Refunded],
-                    autoSetPaymentStatus: null,
-                    isPaymentLocked: false
-                };
-            }
-            
-            // In-progress states (Pending, Processing, Shipped) - depends on payment method
-            
-            // COD: Auto-set Pending, Lock - Requirement 7.1
-            if (paymentMethod === PaymentMethod.COD) {
-                return {
-                    allowedPaymentStatuses: [PaymentStatus.Pending],
-                    autoSetPaymentStatus: PaymentStatus.Pending,
-                    isPaymentLocked: true
-                };
-            }
-            
-            // Bank Transfer (and other methods): Allow Pending or Paid, Not locked - Requirement 7.2
-            return {
-                allowedPaymentStatuses: [PaymentStatus.Pending, PaymentStatus.Paid],
-                autoSetPaymentStatus: null,
-                isPaymentLocked: false
-            };
-        }
+        // ===== Order Notes AJAX =====
+        const orderId = @Model.Id;
+        const antiForgeryToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
 
-        // Update Payment Status options based on OrderStatus and PaymentMethod
-        // Requirements: 7.1, 7.2, 7.3, 7.4
-        function updatePaymentStatusOptions() {
-            const orderStatusSelect = document.getElementById('orderStatusSelect');
-            const paymentStatusSelect = document.getElementById('paymentStatusSelect');
-            const selectedOrderStatus = parseInt(orderStatusSelect.value);
-            const paymentMethod = getPaymentMethod();
-            const currentPaymentStatus = getCurrentPaymentStatus();
-            
-            // Get the combination rule for this order status and payment method
-            const rule = getStatusCombinationRule(selectedOrderStatus, paymentMethod);
-            
-            // Update payment status options - enable/disable based on allowed statuses
-            const options = paymentStatusSelect.querySelectorAll('option');
-            options.forEach(option => {
-                const statusValue = parseInt(option.value);
-                if (rule.allowedPaymentStatuses.includes(statusValue)) {
-                    option.disabled = false;
-                    option.style.display = '';
-                } else {
-                    option.disabled = true;
-                    option.style.display = 'none';
-                }
-            });
-            
-            // Auto-set payment status if rule specifies
-            if (rule.autoSetPaymentStatus !== null) {
-                paymentStatusSelect.value = rule.autoSetPaymentStatus;
-            } else {
-                // If no auto-set, try to keep current value if it's allowed
-                if (rule.allowedPaymentStatuses.includes(currentPaymentStatus)) {
-                    paymentStatusSelect.value = currentPaymentStatus;
-                } else {
-                    // Otherwise, select the first allowed option
-                    paymentStatusSelect.value = rule.allowedPaymentStatuses[0];
-                }
-            }
-            
-            // Lock/unlock payment status field
-            paymentStatusSelect.disabled = rule.isPaymentLocked;
-        }
-
-        // Show/hide attachment section based on order status - Requirement 10.1
-        function updateAttachmentVisibility() {
-            const orderStatusSelect = document.getElementById('orderStatusSelect');
-            const attachmentSection = document.getElementById('attachmentSection');
-            const selectedStatus = parseInt(orderStatusSelect.value);
-
-            // Show attachment section only for Cancelled or Returned
-            if (selectedStatus === OrderStatus.Cancelled || selectedStatus === OrderStatus.Returned) {
-                attachmentSection.style.display = 'block';
-            } else {
-                attachmentSection.style.display = 'none';
-                // Clear file input when hiding
-                const attachmentInput = document.getElementById('attachmentInput');
-                if (attachmentInput) {
-                    attachmentInput.value = '';
-                }
-            }
-        }
-
-        // Handle order status change - update both payment options and attachment visibility
-        function handleOrderStatusChange() {
-            updatePaymentStatusOptions();
-            updateAttachmentVisibility();
-        }
-
-        // Confirmation Modal Logic - Requirements: 8.1, 8.2, 8.3, 8.4
-        // Track if user has confirmed the action
-        let userConfirmed = false;
-        let confirmationModal = null;
-
-        // Get confirmation message based on order status - Requirements: 8.1, 8.2
-        function getConfirmationMessage(orderStatus) {
-            if (orderStatus === OrderStatus.Cancelled) {
-                // Requirement 8.1: Message for Cancelled status
-                return 'Bạn có chắc chắn muốn hủy đơn hàng này? Thao tác này có thể ảnh hưởng đến báo cáo tài chính.';
-            } else if (orderStatus === OrderStatus.Returned) {
-                // Requirement 8.2: Message for Returned status (with Refund)
-                return 'Bạn có chắc chắn muốn xử lý trả hàng và hoàn tiền? Thao tác này có thể ảnh hưởng đến báo cáo tài chính.';
-            }
-            return null;
-        }
-
-        // Check if confirmation is required for the selected status
-        function requiresConfirmation(orderStatus) {
-            return orderStatus === OrderStatus.Cancelled || orderStatus === OrderStatus.Returned;
-        }
-
-        // Show confirmation modal with appropriate message
-        function showConfirmationModal(message) {
-            const messageElement = document.getElementById('confirmationMessage');
-            messageElement.textContent = message;
-            
-            if (!confirmationModal) {
-                confirmationModal = new bootstrap.Modal(document.getElementById('confirmationModal'));
-            }
-            confirmationModal.show();
-        }
-
-        // Handle form submission with confirmation - Requirements: 8.3, 8.4
-        function handleFormSubmit(event) {
-            const orderStatusSelect = document.getElementById('orderStatusSelect');
-            const selectedStatus = parseInt(orderStatusSelect.value);
-            
-            // Check if confirmation is required and user hasn't confirmed yet
-            if (requiresConfirmation(selectedStatus) && !userConfirmed) {
-                // Prevent form submission
-                event.preventDefault();
-                
-                // Get and show confirmation message
-                const message = getConfirmationMessage(selectedStatus);
-                if (message) {
-                    showConfirmationModal(message);
-                }
-                return false;
-            }
-            
-            // Reset confirmation flag for next submission
-            userConfirmed = false;
-            return true;
-        }
-
-        // Handle confirm button click - Requirement 8.3
-        function handleConfirmClick() {
-            userConfirmed = true;
-            
-            // Hide the modal
-            if (confirmationModal) {
-                confirmationModal.hide();
-            }
-            
-            // Submit the form
-            const form = document.getElementById('statusForm');
-            form.submit();
-        }
-
-        // Handle cancel button click - Requirement 8.4
-        function handleCancelClick() {
-            userConfirmed = false;
-            // Modal will be hidden by Bootstrap's data-bs-dismiss
-        }
-
-        // Initialize on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            const orderStatusSelect = document.getElementById('orderStatusSelect');
-            const statusForm = document.getElementById('statusForm');
-            const confirmBtn = document.getElementById('confirmBtn');
-            const cancelConfirmBtn = document.getElementById('cancelConfirmBtn');
-            
-            // Initialize state transition dropdown (disable invalid options)
-            initializeStateTransitionDropdown();
-            
-            // Add change event listener for order status
-            orderStatusSelect.addEventListener('change', handleOrderStatusChange);
-            
-            // Initialize payment status options and attachment visibility on page load
-            updatePaymentStatusOptions();
-            updateAttachmentVisibility();
-            
-            // Add form submit handler for confirmation - Requirements: 8.3, 8.4
-            statusForm.addEventListener('submit', handleFormSubmit);
-            
-            // Add confirm button click handler - Requirement 8.3
-            confirmBtn.addEventListener('click', handleConfirmClick);
-            
-            // Add cancel button click handler - Requirement 8.4
-            cancelConfirmBtn.addEventListener('click', handleCancelClick);
-            
-            // Reset confirmation flag when modal is hidden
-            document.getElementById('confirmationModal').addEventListener('hidden.bs.modal', function() {
-                // Only reset if not confirmed (user clicked X or outside modal)
-                if (!userConfirmed) {
-                    userConfirmed = false;
-                }
-            });
+        // Character counter
+        document.getElementById('noteContent')?.addEventListener('input', function () {
+            document.getElementById('noteCharCount').textContent = this.value.length;
         });
+
+        // Add note
+        document.getElementById('addNoteBtn')?.addEventListener('click', async function () {
+            const content = document.getElementById('noteContent').value.trim();
+            if (!content) return;
+
+            this.disabled = true;
+            try {
+                const resp = await fetch(`/Admin/Order/${orderId}/AddNote`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': antiForgeryToken
+                    },
+                    body: JSON.stringify({ content })
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    const n = data.note;
+                    const html = `
+                        <div class="note-item border-start border-3 border-primary ps-3 mb-3" data-note-id="${n.id}">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong class="small">${n.adminName}</strong>
+                                    <span class="text-muted small ms-2">${n.createdAt}</span>
+                                </div>
+                                ${n.isOwner ? `<button type="button" class="btn btn-link btn-sm text-danger p-0 delete-note-btn" data-note-id="${n.id}" title="Xóa ghi chú"><i class="fas fa-times"></i></button>` : ''}
+                            </div>
+                            <p class="mb-0 mt-1 small">${escHtml(n.content)}</p>
+                        </div>`;
+                    const notesList = document.getElementById('notesList');
+                    const emptyMsg = document.getElementById('emptyNotesMsg');
+                    if (emptyMsg) emptyMsg.remove();
+                    notesList.insertAdjacentHTML('afterbegin', html);
+                    document.getElementById('noteContent').value = '';
+                    document.getElementById('noteCharCount').textContent = '0';
+                    attachDeleteHandlers();
+                }
+            } finally {
+                this.disabled = false;
+            }
+        });
+
+        function attachDeleteHandlers() {
+            document.querySelectorAll('.delete-note-btn').forEach(btn => {
+                btn.replaceWith(btn.cloneNode(true)); // Remove old listeners
+            });
+            document.querySelectorAll('.delete-note-btn').forEach(btn => {
+                btn.addEventListener('click', async function () {
+                    if (!confirm('Xóa ghi chú này?')) return;
+                    const noteId = this.dataset.noteId;
+                    const resp = await fetch(`/Admin/Order/DeleteNote/${noteId}`, {
+                        method: 'POST',
+                        headers: { 'RequestVerificationToken': antiForgeryToken }
+                    });
+                    const data = await resp.json();
+                    if (data.success) {
+                        const item = document.querySelector(`.note-item[data-note-id="${noteId}"]`);
+                        if (item) item.remove();
+                        if (!document.querySelector('.note-item')) {
+                            document.getElementById('notesList').insertAdjacentHTML('afterbegin',
+                                '<p class="text-muted small mb-3" id="emptyNotesMsg">Chưa có ghi chú nào.</p>');
+                        }
+                    }
+                });
+            });
+        }
+
+        function escHtml(str) {
+            return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        attachDeleteHandlers();
     </script>
 }
+

@@ -228,9 +228,10 @@ public static class StatusCombinationRules
         [OrderStatus.Shipped] = new StatusCombinationRule
         {
             OrderStatus = OrderStatus.Shipped,
-            AllowedPaymentStatuses = new[] { PaymentStatus.Pending },
-            AutoSetPaymentStatus = PaymentStatus.Pending,
-            IsPaymentLocked = true
+            // COD: shipper có thể thu tiền trước khi admin xác nhận Delivered
+            AllowedPaymentStatuses = new[] { PaymentStatus.Pending, PaymentStatus.Paid },
+            AutoSetPaymentStatus = null,
+            IsPaymentLocked = false
         },
         [OrderStatus.Delivered] = new StatusCombinationRule
         {
@@ -385,4 +386,9 @@ public static class StatusCombinationRules
     {
         return paymentMethod == PaymentMethod.COD;
     }
+}
+
+public class AddOrderNoteRequest
+{
+    public string Content { get; set; } = string.Empty;
 }

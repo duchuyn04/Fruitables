@@ -71,16 +71,15 @@ public class OrderController : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        // Load audit logs for the Timeline component - Requirements: 9.2, 9.3
-        var auditLogs = await _orderAdminService.GetAuditLogsAsync(id);
-        ViewBag.AuditLogs = auditLogs;
+        // Load order notes
+        var orderNotes = await _orderAdminService.GetOrderNotesAsync(id);
+        ViewBag.OrderNotes = orderNotes;
 
         return View(order);
     }
 
     // POST: Admin/Order/UpdateStatus
-    // DEPRECATED: Use UpdateCombinedStatus instead (Requirements: 1.3)
-    [Obsolete("Use UpdateCombinedStatus instead. This action will be removed in a future version.")]
+    // Used for individual state transitions (Pending -> Processing -> Shipped -> Delivered)
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> UpdateStatus(int orderId, OrderStatus newStatus, string? notes)
@@ -108,8 +107,7 @@ public class OrderController : Controller
     }
 
     // POST: Admin/Order/UpdatePaymentStatus
-    // DEPRECATED: Use UpdateCombinedStatus instead (Requirements: 1.3)
-    [Obsolete("Use UpdateCombinedStatus instead. This action will be removed in a future version.")]
+    // Used for individual payment status updates
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> UpdatePaymentStatus(int orderId, PaymentStatus newPaymentStatus, string? notes)
@@ -389,4 +387,44 @@ public class OrderController : Controller
         PaymentMethod.Paypal => "PayPal",
         _ => method.ToString()
     };
+
+    // POST: Admin/Order/5/AddNote
+    [HttpPost("{id}/AddNote")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AddNote(int id, [FromBody] AddOrderNoteRequest request)
+    {
+        var adminId = GetCurrentAdminId();
+        var adminName = User.FindFirst(ClaimTypes.Name)?.Value ?? "Admin";
+
+        if (string.IsNullOrWhiteSpace(request.Content))
+            return BadRequest(new { success = false, message = "Nội dung không được để trống" });
+
+        var note = await _orderAdminService.AddOrderNoteAsync(id, request.Content.Trim(), adminId, adminName);
+
+        return Ok(new
+        {
+            success = true,
+            note = new
+            {
+                note.Id,
+                note.AdminName,
+                note.Content,
+                createdAt = note.CreatedAt.AddHours(7).ToString("HH:mm dd/MM/yyyy"),
+                isOwner = note.AdminId == adminId
+            }
+        });
+    }
+
+    // DELETE: Admin/Order/DeleteNote/5
+    [HttpPost("DeleteNote/{noteId}")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteNote(int noteId)
+    {
+        var adminId = GetCurrentAdminId();
+        var success = await _orderAdminService.DeleteOrderNoteAsync(noteId, adminId);
+        if (!success)
+            return BadRequest(new { success = false, message = "Không thể xóa ghi chú này" });
+
+        return Ok(new { success = true });
+    }
 }
