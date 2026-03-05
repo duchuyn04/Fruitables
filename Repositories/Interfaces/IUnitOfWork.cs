@@ -13,6 +13,7 @@ public interface IUnitOfWork : IDisposable
     IRepository<Review> Reviews { get; }
     IReviewRepository ReviewRepository { get; }
     IReviewReportRepository ReviewReports { get; }
+    IRepository<ReviewHelpful> ReviewHelpfuls { get; }
     IRepository<ContactMessage> Contacts { get; }
     IRepository<Testimonial> Testimonials { get; }
     IRepository<User> Users { get; }

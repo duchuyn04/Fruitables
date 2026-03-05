@@ -9,6 +9,12 @@ using Fruitables.Filters;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Configure Antiforgery to accept token from AJAX header (for PUT/DELETE JSON requests)
+builder.Services.AddAntiforgery(options =>
+{
+    options.HeaderName = "RequestVerificationToken";
+});
+
 // Add services to the container.
 builder.Services.AddControllersWithViews(options =>
 {

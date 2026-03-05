@@ -21,6 +21,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<ProductTag> ProductTags => Set<ProductTag>();
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<ReviewReport> ReviewReports => Set<ReviewReport>();
+    public DbSet<ReviewHelpful> ReviewHelpfuls => Set<ReviewHelpful>();
     public DbSet<Cart> Carts => Set<Cart>();
     public DbSet<CartItem> CartItems => Set<CartItem>();
     public DbSet<Order> Orders => Set<Order>();
@@ -329,6 +330,20 @@ public class ApplicationDbContext : DbContext
             entity.HasOne(rr => rr.HandledByAdmin)
                   .WithMany()
                   .HasForeignKey(rr => rr.HandledByAdminId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ReviewHelpful - Unique per user+review
+        modelBuilder.Entity<ReviewHelpful>(entity =>
+        {
+            entity.HasIndex(e => new { e.UserId, e.ReviewId }).IsUnique();
+            entity.HasOne(h => h.Review)
+                  .WithMany(r => r.HelpfulVotes)
+                  .HasForeignKey(h => h.ReviewId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(h => h.User)
+                  .WithMany()
+                  .HasForeignKey(h => h.UserId)
                   .OnDelete(DeleteBehavior.Restrict);
         });
 

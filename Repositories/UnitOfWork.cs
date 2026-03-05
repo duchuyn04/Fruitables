@@ -17,6 +17,7 @@ public class UnitOfWork : IUnitOfWork
     private IRepository<Review>? _reviews;
     private IReviewRepository? _reviewRepository;
     private IReviewReportRepository? _reviewReports;
+    private IRepository<ReviewHelpful>? _reviewHelpfuls;
     private IRepository<ContactMessage>? _contacts;
     private IRepository<Testimonial>? _testimonials;
     private IRepository<User>? _users;
@@ -66,6 +67,9 @@ public class UnitOfWork : IUnitOfWork
     
     public IReviewReportRepository ReviewReports => 
         _reviewReports ??= new ReviewReportRepository(_context);
+    
+    public IRepository<ReviewHelpful> ReviewHelpfuls => 
+        _reviewHelpfuls ??= new Repository<ReviewHelpful>(_context);
     
     public IRepository<ContactMessage> Contacts => 
         _contacts ??= new Repository<ContactMessage>(_context);

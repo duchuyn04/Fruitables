@@ -43,6 +43,7 @@ public class Review
     public virtual User? HiddenByAdmin { get; set; }
     public virtual User? DeletedByAdmin { get; set; }
     public virtual ICollection<ReviewReport> Reports { get; set; } = new List<ReviewReport>();
+    public virtual ICollection<ReviewHelpful> HelpfulVotes { get; set; } = new List<ReviewHelpful>();
 }
 
 public enum ReviewStatus

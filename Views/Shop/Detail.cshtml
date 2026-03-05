@@ -8,8 +8,8 @@
     var relatedProducts = ViewBag.RelatedProducts as List<Product> ?? new List<Product>();
     var isSale = Model.SalePrice.HasValue && Model.SalePrice < Model.Price;
     var discountPercent = isSale ? (int)Math.Round((1 - (Model.SalePrice!.Value / Model.Price)) * 100) : 0;
-    var avgRating = Model.Reviews?.Any() == true ? Model.Reviews.Average(r => r.Rating) : 0;
-    var reviewCount = Model.Reviews?.Count ?? 0;
+    var avgRating = (double)(Model.AverageRating);
+    var reviewCount = Model.ReviewCount;
 }
 
 <!-- Single Page Header start -->
@@ -311,6 +311,7 @@
 </style>
 
 @section Scripts {
+    <script src="~/js/review.js"></script>
     <script>
         const minQty = @Model.MinOrderQuantity;
         const maxQty = @Model.StockQuantity;

@@ -165,7 +165,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const reviewId = document.getElementById('reviewId').value;
         const isEdit = reviewId !== '';
-        const url = isEdit ? `/Review/Edit/${reviewId}` : '/Review/Create';
+        const url = isEdit ? `/Review/${reviewId}` : '/Review/Create';
         const method = isEdit ? 'PUT' : 'POST';
 
         try {

@@ -6,9 +6,6 @@ using Fruitables.Services.Interfaces;
 
 namespace Fruitables.Controllers;
 
-/// <summary>
-/// Controller quản lý địa chỉ giao hàng của người dùng
-/// </summary>
 [Authorize]
 public class AddressController : Controller
 {

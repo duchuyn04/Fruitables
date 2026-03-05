@@ -2,7 +2,32 @@
 
 document.addEventListener('DOMContentLoaded', function() {
     initializeReviewActions();
+    restoreHelpfulState();
+
+    // Wire nút xác nhận xóa trong modal
+    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+    if (confirmDeleteBtn) {
+        confirmDeleteBtn.addEventListener('click', function() {
+            if (typeof deleteConfirmCallback === 'function') {
+                deleteConfirmCallback();
+                deleteConfirmCallback = null;
+            }
+        });
+    }
 });
+
+// Khôi phục trạng thái nút Hữu ích đã bấm từ localStorage
+function restoreHelpfulState() {
+    document.querySelectorAll('.helpful-btn').forEach(btn => {
+        const reviewId = btn.getAttribute('data-review-id');
+        if (localStorage.getItem(`helpful_voted_${reviewId}`)) {
+            btn.disabled = true;
+            btn.classList.remove('btn-outline-secondary');
+            btn.classList.add('btn-secondary');
+            btn.title = 'Bạn đã đánh dấu hữu ích';
+        }
+    });
+}
 
 function initializeReviewActions() {
     // Helpful button handlers
@@ -32,24 +57,35 @@ async function handleHelpfulClick(e) {
     btn.disabled = true;
 
     try {
+        const token = getAntiForgeryToken();
+        
+        const formData = new FormData();
+        formData.append('__RequestVerificationToken', token);
+        
         const response = await fetch(`/Review/${reviewId}/helpful`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'RequestVerificationToken': getAntiForgeryToken()
-            }
+            body: formData
         });
 
         const result = await response.json();
 
         if (result.success) {
+            // Lưu trạng thái đã vote vào localStorage
+            localStorage.setItem(`helpful_voted_${reviewId}`, '1');
+
             // Update helpful count
             const currentCount = parseInt(btn.textContent.match(/\d+/)[0]);
             btn.innerHTML = `<i class="fa fa-thumbs-up"></i> Hữu ích (${currentCount + 1})`;
+            btn.classList.remove('btn-outline-secondary');
+            btn.classList.add('btn-secondary');
+            btn.title = 'Bạn đã đánh dấu hữu ích';
             
-            // Show success message
             showToast('success', result.message || 'Cảm ơn phản hồi của bạn!');
         } else {
+            // Nếu server báo đã vote rồi thì lưu localStorage luôn
+            if (result.message && result.message.includes('hữu ích')) {
+                localStorage.setItem(`helpful_voted_${reviewId}`, '1');
+            }
             showToast('error', result.message || 'Không thể đánh dấu hữu ích');
             btn.disabled = false;
         }
@@ -72,18 +108,25 @@ function handleEditClick(e) {
     }
 }
 
-// Delete review
-async function handleDeleteClick(e) {
+// Biến lưu callback xác nhận xóa
+let deleteConfirmCallback = null;
+
+// Delete review — dùng modal Bootstrap thay cho confirm()
+function handleDeleteClick(e) {
     const btn = e.currentTarget;
     const reviewId = btn.getAttribute('data-review-id');
     
     if (!reviewId) return;
 
-    // Confirm deletion
-    if (!confirm('Bạn có chắc chắn muốn xóa đánh giá này?')) {
-        return;
-    }
+    // Lưu callback để thực hiện sau khi user xác nhận
+    deleteConfirmCallback = () => executeDelete(btn, reviewId);
 
+    // Hiển thị modal xác nhận
+    const modal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+    modal.show();
+}
+
+async function executeDelete(btn, reviewId) {
     // Disable button
     btn.disabled = true;
     const originalHtml = btn.innerHTML;

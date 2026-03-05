@@ -382,10 +382,26 @@ public class ReviewService : IReviewService
             if (review == null || review.IsDeleted || review.IsHidden)
                 return false;
 
-            // TODO: Track who marked as helpful to prevent duplicates
-            // For now, just increment
+            // Check if user already voted helpful for this review
+            var alreadyVoted = _unitOfWork.ReviewHelpfuls
+                .Query()
+                .Any(h => h.ReviewId == reviewId && h.UserId == userId);
+
+            if (alreadyVoted)
+                return false;
+
+            // Add helpful vote record
+            var helpful = new ReviewHelpful
+            {
+                ReviewId = reviewId,
+                UserId = userId,
+                CreatedAt = DateTime.UtcNow
+            };
+            await _unitOfWork.ReviewHelpfuls.AddAsync(helpful);
+
+
+            // Increment count
             review.HelpfulCount++;
-            
             _unitOfWork.ReviewRepository.Update(review);
             await _unitOfWork.SaveChangesAsync();
 
@@ -397,6 +413,7 @@ public class ReviewService : IReviewService
             throw;
         }
     }
+
 
     #endregion
 
