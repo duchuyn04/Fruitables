@@ -34,8 +34,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<ProductVariant> ProductVariants => Set<ProductVariant>();
     public DbSet<ProductLog> ProductLogs => Set<ProductLog>();
     public DbSet<OrderStatusHistory> OrderStatusHistories => Set<OrderStatusHistory>();
-    public DbSet<OrderStatusAuditLog> OrderStatusAuditLogs => Set<OrderStatusAuditLog>();
-    public DbSet<AuditLogAttachment> AuditLogAttachments => Set<AuditLogAttachment>();
+    public DbSet<OrderNote> OrderNotes => Set<OrderNote>();
     public DbSet<UserAccountLog> UserAccountLogs => Set<UserAccountLog>();
     
     // RBAC
@@ -154,26 +153,15 @@ public class ApplicationDbContext : DbContext
             entity.HasIndex(e => e.CreatedAt);
         });
 
-        // OrderStatusAuditLog
-        modelBuilder.Entity<OrderStatusAuditLog>(entity =>
+        // OrderNote
+        modelBuilder.Entity<OrderNote>(entity =>
         {
-            entity.HasOne(a => a.Order)
-                  .WithMany()
-                  .HasForeignKey(a => a.OrderId)
+            entity.HasOne(n => n.Order)
+                  .WithMany(o => o.OrderNotes)
+                  .HasForeignKey(n => n.OrderId)
                   .OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(e => e.OrderId);
             entity.HasIndex(e => e.CreatedAt);
-            entity.HasIndex(e => e.AdminId);
-        });
-
-        // AuditLogAttachment
-        modelBuilder.Entity<AuditLogAttachment>(entity =>
-        {
-            entity.HasOne(a => a.AuditLog)
-                  .WithMany(l => l.Attachments)
-                  .HasForeignKey(a => a.AuditLogId)
-                  .OnDelete(DeleteBehavior.Cascade);
-            entity.HasIndex(e => e.AuditLogId);
         });
 
         // UserAccountLog
