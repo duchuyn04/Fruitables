@@ -50,7 +50,7 @@ public class OrderLogService : IOrderLogService
                 OldStatus = order.Status,
                 NewStatus = order.Status,
                 AdminId = adminId,
-                Notes = notes ?? $"Payment status changed from {oldStatus} to {newStatus}",
+                Notes = notes ?? $"Trạng thái thanh toán cập nhật từ {GetPaymentStatusDisplayName(oldStatus)} sang {GetPaymentStatusDisplayName(newStatus)}",
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -62,6 +62,14 @@ public class OrderLogService : IOrderLogService
             "Order {OrderId} payment status changed from {OldStatus} to {NewStatus} by Admin {AdminId}",
             orderId, oldStatus, newStatus, adminId);
     }
+
+    private string GetPaymentStatusDisplayName(PaymentStatus status) => status switch
+    {
+        PaymentStatus.Pending => "Chờ thanh toán",
+        PaymentStatus.Paid => "Đã thanh toán",
+        PaymentStatus.Refunded => "Đã hoàn tiền",
+        _ => status.ToString()
+    };
 
     public Task LogErrorAsync(string action, int? orderId, Exception ex)
     {
