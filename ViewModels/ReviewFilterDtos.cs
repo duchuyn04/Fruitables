@@ -37,7 +37,7 @@ public class ReviewAdminFilterDto
     // Filters
     public int? ProductId { get; set; }
     public int? UserId { get; set; }
-    public ReviewStatus? Status { get; set; }
+    public string? Status { get; set; } // Map to visual status: "Deleted", "Hidden", "Visible"
     public int? Rating { get; set; }
     public bool? IsHidden { get; set; }
     public bool? IsDeleted { get; set; }

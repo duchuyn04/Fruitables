@@ -30,6 +30,12 @@ public class ReviewAdminController : Controller
         try
         {
             var result = await _reviewService.GetAllReviewsAsync(filter);
+            
+            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+            {
+                return PartialView("_ReviewTable", result);
+            }
+            
             return View(result);
         }
         catch (Exception ex)

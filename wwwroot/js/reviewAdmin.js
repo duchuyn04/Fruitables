@@ -1,39 +1,15 @@
 // Review Admin Management JavaScript
 
+let hideModal, deleteModal;
+let filterTimeout = null;
+
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize modals
-    const hideModal = new bootstrap.Modal(document.getElementById('hideModal'));
-    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    hideModal = new bootstrap.Modal(document.getElementById('hideModal'));
+    deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
 
-    // Hide review buttons
-    document.querySelectorAll('.btn-hide').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const reviewId = this.dataset.id;
-            document.getElementById('hideReviewId').value = reviewId;
-            document.getElementById('hideReason').value = '';
-            hideModal.show();
-        });
-    });
-
-    // Show review buttons
-    document.querySelectorAll('.btn-show').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const reviewId = this.dataset.id;
-            if (confirm('Bạn có chắc muốn hiện đánh giá này?')) {
-                showReview(reviewId);
-            }
-        });
-    });
-
-    // Delete review buttons
-    document.querySelectorAll('.btn-delete').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const reviewId = this.dataset.id;
-            document.getElementById('deleteReviewId').value = reviewId;
-            document.getElementById('deleteReason').value = '';
-            deleteModal.show();
-        });
-    });
+    bindReviewEvents();
+    bindFilterEvents();
 
     // Confirm hide
     document.getElementById('confirmHide')?.addEventListener('click', function() {
@@ -60,9 +36,44 @@ document.addEventListener('DOMContentLoaded', function() {
 
         deleteReview(reviewId, reason);
     });
+});
+
+function bindReviewEvents() {
+    const container = document.getElementById('reviewTableContainer');
+    if (!container) return;
+
+    // Hide review buttons
+    container.querySelectorAll('.btn-hide').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const reviewId = this.dataset.id;
+            document.getElementById('hideReviewId').value = reviewId;
+            document.getElementById('hideReason').value = '';
+            hideModal.show();
+        });
+    });
+
+    // Show review buttons
+    container.querySelectorAll('.btn-show').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const reviewId = this.dataset.id;
+            if (confirm('Bạn có chắc muốn hiện đánh giá này?')) {
+                showReview(reviewId);
+            }
+        });
+    });
+
+    // Delete review buttons
+    container.querySelectorAll('.btn-delete').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const reviewId = this.dataset.id;
+            document.getElementById('deleteReviewId').value = reviewId;
+            document.getElementById('deleteReason').value = '';
+            deleteModal.show();
+        });
+    });
 
     // Resolve report buttons
-    document.querySelectorAll('.btn-resolve').forEach(btn => {
+    container.querySelectorAll('.btn-resolve').forEach(btn => {
         btn.addEventListener('click', function() {
             const reportId = this.dataset.id;
             if (confirm('Xử lý báo cáo này? Đánh giá sẽ bị ẩn.')) {
@@ -72,7 +83,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Dismiss report buttons
-    document.querySelectorAll('.btn-dismiss').forEach(btn => {
+    container.querySelectorAll('.btn-dismiss').forEach(btn => {
         btn.addEventListener('click', function() {
             const reportId = this.dataset.id;
             if (confirm('Bỏ qua báo cáo này?')) {
@@ -82,12 +93,114 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Select all checkbox
-    document.getElementById('selectAll')?.addEventListener('change', function() {
-        document.querySelectorAll('.review-checkbox').forEach(cb => {
-            cb.checked = this.checked;
+    const selectAll = container.querySelector('#selectAll');
+    if (selectAll) {
+        selectAll.addEventListener('change', function() {
+            container.querySelectorAll('.review-checkbox').forEach(cb => {
+                cb.checked = this.checked;
+            });
+        });
+    }
+
+    // Pagination links
+    container.querySelectorAll('.ajax-page').forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            loadReviewsAjax(this.getAttribute('href'));
         });
     });
-});
+}
+
+function bindFilterEvents() {
+    const filterForm = document.getElementById('filterForm');
+    if (!filterForm) return;
+
+    // Prevent default form submit and use AJAX
+    filterForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        triggerFilter();
+    });
+
+    // Listeners for select dropdowns
+    filterForm.querySelectorAll('select').forEach(select => {
+        select.addEventListener('change', function() {
+            triggerFilter();
+        });
+    });
+
+    // Listener for search text input (with debounce)
+    const searchInput = filterForm.querySelector('input[name="SearchTerm"]');
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            clearTimeout(filterTimeout);
+            filterTimeout = setTimeout(triggerFilter, 500); // 500ms debounce
+        });
+    }
+
+    // Reset button should also use ajax
+    const resetBtn = filterForm.querySelector('a[href*="Index"]');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            // clear form
+            filterForm.reset();
+            // trigger
+            triggerFilter();
+        });
+    }
+}
+
+function triggerFilter() {
+    const filterForm = document.getElementById('filterForm');
+    const formData = new FormData(filterForm);
+    const params = new URLSearchParams(formData);
+    
+    // Remove empty parameters to clean URL
+    const keysForDel = [];
+    params.forEach((value, key) => {
+        if (value.trim() === '') {
+            keysForDel.push(key);
+        }
+    });
+    keysForDel.forEach(k => params.delete(k));
+
+    const url = filterForm.getAttribute('action') + '?' + params.toString();
+    loadReviewsAjax(url);
+}
+
+async function loadReviewsAjax(url) {
+    const container = document.getElementById('reviewTableContainer');
+    if (!container) return;
+
+    try {
+        // Opacity effect to show loading state
+        container.style.opacity = '0.5';
+
+        const response = await fetch(url, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+
+        if (response.ok) {
+            const html = await response.text();
+            container.innerHTML = html;
+            
+            // push state to url so user can copy url or refresh
+            window.history.pushState(null, '', url);
+            
+            // Re-bind events to new DOM elements
+            bindReviewEvents();
+        } else {
+            showToast('Lỗi khi tải dữ liệu', 'error');
+        }
+    } catch (error) {
+        console.error('Error fetching reviews:', error);
+        showToast('Có lỗi xảy ra', 'error');
+    } finally {
+        container.style.opacity = '1';
+    }
+}
 
 // Hide review
 async function hideReview(reviewId, reason) {

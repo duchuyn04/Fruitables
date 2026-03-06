@@ -131,8 +131,16 @@ public class ReviewRepository : Repository<Review>, IReviewRepository
         if (filter.UserId.HasValue)
             query = query.Where(r => r.UserId == filter.UserId.Value);
 
-        if (filter.Status.HasValue)
-            query = query.Where(r => r.Status == filter.Status.Value);
+        if (!string.IsNullOrEmpty(filter.Status))
+        {
+            query = filter.Status.ToLower() switch
+            {
+                "visible" => query.Where(r => !r.IsHidden && !r.IsDeleted),
+                "hidden" => query.Where(r => r.IsHidden && !r.IsDeleted),
+                "deleted" => query.Where(r => r.IsDeleted),
+                _ => query
+            };
+        }
 
         if (filter.Rating.HasValue)
             query = query.Where(r => r.Rating == filter.Rating.Value);
