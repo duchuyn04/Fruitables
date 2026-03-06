@@ -1,0 +1,179 @@
+@model Fruitables.ViewModels.PagedResult<Fruitables.ViewModels.ReviewAdminViewModel>
+@using Fruitables.Helpers
+
+@if (Model.Data != null && Model.Data.Any())
+{
+    <table class="w-full text-left border-collapse">
+        <thead>
+            <tr class="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
+                <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 w-1/3">Sản phẩm &amp; Nội dung</th>
+                <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Người dùng</th>
+                <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Đánh giá</th>
+                <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-center">Trạng thái</th>
+                <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-center">Báo cáo</th>
+                <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Ngày tạo</th>
+                <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-right">Thao tác</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100 dark:divide-slate-700/50">
+            @foreach (var review in Model.Data)
+            {
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors @(review.IsDeleted ? "opacity-60" : "")">
+                    <td class="px-6 py-5">
+                        <div class="flex flex-col">
+                            <span class="font-bold text-slate-900 dark:text-white">@review.ProductName</span>
+                            @if (!string.IsNullOrEmpty(review.Comment))
+                            {
+                                <span class="text-sm text-slate-600 dark:text-slate-400 mt-1 italic">
+                                    "@(review.Comment.Length > 100 ? review.Comment.Substring(0, 100) + "..." : review.Comment)"
+                                </span>
+                            }
+                        </div>
+                    </td>
+                    <td class="px-6 py-5">
+                        <div class="flex flex-col">
+                            <span class="font-semibold text-slate-900 dark:text-white">@review.UserName</span>
+                            @if (review.IsVerifiedPurchase)
+                            {
+                                <div class="mt-1">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/30 text-[10px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-tight">
+                                        <span class="material-icons-round text-[10px] mr-0.5">verified</span> Đã mua
+                                    </span>
+                                </div>
+                            }
+                        </div>
+                    </td>
+                    <td class="px-6 py-5">
+                        <div class="flex text-amber-400">
+                            @for (int i = 1; i <= 5; i++)
+                            {
+                                <span class="material-icons-round text-base">@(i <= review.Rating ? "star" : "star_outline")</span>
+                            }
+                        </div>
+                    </td>
+                    <td class="px-6 py-5 text-center">
+                        @if (review.IsDeleted)
+                        {
+                            <span class="px-3 py-1 rounded-full text-xs font-bold bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">Đã xóa</span>
+                        }
+                        else if (review.IsHidden)
+                        {
+                            <span class="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">Ẩn</span>
+                        }
+                        else
+                        {
+                            <span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400">Hiện</span>
+                        }
+                    </td>
+                    <td class="px-6 py-5 text-center">
+                        @if (review.ReportCount > 0)
+                        {
+                            <span class="text-xs font-bold text-red-500 dark:text-red-400">@review.ReportCount báo cáo</span>
+                        }
+                        else
+                        {
+                            <span class="text-slate-300 dark:text-slate-600">—</span>
+                        }
+                    </td>
+                    <td class="px-6 py-5">
+                        <div class="text-sm text-slate-500 dark:text-slate-400 flex flex-col">
+                            <span>@review.CreatedAt.ToVietnamTimeString()</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-5 text-right">
+                        <div class="flex items-center justify-end space-x-1">
+                            @if (!review.IsDeleted)
+                            {
+                                @if (review.IsHidden)
+                                {
+                                    <button type="button" class="btn-show p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-colors" data-id="@review.Id" title="Hiện">
+                                        <span class="material-icons-round text-lg">visibility</span>
+                                    </button>
+                                }
+                                else
+                                {
+                                    <button type="button" class="btn-hide p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors" data-id="@review.Id" title="Ẩn">
+                                        <span class="material-icons-round text-lg">visibility_off</span>
+                                    </button>
+                                }
+                                <button type="button" class="btn-delete p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors" data-id="@review.Id" title="Xóa">
+                                    <span class="material-icons-round text-lg">delete_outline</span>
+                                </button>
+                            }
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <!-- Pagination -->
+    @if (Model.TotalPages > 1)
+    {
+        var qsRaw = Context.Request.QueryString.Value?.TrimStart('?') ?? "";
+        var filteredQsParts = qsRaw.Split('&', StringSplitOptions.RemoveEmptyEntries)
+            .Where(p => !p.StartsWith("page=", StringComparison.OrdinalIgnoreCase));
+        var baseQuery = string.IsNullOrEmpty(string.Join("&", filteredQsParts)) ? "" : "&" + string.Join("&", filteredQsParts);
+        
+        <div class="px-6 py-4 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
+            <div class="text-sm text-slate-500 dark:text-slate-400">
+                Hiển thị <span class="font-medium text-slate-900 dark:text-white">@((Model.CurrentPage - 1) * Model.PageSize + 1)</span>
+                đến <span class="font-medium text-slate-900 dark:text-white">@Math.Min(Model.CurrentPage * Model.PageSize, Model.TotalCount)</span>
+                trong <span class="font-medium text-slate-900 dark:text-white">@Model.TotalCount</span> đánh giá
+            </div>
+            <div class="flex space-x-2">
+                @if (Model.CurrentPage > 1)
+                {
+                    <a href="?page=@(Model.CurrentPage - 1)@baseQuery" class="ajax-page px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-800 transition-colors">
+                        <span class="material-icons-round text-base">chevron_left</span>
+                    </a>
+                }
+                else
+                {
+                    <button disabled class="px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-300 dark:text-slate-600 opacity-50">
+                        <span class="material-icons-round text-base">chevron_left</span>
+                    </button>
+                }
+
+                @for (int i = 1; i <= Model.TotalPages; i++)
+                {
+                    if (i == 1 || i == Model.TotalPages || (i >= Model.CurrentPage - 2 && i <= Model.CurrentPage + 2))
+                    {
+                        if (i == Model.CurrentPage)
+                        {
+                            <button class="px-3 py-1.5 bg-primary text-white rounded-lg font-semibold text-sm">@i</button>
+                        }
+                        else
+                        {
+                            <a href="?page=@(i)@baseQuery" class="ajax-page px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-800 transition-colors font-semibold text-sm">@i</a>
+                        }
+                    }
+                    else if (i == Model.CurrentPage - 3 || i == Model.CurrentPage + 3)
+                    {
+                        <span class="px-2 py-1.5 text-slate-400">...</span>
+                    }
+                }
+
+                @if (Model.CurrentPage < Model.TotalPages)
+                {
+                    <a href="?page=@(Model.CurrentPage + 1)@baseQuery" class="ajax-page px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-800 transition-colors">
+                        <span class="material-icons-round text-base">chevron_right</span>
+                    </a>
+                }
+                else
+                {
+                    <button disabled class="px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-300 dark:text-slate-600 opacity-50">
+                        <span class="material-icons-round text-base">chevron_right</span>
+                    </button>
+                }
+            </div>
+        </div>
+    }
+}
+else
+{
+    <div class="py-16 text-center">
+        <span class="material-icons-round text-5xl text-slate-300 dark:text-slate-600 mb-4 block">rate_review</span>
+        <p class="text-slate-500 dark:text-slate-400">Không có đánh giá nào</p>
+    </div>
+}
