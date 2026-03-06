@@ -30,6 +30,11 @@ public class ReviewAdminController : Controller
         try
         {
             var result = await _reviewService.GetAllReviewsAsync(filter);
+            var stats = await _reviewService.GetAdminStatisticsAsync();
+            
+            ViewBag.AverageRating = stats.AverageRating;
+            ViewBag.TotalValidReviews = stats.ValidReviews;
+            ViewBag.NewReviewsToday = stats.ReviewsToday;
             
             if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
             {
