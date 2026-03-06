@@ -92,6 +92,7 @@ public class ReviewAdminStatistics
     public int ReportedReviews { get; set; }
     public int TotalReports { get; set; }
     public int PendingReports { get; set; }
+    public int ValidReviews { get; set; }
     
     public decimal AverageRating { get; set; }
     public int ReviewsToday { get; set; }

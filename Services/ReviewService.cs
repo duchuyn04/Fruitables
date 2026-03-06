@@ -672,6 +672,8 @@ public class ReviewService : IReviewService
             var weekAgo = now.AddDays(-7);
             var monthAgo = now.AddMonths(-1);
 
+            var validReviews = allReviews.Where(r => !r.IsDeleted && !r.IsHidden).ToList();
+
             var stats = new ReviewAdminStatistics
             {
                 TotalReviews = allReviews.Count,
@@ -681,9 +683,10 @@ public class ReviewService : IReviewService
                 HiddenReviews = allReviews.Count(r => r.IsHidden && !r.IsDeleted),
                 DeletedReviews = allReviews.Count(r => r.IsDeleted),
                 ReportedReviews = allReviews.Count(r => r.ReportCount > 0 && !r.IsDeleted),
+                ValidReviews = validReviews.Count,
                 TotalReports = await _unitOfWork.ReviewReports.CountAsync(),
                 PendingReports = await _unitOfWork.ReviewReports.CountPendingReportsAsync(),
-                AverageRating = allReviews.Any() ? (decimal)allReviews.Average(r => r.Rating) : 0,
+                AverageRating = validReviews.Any() ? (decimal)validReviews.Average(r => r.Rating) : 0,
                 ReviewsToday = allReviews.Count(r => r.CreatedAt >= today),
                 ReviewsThisWeek = allReviews.Count(r => r.CreatedAt >= weekAgo),
                 ReviewsThisMonth = allReviews.Count(r => r.CreatedAt >= monthAgo)
