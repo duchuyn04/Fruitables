@@ -30,7 +30,7 @@
                     <a asp-controller="Shop" asp-action="Detail" class="nav-item nav-link @(currentController == "Shop" && currentAction == "Detail" ? "active" : "")">Shop Detail</a>
                     <div class="nav-item dropdown">
                         <a href="#" class="nav-link dropdown-toggle @(currentController == "Cart" || currentController == "Checkout" || currentController == "Testimonial" ? "active" : "")" data-bs-toggle="dropdown">Pages</a>
-                        <div class="dropdown-menu m-0 bg-secondary rounded-0">
+                        <div class="dropdown-menu m-0 rounded-0">
                             <a asp-controller="Cart" asp-action="Index" class="dropdown-item">Cart</a>
                             <a asp-controller="Checkout" asp-action="Index" class="dropdown-item">Checkout</a>
                             <a asp-controller="Testimonial" asp-action="Index" class="dropdown-item">Testimonial</a>
