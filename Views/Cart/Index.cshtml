@@ -4,190 +4,368 @@
     ViewData["Title"] = "Giỏ hàng";
 }
 
-<!-- Single Page Header start -->
-<div class="container-fluid page-header py-5">
-    <h1 class="text-center text-white display-6">Giỏ hàng</h1>
-    <ol class="breadcrumb justify-content-center mb-0">
-        <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Trang chủ</a></li>
-        <li class="breadcrumb-item active text-white">Giỏ hàng</li>
-    </ol>
-</div>
-<!-- Single Page Header End -->
-
-<!-- Toast Container -->
-<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
-    @if (TempData["Success"] != null)
-    {
-        <div class="toast show" role="alert" data-bs-autohide="true" data-bs-delay="5000">
-            <div class="toast-header bg-success text-white">
-                <i class="fa fa-check-circle me-2"></i>
-                <strong class="me-auto">Thành công</strong>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
-            </div>
-            <div class="toast-body">@TempData["Success"]</div>
-        </div>
+@section Styles {
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet"/>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            corePlugins: {
+                preflight: true, 
+            },
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#81B622",
+                        accent: "#FFB524",
+                        btn: "#82b426",
+                        "background-light": "#F8F9FA",
+                        "background-dark": "#121212",
+                    },
+                    fontFamily: {
+                        display: ["Lexend", "-apple-system", "sans-serif"],
+                    },
+                    borderRadius: {
+                        DEFAULT: "12px",
+                        "3xl": "1.5rem",
+                    },
+                },
+            },
+        };
+    </script>
+    <style>
+    /* Ẩn header cũ */
+    .container-fluid.fixed-top {
+        display: none !important;
     }
-</div>
 
-<!-- Cart Page Start -->
-<div class="container-fluid py-5">
-    <div class="container py-5">
+    body {
+        background-color: #f7fbff; 
+    }
+
+    /* Hiệu ứng dropdown 3D giống trang chủ */
+    @@media (min-width: 992px) {
+        .custom-dropdown-hover .dropdown-menu {
+            display: none;
+            visibility: hidden;
+            top: 100%;
+            transform: rotateX(-75deg);
+            transform-origin: 0% 0%;
+            transition: .5s;
+            opacity: 0;
+            margin-top: 0;
+            border: 0;
+            position: absolute;
+            left: 0;
+        }
+        .custom-dropdown-hover:hover .dropdown-menu {
+            display: block;
+            transform: rotateX(0deg);
+            visibility: visible;
+            transition: .5s;
+            opacity: 1;
+        }
+    }
+    
+    /* Hide global layout header for this page */
+    .fixed-top { display: none !important; }
+    /* body { padding-top: 0 !important; } */ /* This line is now covered by the new body style */
+
+        /* Add scoped font handling if needed */
+        .cart-tailwind-scope {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            text-align: left;
+        }
+        .cart-tailwind-scope img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        /* Hover effect cho icon cart */
+        .position-relative.me-4.my-auto:hover .fa-shopping-bag {
+            color: #FFB524 !important;
+            transition: 0.3s;
+        }
+    </style>
+}
+
+<div class="cart-tailwind-scope bg-[#fafbfe] dark:bg-background-dark text-slate-800 dark:text-slate-200 min-h-screen font-display">
+    <!-- Topbar -->
+    <div class="bg-primary py-2 px-4 md:px-12 text-white text-xs md:text-sm flex flex-wrap justify-between items-center rounded-b-3xl mx-4 mb-4">
+        <div class="flex gap-4">
+            <span class="flex items-center gap-1"><span class="material-icons-outlined text-sm">location_on</span> 123 Street, New York</span>
+            <span class="flex items-center gap-1"><span class="material-icons-outlined text-sm">email</span> Email@Example.com</span>
+        </div>
+        <div class="hidden md:flex gap-4">
+            <a class="hover:underline" href="#">Privacy Policy</a>
+            <a class="hover:underline" href="#">Terms of Use</a>
+            <a class="hover:underline" href="#">Sales and Refunds</a>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 sticky top-0 z-50 mb-0">
+        <div class="container mx-auto px-4 md:px-12 py-4 flex justify-between items-center">
+            <a asp-controller="Home" asp-action="Index" class="text-3xl font-extrabold text-primary hover:text-primary" style="text-decoration: none;">Fruitables</a>
+            <nav class="hidden md:flex items-center gap-8">
+                <a asp-controller="Home" asp-action="Index" class="font-medium text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" style="text-decoration: none;">Home</a>
+                <a asp-controller="Shop" asp-action="Index" class="font-medium text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" style="text-decoration: none;">Shop</a>
+                <a asp-controller="Shop" asp-action="Detail" class="font-medium text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" style="text-decoration: none;">Shop Detail</a>
+                <div class="relative group custom-dropdown-hover dropdown">
+                    <button class="flex items-center gap-1 font-medium text-primary hover:text-primary transition-colors dropdown-toggle border-0 bg-transparent p-0" data-bs-toggle="dropdown" aria-expanded="false">
+                        Pages <span class="material-icons-outlined text-sm">expand_more</span>
+                    </button>
+                    <ul class="dropdown-menu border-0 shadow-sm rounded-[10px] m-0 bg-white dark:bg-slate-800 min-w-[12rem] py-2 hidden lg:group-hover:block">
+                        <li><a asp-controller="Cart" asp-action="Index" class="dropdown-item px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">Cart</a></li>
+                        <li><a asp-controller="Checkout" asp-action="Index" class="dropdown-item px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">Checkout</a></li>
+                        <li><a asp-controller="Testimonial" asp-action="Index" class="dropdown-item px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">Testimonial</a></li>
+                        <li><a asp-controller="Home" asp-action="NotFound" class="dropdown-item px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">404 Page</a></li>
+                    </ul>
+                </div>
+                <a asp-controller="Contact" asp-action="Index" class="font-medium text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" style="text-decoration: none;">Contact</a>
+            </nav>
+            <div class="d-flex m-3 me-0 align-items-center">
+                <button data-bs-toggle="modal" data-bs-target="#searchModal" class="btn-search btn border border-secondary btn-md-square rounded-circle bg-white me-4">
+                    <i class="fas fa-search text-primary"></i>
+                </button>
+                <a asp-controller="Cart" asp-action="Index" class="position-relative me-4 my-auto">
+                    <i class="fa fa-shopping-bag fa-2x text-primary"></i>
+                    <span class="position-absolute bg-secondary rounded-circle d-flex align-items-center justify-content-center text-dark px-1" style="top: -5px; left: 15px; height: 20px; min-width: 20px;">@(ViewBag.CartCount ?? 0)</span>
+                </a>
+                
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    <div class="dropdown">
+                        <button class="btn btn-link text-decoration-none d-flex align-items-center gap-2 dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            @await Component.InvokeAsync("UserAvatar")
+                            <span class="d-none d-lg-inline">@User.Identity.Name</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-3 rounded-xl">
+                            <li><span class="dropdown-item-text fw-bold">@User.Identity.Name</span></li>
+                            <li><hr class="dropdown-divider"></li>
+                            @if (User.IsInRole("Admin") || User.IsInRole("SuperAdmin"))
+                            {
+                                <li>
+                                    <a asp-area="Admin" asp-controller="Dashboard" asp-action="Index" class="dropdown-item text-primary fw-bold">
+                                        <i class="fas fa-tachometer-alt me-2"></i>Trang quản trị
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                            }
+                            <li>
+                                <a asp-controller="Profile" asp-action="Index" class="dropdown-item">
+                                    <i class="fas fa-user-circle me-2"></i>Thông tin cá nhân
+                                </a>
+                            </li>
+                            <li>
+                                <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
+                                    <button type="submit" class="dropdown-item text-danger">
+                                        <i class="fas fa-sign-out-alt me-2"></i>Đăng xuất
+                                    </button>
+                                </form>
+                            </li>
+                        </ul>
+                    </div>
+                }
+                else
+                {
+                    <a asp-controller="Account" asp-action="Login" class="btn btn-outline-primary me-2">Đăng nhập</a>
+                    <a asp-controller="Account" asp-action="Register" class="btn btn-primary">Đăng ký</a>
+                }
+            </div>
+        </div>
+    </header>
+
+    <!-- Breadcrumb / Header from Cartui.html -->
+    <main class="container mx-auto px-4 md:px-12 pb-12">
         @if (Model.Items.Any())
         {
-            <div class="table-responsive">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th scope="col">Sản phẩm</th>
-                            <th scope="col">Tên</th>
-                            <th scope="col">Giá</th>
-                            <th scope="col">Số lượng</th>
-                            <th scope="col">Tổng</th>
-                            <th scope="col">Xóa</th>
-                        </tr>
-                    </thead>
-                    <tbody id="cart-items">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                <div class="lg:col-span-8 space-y-6">
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="text-[22px] font-bold text-slate-800 flex items-center gap-2">Giỏ hàng của bạn <span class="text-slate-400 font-normal text-[18px]">(@Model.Items.Count() sản phẩm)</span></h3>
+                    </div>
+
+                    <div id="cart-items" class="space-y-4">
                         @foreach (var item in Model.Items)
                         {
-                            <tr data-product-id="@item.ProductId" data-stock="@item.StockQuantity">
-                                <th scope="row">
-                                    <div class="d-flex align-items-center">
-                                        <img src="@(string.IsNullOrEmpty(item.ProductImage) ? "~/img/vegetable-item-3.png" : item.ProductImage)" 
-                                             class="img-fluid me-5 rounded-circle" style="width: 80px; height: 80px;" alt="@item.ProductName">
+                            <div class="cart-item bg-white dark:bg-slate-900 p-4 rounded-3xl border shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] border-slate-100 dark:border-slate-800 flex gap-6 items-center transition-all" data-product-id="@item.ProductId" data-stock="@item.StockQuantity">
+                                <div class="w-24 h-24 md:w-28 md:h-28 rounded-2xl overflow-hidden bg-slate-50 dark:bg-slate-800 flex-shrink-0">
+                                    <img alt="@item.ProductName" class="w-full h-full object-cover" src="@(string.IsNullOrEmpty(item.ProductImage) ? Url.Content("~/img/vegetable-item-3.png") : item.ProductImage)" />
+                                </div>
+                                <div class="flex-grow flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                    <div class="space-y-1">
+                                        <h4 class="text-base font-bold text-slate-800 dark:text-slate-100 mb-0">
+                                            <a asp-controller="Shop" asp-action="Detail" asp-route-id="@item.ProductId" class="hover:text-primary">@item.ProductName</a>
+                                        </h4>
+                                        <p class="text-[13px] text-slate-500 mb-0">Đơn giá: @item.Price.ToString("N0")đ</p>
+                                        <p class="text-[12px] text-primary font-medium stock-info mb-0">Còn @item.StockQuantity sản phẩm</p>
                                     </div>
-                                </th>
-                                <td>
-                                    <p class="mb-0 mt-4">
-                                        <a asp-controller="Shop" asp-action="Detail" asp-route-id="@item.ProductId">@item.ProductName</a>
-                                    </p>
-                                    <small class="text-muted stock-info">Còn @item.StockQuantity sản phẩm</small>
-                                </td>
-                                <td><p class="mb-0 mt-4 item-price">@item.Price.ToString("N0")đ</p></td>
-                                <td>
-                                    <div class="input-group quantity mt-4" style="width: 100px;">
-                                        <div class="input-group-btn">
-                                            <button type="button" class="btn btn-sm btn-minus rounded-circle bg-light border" 
-                                                    onclick="updateQuantity(@item.ProductId, @(item.Quantity - 1))">
-                                                <i class="fa fa-minus"></i>
-                                            </button>
+                                    <div class="flex items-center gap-8">
+                                        <div class="flex flex-col items-center">
+                                            <div class="flex items-center border border-slate-200 dark:border-slate-700 rounded-full p-0.5 bg-white dark:bg-slate-800 h-9 w-24">
+                                                <button class="btn-minus w-7 text-lg flex items-center justify-center text-slate-400 hover:text-black hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-all" onclick="updateQuantity(@item.ProductId, @(item.Quantity - 1))">-</button>
+                                                <input type="text" class="item-quantity w-8 text-center text-sm font-semibold bg-transparent border-0 focus:ring-0 p-0 text-slate-800 dark:text-slate-200" value="@item.Quantity" readonly />
+                                                <button class="btn-plus w-7 text-lg flex items-center justify-center text-slate-400 hover:text-black hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-all @(item.Quantity >= item.StockQuantity ? "opacity-30 cursor-not-allowed" : "")" onclick="updateQuantity(@item.ProductId, @(item.Quantity + 1))" @(item.Quantity >= item.StockQuantity ? "disabled" : "")>+</button>
+                                            </div>
+                                            @if (item.Quantity >= item.StockQuantity)
+                                            {
+                                                <small class="text-red-500 text-[10px] mt-1 block text-center max-msg">Đã đạt tối đa</small>
+                                            }
                                         </div>
-                                        <input type="text" class="form-control form-control-sm text-center border-0 item-quantity" 
-                                               value="@item.Quantity" readonly data-price="@item.Price">
-                                        <div class="input-group-btn">
-                                            <button type="button" class="btn btn-sm btn-plus rounded-circle bg-light border @(item.Quantity >= item.StockQuantity ? "disabled" : "")"
-                                                    onclick="updateQuantity(@item.ProductId, @(item.Quantity + 1))" @(item.Quantity >= item.StockQuantity ? "disabled" : "")>
-                                                <i class="fa fa-plus"></i>
-                                            </button>
-                                        </div>
+                                        <span class="text-base font-bold text-slate-800 dark:text-slate-100 item-total w-20 text-right">@item.Total.ToString("N0")đ</span>
+                                        <button class="p-2 text-slate-300 hover:text-red-500 transition-colors" onclick="removeFromCart(@item.ProductId)">
+                                            <span class="material-icons-outlined text-xl">delete_outline</span>
+                                        </button>
                                     </div>
-                                    @if (item.Quantity >= item.StockQuantity)
-                                    {
-                                        <small class="text-danger d-block mt-1">Đã đạt tối đa</small>
-                                    }
-                                </td>
-                                <td><p class="mb-0 mt-4 item-total">@item.Total.ToString("N0")đ</p></td>
-                                <td>
-                                    <button type="button" class="btn btn-md rounded-circle bg-light border mt-4"
-                                            onclick="removeFromCart(@item.ProductId)">
-                                        <i class="fa fa-times text-danger"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-            <div class="mt-5">
-                <form asp-controller="Cart" asp-action="ApplyCoupon" method="post" class="d-inline">
-                    <input type="text" name="couponCode" class="border-0 border-bottom rounded me-5 py-3 mb-4" placeholder="Mã giảm giá" value="@Model.CouponCode">
-                    <button type="submit" class="btn border-secondary rounded-pill px-4 py-3 text-primary">Áp dụng</button>
-                </form>
-            </div>
-            <div class="row g-4 justify-content-end">
-                <div class="col-8"></div>
-                <div class="col-sm-8 col-md-7 col-lg-6 col-xl-4">
-                    <div class="bg-light rounded">
-                        <div class="p-4">
-                            <h1 class="display-6 mb-4">Tổng <span class="fw-normal">giỏ hàng</span></h1>
-                            <div class="d-flex justify-content-between mb-4">
-                                <h5 class="mb-0 me-4">Tạm tính:</h5>
-                                <p class="mb-0" id="cart-subtotal">@Model.Subtotal.ToString("N0")đ</p>
+                                </div>
                             </div>
-                            <div class="d-flex justify-content-between">
-                                <h5 class="mb-0 me-4">Phí vận chuyển</h5>
-                                <div class="">
+                        }
+                    </div>
+
+                    <div class="pt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <form asp-controller="Cart" asp-action="ApplyCoupon" method="post" class="relative w-full sm:w-80 flex">
+                            <input name="couponCode" class="w-full px-6 py-3 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-accent/20" placeholder="Mã giảm giá" type="text" value="@Model.CouponCode"/>
+                            <button type="submit" class="absolute right-1 top-1 bottom-1 px-6 rounded-full bg-accent text-white font-bold text-xs hover:brightness-110 transition-all uppercase tracking-wider border-0 shadow-sm">Áp dụng</button>
+                        </form>
+                        <a class="text-primary font-medium hover:underline text-sm" asp-controller="Shop" asp-action="Index">Tiếp tục mua sắm</a>
+                    </div>
+                </div>
+
+                <aside class="lg:col-span-4 sticky top-24">
+                    <div class="bg-white dark:bg-slate-900 rounded-[2rem] border shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border-slate-100 dark:border-slate-800 overflow-hidden">
+                        <div class="p-8 pb-6">
+                            <h3 class="text-xl font-bold mb-6 text-slate-800">Tổng giỏ hàng</h3>
+                            
+                            @if (!string.IsNullOrEmpty(Model.CouponCode))
+                            {
+                                <div class="mb-6 p-4 bg-white dark:bg-slate-800 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
+                                    <div class="flex justify-between items-center mb-1">
+                                        <span class="text-sm font-semibold flex items-center gap-2 text-primary"><span class="material-icons-outlined text-sm">local_offer</span> Voucher đang dùng</span>
+                                        <a href="#" class="text-[11px] text-primary font-bold">Xem thêm</a>
+                                    </div>
+                                    <div class="text-[11px] text-slate-400">Mã: @Model.CouponCode</div>
+                                </div>
+                            } else {
+                                <div class="mb-6 p-4 bg-white dark:bg-slate-800 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
+                                    <div class="flex justify-between items-center mb-1">
+                                        <span class="text-sm font-semibold flex items-center gap-2 text-primary"><span class="material-icons-outlined text-sm">local_offer</span> Voucher của tôi</span>
+                                        <a href="#" class="text-[11px] text-primary font-bold">Xem thêm</a>
+                                    </div>
+                                    <div class="text-[11px] text-slate-400">Bạn đang có 3 voucher có thể sử dụng</div>
+                                </div>
+                            }
+
+                            <div class="space-y-3 mb-6">
+                                <div class="flex justify-between items-center text-[13px]">
+                                    <span class="text-slate-500 font-medium">Tạm tính:</span>
+                                    <span class="font-bold text-slate-700" id="cart-subtotal">@Model.Subtotal.ToString("N0")đ</span>
+                                </div>
+                                <div class="flex justify-between items-center text-[13px]">
+                                    <span class="text-slate-500 font-medium">Phí vận chuyển:</span>
                                     @if (Model.ShippingInfo != null)
                                     {
                                         @if (Model.ShippingInfo.IsFreeShipping)
                                         {
-                                            <p class="mb-0 text-success" id="cart-shipping">
-                                                <i class="fas fa-check-circle me-1"></i>Miễn phí
-                                            </p>
+                                            <span class="font-bold text-slate-700 flex items-center gap-1" id="cart-shipping"><span class="material-icons-outlined text-sm text-green-500">check_circle</span> 0đ</span>
                                         }
                                         else
                                         {
-                                            <p class="mb-0" id="cart-shipping">@Model.ShippingInfo.ShippingFee.ToString("N0")đ</p>
+                                            <span class="font-bold text-slate-700" id="cart-shipping">@Model.ShippingInfo.ShippingFee.ToString("N0")đ</span>
                                         }
                                     }
                                     else
                                     {
-                                        <p class="mb-0" id="cart-shipping">@Model.ShippingFee.ToString("N0")đ</p>
+                                        <span class="font-bold text-slate-700" id="cart-shipping">@Model.ShippingFee.ToString("N0")đ</span>
                                     }
+                                </div>
+
+                                <div id="shipping-message-wrapper" style="@(Model.ShippingInfo != null && !string.IsNullOrEmpty(Model.ShippingInfo.Message) ? "" : "display:none;")">
+                                    @if (Model.ShippingInfo != null && !string.IsNullOrEmpty(Model.ShippingInfo.Message))
+                                    {
+                                        <div class="bg-[#f0f5ff] dark:bg-blue-900/20 p-2.5 rounded-lg text-[10px] text-blue-500 dark:text-blue-400 flex items-start gap-1.5 shipping-message-row">
+                                            <span class="material-icons-outlined text-[14px]">info</span>
+                                            <span class="shipping-message-text pt-[1px] font-medium leading-[14px]">@Model.ShippingInfo.Message</span>
+                                        </div>
+                                    }
+                                    else 
+                                    {
+                                        <div class="bg-[#f0f5ff] dark:bg-blue-900/20 p-2.5 rounded-lg text-[10px] text-blue-500 dark:text-blue-400 flex items-start gap-1.5 shipping-message-row">
+                                            <span class="material-icons-outlined text-[14px]">info</span>
+                                            <span class="shipping-message-text pt-[1px] font-medium leading-[14px]"></span>
+                                        </div>
+                                    }
+                                </div>
+
+                                @if (Model.ShippingInfo != null)
+                                {
+                                    <div class="flex justify-between items-center text-[12px] text-slate-400 font-medium pt-2">
+                                        <span class="">Vùng vận chuyển:</span>
+                                        <span class="font-semibold text-slate-700">
+                                            @(Model.ShippingInfo.Zone == Fruitables.Models.ShippingZone.Zone1_InnerCity ? "Nội thành HN" : 
+                                               Model.ShippingInfo.Zone == Fruitables.Models.ShippingZone.Zone2_OuterCity ? "Ngoại thành" : "Vùng xa")
+                                        </span>
+                                    </div>
+                                }
+                                
+                                <div class="flex justify-between items-center text-primary text-[13px]" id="discount-row" style="@(Model.Discount > 0 ? "" : "display: none;")">
+                                    <span class="font-bold">Giảm giá:</span>
+                                    <span class="font-bold" id="cart-discount">-@Model.Discount.ToString("N0")đ</span>
                                 </div>
                             </div>
-                            @if (Model.ShippingInfo != null && !string.IsNullOrEmpty(Model.ShippingInfo.Message))
-                            {
-                                <div class="mt-2" id="shipping-message-row">
-                                    @if (Model.ShippingInfo.IsFreeShipping || Model.ShippingInfo.IsReducedShipping)
-                                    {
-                                        <small class="text-success">
-                                            <i class="fas fa-gift me-1"></i>@Model.ShippingInfo.Message
-                                        </small>
-                                    }
-                                    else if (Model.ShippingInfo.AmountToFreeShipping > 0)
-                                    {
-                                        <small class="text-info">
-                                            <i class="fas fa-info-circle me-1"></i>@Model.ShippingInfo.Message
-                                        </small>
-                                    }
+                            
+                            <div class="pt-2 mb-6">
+                                <div class="flex justify-between items-end">
+                                    <span class="text-[15px] font-bold text-slate-800">Tổng cộng:</span>
+                                    <div class="text-right flex flex-col items-end">
+                                        <span class="block text-2xl font-extrabold text-slate-900 dark:text-white leading-none mb-1" id="cart-total">@Model.Total.ToString("N0")đ</span>
+                                        <span class="text-[9px] text-slate-400 font-medium italic">(Đã bao gồm VAT nếu có)</span>
+                                    </div>
                                 </div>
-                            }
-                            @if (Model.ShippingInfo != null)
-                            {
-                                <div class="mt-2">
-                                    <small class="text-muted">
-                                        Khu vực: @(Model.ShippingInfo.Zone == Fruitables.Models.ShippingZone.Zone1_InnerCity ? "Nội thành" : 
-                                                   Model.ShippingInfo.Zone == Fruitables.Models.ShippingZone.Zone2_OuterCity ? "Ngoại thành" : "Vùng xa")
-                                    </small>
-                                </div>
-                            }
-                            <div class="d-flex justify-content-between mt-2" id="discount-row" style="@(Model.Discount > 0 ? "" : "display: none;")">
-                                <h5 class="mb-0 me-4">Giảm giá:</h5>
-                                <p class="mb-0 text-success" id="cart-discount">-@Model.Discount.ToString("N0")đ</p>
                             </div>
+                            
+                            <a asp-controller="Checkout" asp-action="Index" class="w-full bg-btn hover:brightness-105 text-white font-bold py-4 rounded-xl shadow-[0_4px_14px_0_rgba(130,180,38,0.39)] transition-all transform hover:-translate-y-1 text-sm tracking-wide flex items-center justify-center gap-1">
+                                THANH TOÁN <span class="material-icons-outlined text-sm">arrow_forward</span>
+                            </a>
                         </div>
-                        <div class="py-4 mb-4 border-top border-bottom d-flex justify-content-between">
-                            <h5 class="mb-0 ps-4 me-4">Tổng cộng</h5>
-                            <p class="mb-0 pe-4" id="cart-total">@Model.Total.ToString("N0")đ</p>
-                        </div>
-                        <a asp-controller="Checkout" asp-action="Index" class="btn border-secondary rounded-pill px-4 py-3 text-primary text-uppercase mb-4 ms-4">Thanh toán</a>
                     </div>
-                </div>
+                </aside>
             </div>
         }
         else
         {
-            <div class="text-center py-5">
-                <i class="fas fa-shopping-cart fa-5x text-muted mb-4"></i>
-                <h3>Giỏ hàng trống</h3>
-                <p class="text-muted">Bạn chưa thêm sản phẩm nào vào giỏ hàng.</p>
-                <a asp-controller="Shop" asp-action="Index" class="btn border-secondary rounded-pill px-4 py-3 text-primary mt-3">Tiếp tục mua sắm</a>
+            <div class="text-center py-24 bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
+                <span class="material-icons-outlined text-8xl text-slate-200 dark:text-slate-700 mb-6 block">shopping_cart</span>
+                <h3 class="text-3xl font-bold mb-4">Giỏ hàng trống</h3>
+                <p class="text-slate-500 mb-8 max-w-md mx-auto">Bạn chưa thêm sản phẩm nào vào giỏ hàng. Hãy khám phá các sản phẩm tươi ngon của chúng tôi nhé.</p>
+                <a asp-controller="Shop" asp-action="Index" class="inline-flex items-center gap-2 bg-primary hover:bg-opacity-90 text-white font-bold py-4 px-8 rounded-full shadow-lg shadow-primary/20 transition-transform transform hover:-translate-y-1 uppercase tracking-wider">
+                    <span class="material-icons-outlined">storefront</span>
+                    Tiếp tục mua sắm
+                </a>
+            </div>
+        }
+    </main>
+
+    <!-- Tailwind Toast Container -->
+    <div id="tailwind-toast-container" class="fixed bottom-4 right-4 z-[1100] flex flex-col gap-2">
+        @if (TempData["Success"] != null)
+        {
+            <div class="toast-item bg-white dark:bg-slate-800 border-l-4 border-green-500 shadow-xl rounded-lg p-4 flex items-start gap-3 w-80 transform transition-all duration-300 translate-x-0 opacity-100">
+                <span class="material-icons-outlined text-green-500">check_circle</span>
+                <div class="flex-grow">
+                    <h4 class="text-sm font-bold text-slate-800 dark:text-slate-100">Thành công</h4>
+                    <p class="text-xs text-slate-500 mt-1">@TempData["Success"]</p>
+                </div>
+                <button class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 bg-transparent border-0" onclick="this.closest('.toast-item').remove()">
+                    <span class="material-icons-outlined text-sm">close</span>
+                </button>
             </div>
         }
     </div>
 </div>
-<!-- Cart Page End -->
-
 
 @section Scripts {
     <script>
@@ -198,60 +376,43 @@
         function updateCartDisplay(data) {
             document.getElementById('cart-subtotal').textContent = formatCurrency(data.subtotal);
             
-            // Update shipping display with ShippingInfo (Requirements 4.1, 5.1, 5.2, 5.3, 5.4)
+            // Update shipping display
             var shippingEl = document.getElementById('cart-shipping');
             if (data.shippingInfo && data.shippingInfo.isFreeShipping) {
-                shippingEl.innerHTML = '<i class="fas fa-check-circle me-1"></i>Miễn phí';
-                shippingEl.className = 'mb-0 text-success';
+                shippingEl.innerHTML = '<span class="material-icons-outlined text-sm text-green-500">check_circle</span> 0đ';
+                shippingEl.className = 'font-bold text-slate-700 flex items-center gap-1';
             } else {
-                shippingEl.textContent = formatCurrency(data.shippingFee);
-                shippingEl.className = 'mb-0';
+                shippingEl.textContent = formatCurrency(data.shippingFee || 0);
+                shippingEl.className = 'font-bold text-slate-700';
             }
             
             // Update shipping message
-            var messageRow = document.getElementById('shipping-message-row');
+            var wrapper = document.getElementById('shipping-message-wrapper');
             if (data.shippingInfo && data.shippingInfo.message) {
-                if (!messageRow) {
-                    // Create message row if it doesn't exist
-                    var shippingSection = shippingEl.closest('.d-flex').parentElement;
-                    messageRow = document.createElement('div');
-                    messageRow.id = 'shipping-message-row';
-                    messageRow.className = 'mt-2';
-                    shippingSection.insertBefore(messageRow, shippingSection.querySelector('.d-flex.justify-content-between.mt-2'));
-                }
+                var msgRow = wrapper.querySelector('.shipping-message-row');
+                var msgText = wrapper.querySelector('.shipping-message-text');
                 
-                var iconClass = '';
-                var textClass = '';
-                if (data.shippingInfo.isFreeShipping || data.shippingInfo.isReducedShipping) {
-                    iconClass = 'fas fa-gift me-1';
-                    textClass = 'text-success';
-                } else if (data.shippingInfo.amountToFreeShipping > 0) {
-                    iconClass = 'fas fa-info-circle me-1';
-                    textClass = 'text-info';
-                }
-                
-                messageRow.innerHTML = '<small class="' + textClass + '"><i class="' + iconClass + '"></i>' + data.shippingInfo.message + '</small>';
-                messageRow.style.display = '';
-            } else if (messageRow) {
-                messageRow.style.display = 'none';
+                msgText.textContent = data.shippingInfo.message;
+                wrapper.style.display = '';
+            } else {
+                wrapper.style.display = 'none';
             }
             
             document.getElementById('cart-total').textContent = formatCurrency(data.total);
             
-            // Update discount
             var discountRow = document.getElementById('discount-row');
             if (data.discount > 0) {
-                discountRow.style.display = '';
+                discountRow.style.display = 'flex';
                 document.getElementById('cart-discount').textContent = '-' + formatCurrency(data.discount);
             } else {
                 discountRow.style.display = 'none';
             }
             
             // Update navbar cart count
-            var cartCountBadge = document.querySelector('.fa-shopping-bag + span');
-            if (cartCountBadge) {
-                cartCountBadge.textContent = data.cartCount;
-            }
+            var cartCountBadges = document.querySelectorAll('.fa-shopping-bag + span, .cart-badge');
+            cartCountBadges.forEach(badge => {
+                badge.textContent = data.cartCount;
+            });
         }
 
         function updateQuantity(productId, quantity) {
@@ -260,8 +421,7 @@
                 return;
             }
 
-            // Check stock limit before sending request
-            var row = document.querySelector('tr[data-product-id="' + productId + '"]');
+            var row = document.querySelector('.cart-item[data-product-id="' + productId + '"]');
             var stock = parseInt(row.getAttribute('data-stock'));
             if (quantity > stock) {
                 showToast('Số lượng không thể vượt quá ' + stock + ' sản phẩm', 'warning');
@@ -279,16 +439,13 @@
             .then(data => {
                 if (data.success) {
                     if (data.itemRemoved) {
-                        // Remove row if quantity became 0
-                        var row = document.querySelector('tr[data-product-id="' + productId + '"]');
+                        var row = document.querySelector('.cart-item[data-product-id="' + productId + '"]');
                         if (row) row.remove();
-                        
                         if (data.cartCount === 0) {
                             location.reload();
                         }
                     } else {
-                        // Update item row with actual quantity from server
-                        var row = document.querySelector('tr[data-product-id="' + productId + '"]');
+                        var row = document.querySelector('.cart-item[data-product-id="' + productId + '"]');
                         if (row) {
                             var actualQty = data.actualQuantity;
                             var stockQty = data.stockQuantity;
@@ -297,30 +454,25 @@
                             row.querySelector('.item-total').textContent = formatCurrency(data.itemTotal);
                             row.setAttribute('data-stock', stockQty);
                             
-                            // Update button onclick values
                             var minusBtn = row.querySelector('.btn-minus');
                             var plusBtn = row.querySelector('.btn-plus');
                             minusBtn.setAttribute('onclick', 'updateQuantity(' + productId + ', ' + (actualQty - 1) + ')');
                             plusBtn.setAttribute('onclick', 'updateQuantity(' + productId + ', ' + (actualQty + 1) + ')');
                             
-                            // Update plus button state
                             if (data.maxReached) {
-                                plusBtn.classList.add('disabled');
+                                plusBtn.classList.add('opacity-50', 'cursor-not-allowed');
                                 plusBtn.setAttribute('disabled', 'disabled');
-                                // Add or update max reached message
-                                var maxMsg = row.querySelector('small.text-danger');
+                                var maxMsg = row.querySelector('.max-msg');
                                 if (!maxMsg) {
-                                    var quantityDiv = row.querySelector('.input-group.quantity').parentElement;
                                     var msg = document.createElement('small');
-                                    msg.className = 'text-danger d-block mt-1';
+                                    msg.className = 'text-red-500 text-[10px] mt-[-8px] block w-full text-center max-msg';
                                     msg.textContent = 'Đã đạt tối đa';
-                                    quantityDiv.appendChild(msg);
+                                    plusBtn.parentElement.parentElement.insertBefore(msg, plusBtn.parentElement.nextSibling);
                                 }
                             } else {
-                                plusBtn.classList.remove('disabled');
+                                plusBtn.classList.remove('opacity-50', 'cursor-not-allowed');
                                 plusBtn.removeAttribute('disabled');
-                                // Remove max reached message if exists
-                                var maxMsg = row.querySelector('small.text-danger');
+                                var maxMsg = row.querySelector('.max-msg');
                                 if (maxMsg) maxMsg.remove();
                             }
                         }
@@ -332,19 +484,36 @@
         }
 
         function showToast(message, type) {
-            var toastContainer = document.querySelector('.toast-container');
-            var bgClass = type === 'warning' ? 'bg-warning' : 'bg-success';
+            var container = document.getElementById('tailwind-toast-container');
+            var isWarning = type === 'warning';
+            var borderColor = isWarning ? 'border-yellow-500' : 'border-green-500';
+            var iconColor = isWarning ? 'text-yellow-500' : 'text-green-500';
+            var iconName = isWarning ? 'warning' : 'check_circle';
+            var title = isWarning ? 'Cảnh báo' : 'Thông báo';
+
             var toast = document.createElement('div');
-            toast.className = 'toast show';
-            toast.setAttribute('role', 'alert');
-            toast.innerHTML = '<div class="toast-header ' + bgClass + ' text-white">' +
-                '<i class="fa fa-exclamation-circle me-2"></i>' +
-                '<strong class="me-auto">Thông báo</strong>' +
-                '<button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>' +
-                '</div><div class="toast-body">' + message + '</div>';
-            toastContainer.appendChild(toast);
-            setTimeout(function() {
-                toast.remove();
+            toast.className = 'toast-item bg-white dark:bg-slate-800 border-l-4 ' + borderColor + ' shadow-xl rounded-lg p-4 flex items-start gap-3 w-80 transform transition-all duration-300 translate-x-full opacity-0';
+            toast.innerHTML = 
+                '<span class="material-icons-outlined ' + iconColor + '">' + iconName + '</span>' +
+                '<div class="flex-grow">' +
+                    '<h4 class="text-sm font-bold text-slate-800 dark:text-slate-100">' + title + '</h4>' +
+                    '<p class="text-xs text-slate-500 mt-1">' + message + '</p>' +
+                '</div>' +
+                '<button class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 bg-transparent border-0" onclick="this.closest(\'.toast-item\').remove()">' +
+                    '<span class="material-icons-outlined text-sm">close</span>' +
+                '</button>';
+            
+            container.appendChild(toast);
+            
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-x-full', 'opacity-0');
+                toast.classList.add('translate-x-0', 'opacity-100');
+            });
+
+            setTimeout(() => {
+                toast.classList.remove('translate-x-0', 'opacity-100');
+                toast.classList.add('translate-x-full', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
             }, 3000);
         }
 
@@ -359,10 +528,8 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // Remove row
-                    var row = document.querySelector('tr[data-product-id="' + productId + '"]');
+                    var row = document.querySelector('.cart-item[data-product-id="' + productId + '"]');
                     if (row) {
-                        row.style.transition = 'opacity 0.3s';
                         row.style.opacity = '0';
                         setTimeout(function() {
                             row.remove();
@@ -377,12 +544,12 @@
             .catch(error => console.error('Error:', error));
         }
 
-        // Toast auto-hide
-        document.querySelectorAll('.toast.show').forEach(function(toast) {
-            setTimeout(function() {
-                var bsToast = bootstrap.Toast.getOrCreateInstance(toast);
-                bsToast.hide();
-            }, 5000);
-        });
+        setTimeout(() => {
+            document.querySelectorAll('.toast-item').forEach(toast => {
+                toast.classList.remove('translate-x-0', 'opacity-100');
+                toast.classList.add('translate-x-full', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            });
+        }, 5000);
     </script>
 }
