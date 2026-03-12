@@ -286,14 +286,16 @@
 
                     <div class="mb-3">
                         <div class="form-check form-switch">
-                            <input type="checkbox" name="request.IsActive" id="request_IsActive" value="true" class="form-check-input" checked="@Model.Product.IsActive" />
+                            <input type="checkbox" name="request.IsActive" id="request_IsActive" value="true" class="form-check-input" @(Model.Product.IsActive ? "checked=\"checked\"" : "") />
+                            <input type="hidden" name="request.IsActive" value="false" />
                             <label class="form-check-label" for="request_IsActive">Kích hoạt sản phẩm</label>
                         </div>
                     </div>
 
                     <div class="mb-3">
                         <div class="form-check form-switch">
-                            <input type="checkbox" name="request.IsFeatured" id="request_IsFeatured" value="true" class="form-check-input" checked="@Model.Product.IsFeatured" />
+                            <input type="checkbox" name="request.IsFeatured" id="request_IsFeatured" value="true" class="form-check-input" @(Model.Product.IsFeatured ? "checked=\"checked\"" : "") />
+                            <input type="hidden" name="request.IsFeatured" value="false" />
                             <label class="form-check-label" for="request_IsFeatured">Sản phẩm nổi bật</label>
                         </div>
                     </div>
