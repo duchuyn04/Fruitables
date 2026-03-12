@@ -376,7 +376,7 @@
                 provinceSelector: '#provinceSelect',
                 districtSelector: '#districtSelect',
                 wardSelector: '#wardSelect',
-                streetAddressSelector: '#StreetAddress',
+                streetAddressSelector: '#StreetAddressInput',
                 provinceNameSelector: '#provinceName',
                 districtNameSelector: '#districtName',
                 wardNameSelector: '#wardName',
@@ -646,6 +646,11 @@
                 $('#provinceName').val(addressValues.provinceName);
                 $('#districtName').val(addressValues.districtName);
                 $('#wardName').val(addressValues.wardName);
+                
+                // Clear SelectedAddressId so it doesn't send "new" which causes server model binding error
+                if ($('#addressSelect').val() === 'new') {
+                    $('input[name="SelectedAddressId"]').val('');
+                }
                 
                 return true;
             });

@@ -129,6 +129,12 @@ public class CheckoutController : Controller
         
         var sessionId = GetSessionId();
         var userId = GetCurrentUserId();
+
+        // If 'new' was sent and failed to bind, or we need to ensure SelectedAddressId doesn't block validation
+        if (!model.SelectedAddressId.HasValue)
+        {
+            ModelState.Remove(nameof(model.SelectedAddressId));
+        }
         
         // If using saved address, remove validation for address fields
         if (model.SelectedAddressId.HasValue)
