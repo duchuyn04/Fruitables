@@ -644,7 +644,38 @@ public class RbacService : IRbacService
         if (existing != null)
         {
             _logger.LogDebug("Role {RoleId} already assigned to user {UserId}", roleId, userId);
+            
+            // Still need to remove OTHER roles to ensure they only have this one role
+            var otherRoles = await _unitOfWork.UserRoleMappings
+                .Query()
+                .Where(ur => ur.UserId == userId && ur.RoleId != roleId)
+                .ToListAsync();
+                
+            if (otherRoles.Any())
+            {
+                _unitOfWork.UserRoleMappings.RemoveRange(otherRoles);
+                await _unitOfWork.SaveChangesAsync();
+                await SyncUserLegacyRoleAsync(userId);
+                await InvalidateUserCacheAsync(userId);
+            }
+            
             return; // Idempotent - no error, just return
+        }
+
+        // Revoke all existing roles for this user before assigning the new one
+        var allExistingRoles = await _unitOfWork.UserRoleMappings
+            .Query()
+            .Where(ur => ur.UserId == userId)
+            .ToListAsync();
+            
+        if (allExistingRoles.Any())
+        {
+            _unitOfWork.UserRoleMappings.RemoveRange(allExistingRoles);
+            
+            foreach (var existingRole in allExistingRoles)
+            {
+                _logger.LogInformation("Revoked previous role {RoleId} from user {UserId} before assigning new role", existingRole.RoleId, userId);
+            }
         }
         
         var userRole = new UserRoleMapping
