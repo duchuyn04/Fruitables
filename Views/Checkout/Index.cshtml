@@ -566,6 +566,11 @@
                 }
             });
 
+            // Phone number input handler - clear error on input
+            $('#Mobile').on('input', function() {
+                $(this).removeClass('is-invalid');
+            });
+
             // Form validation and submission handler
             // **Feature: checkout-address-split, Task 21.3: Cập nhật validation messages**
             // **Validates: Requirements 4.2, 5.1, 5.3**
@@ -616,6 +621,16 @@
                 if (addressValues.streetAddress && addressValues.streetAddress.length > 200) {
                     validation.isValid = false;
                     validation.errors.push('Địa chỉ không được vượt quá 200 ký tự');
+                }
+                
+                // Validate phone number (10-11 digits)
+                var phone = $('#Mobile').val();
+                if (!phone || !/^\d{10,11}$/.test(phone)) {
+                    validation.isValid = false;
+                    validation.errors.push('Số điện thoại phải có 10-11 chữ số');
+                    $('#Mobile').addClass('is-invalid');
+                } else {
+                    $('#Mobile').removeClass('is-invalid');
                 }
                 
                 if (!validation.isValid) {

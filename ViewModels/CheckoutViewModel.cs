@@ -52,7 +52,8 @@ public class CheckoutViewModel
     [Display(Name = "Postcode/Zip")]
     public string? Postcode { get; set; }
 
-    [Required, Phone]
+    [Required]
+    [RegularExpression(@"^\d{10,11}$", ErrorMessage = "Số điện thoại phải có 10-11 chữ số")]
     public string Mobile { get; set; } = string.Empty;
 
     [EmailAddress, Display(Name = "Email Address")]

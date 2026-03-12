@@ -13,6 +13,7 @@ public class Address
     public string FullName { get; set; } = string.Empty;
 
     [Required, MaxLength(20)]
+    [RegularExpression(@"^\d{10,11}$", ErrorMessage = "Số điện thoại phải có 10-11 chữ số")]
     public string Phone { get; set; } = string.Empty;
 
     // Structured address fields
