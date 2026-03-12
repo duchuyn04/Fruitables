@@ -6,6 +6,8 @@ using Fruitables.Repositories.Interfaces;
 using Fruitables.Services;
 using Fruitables.Services.Interfaces;
 using Fruitables.Filters;
+using Microsoft.AspNetCore.DataProtection;
+using System.IO;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -111,6 +113,12 @@ builder.Services.AddSession(options =>
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
 });
+
+// Add Data Protection to persist encryption keys to survive IIS App Pool recycles
+var keysDirectory = Path.Combine(builder.Environment.ContentRootPath, "App_Data", "Keys");
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(keysDirectory))
+    .SetApplicationName("FruitablesApp");
 
 var app = builder.Build();
 
