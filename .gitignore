@@ -409,3 +409,13 @@ FodyWeavers.xsd
 .DS_Store
 .AppleDouble
 .LSOverride
+
+# Data Protection Keys (sensitive)
+App_Data/
+
+# Build output files
+build_output.txt
+*.log
+
+# .NET tools
+dotnet-tools.json
