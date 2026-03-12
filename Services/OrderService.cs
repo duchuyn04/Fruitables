@@ -86,7 +86,7 @@ public class OrderService : IOrderService
                 WardName = model.WardName ?? string.Empty,
                 StreetAddress = model.StreetAddress,
                 IsDefault = false,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow.AddHours(7)
             };
             
             await _unitOfWork.Addresses.AddAsync(shippingAddress);
@@ -154,7 +154,7 @@ public class OrderService : IOrderService
 
     private static string GenerateOrderNumber()
     {
-        return $"ORD-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString()[..8].ToUpper()}";
+        return $"ORD-{DateTime.UtcNow.AddHours(7):yyyyMMdd}-{Guid.NewGuid().ToString()[..8].ToUpper()}";
     }
 
     private static decimal GetShippingFee(ShippingMethod method)

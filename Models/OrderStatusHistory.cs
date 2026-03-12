@@ -17,7 +17,7 @@ public class OrderStatusHistory
     [MaxLength(500)]
     public string? Notes { get; set; }
 
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow.AddHours(7);
 
     // Navigation properties
     public virtual Order Order { get; set; } = null!;

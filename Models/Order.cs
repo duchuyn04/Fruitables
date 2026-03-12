@@ -76,7 +76,7 @@ public class Order
     [MaxLength(500)]
     public string? CancelReason { get; set; }
 
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow.AddHours(7);
 
     [Timestamp]
     public byte[]? RowVersion { get; set; }
