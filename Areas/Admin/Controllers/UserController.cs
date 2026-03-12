@@ -26,6 +26,7 @@ public class UserController : Controller
     public async Task<IActionResult> Index(
         string? searchTerm,
         bool? isActive,
+        string? roleType,
         string sortBy = "CreatedAt",
         bool sortDescending = true,
         int page = 1)
@@ -34,6 +35,7 @@ public class UserController : Controller
         {
             SearchTerm = searchTerm,
             IsActive = isActive,
+            RoleType = roleType,
             SortBy = sortBy,
             SortDescending = sortDescending,
             Page = page,
@@ -44,6 +46,7 @@ public class UserController : Controller
 
         ViewBag.SearchTerm = searchTerm;
         ViewBag.IsActive = isActive;
+        ViewBag.RoleType = roleType;
         ViewBag.SortBy = sortBy;
         ViewBag.SortDescending = sortDescending;
         ViewBag.CanLockAccount = _userManagementService.CanLockAccount(GetCurrentUserRole());

@@ -30,9 +30,17 @@ public class UserManagementService : IUserManagementService
     /// <inheritdoc />
     public async Task<UserListResult> GetCustomersAsync(UserFilterRequest filter)
     {
-        var query = _context.Users
-            .Where(u => u.Role == UserRole.Customer)
-            .AsQueryable();
+        var query = _context.Users.AsQueryable();
+
+        if (filter.RoleType == "Admin")
+        {
+            query = query.Where(u => u.Role == UserRole.Admin || u.Role == UserRole.SuperAdmin);
+        }
+        else
+        {
+            // Default to Customer
+            query = query.Where(u => u.Role == UserRole.Customer);
+        }
 
         // Apply search filter
         if (!string.IsNullOrWhiteSpace(filter.SearchTerm))
@@ -104,7 +112,7 @@ public class UserManagementService : IUserManagementService
             .Include(u => u.Orders)
             .Include(u => u.Addresses)
             .Include(u => u.LockedByAdmin)
-            .FirstOrDefaultAsync(u => u.Id == customerId && u.Role == UserRole.Customer);
+            .FirstOrDefaultAsync(u => u.Id == customerId);
 
         if (customer == null)
         {
@@ -180,7 +188,7 @@ public class UserManagementService : IUserManagementService
         int pageSize = 10)
     {
         var customer = await _context.Users
-            .FirstOrDefaultAsync(u => u.Id == customerId && u.Role == UserRole.Customer);
+            .FirstOrDefaultAsync(u => u.Id == customerId);
 
         if (customer == null)
         {
