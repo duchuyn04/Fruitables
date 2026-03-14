@@ -14,7 +14,7 @@
                     ?? Model.Images?.FirstOrDefault()?.ImageUrl 
                     ?? "~/img/fruite-item-5.jpg";
             }
-            <a asp-controller="Shop" asp-action="Detail" asp-route-id="@Model.Id">
+            <a asp-controller="Shop" asp-action="Detail" asp-route-slug="@Model.Slug">
                 <img src="@primaryImage" class="img-fluid w-100 rounded-top product-image" alt="@Model.Name">
             </a>
         </div>
@@ -38,7 +38,7 @@
         }
         <div class="p-4 border border-secondary border-top-0 rounded-bottom">
             <h4>
-                <a asp-controller="Shop" asp-action="Detail" asp-route-id="@Model.Id" class="text-dark">
+                <a asp-controller="Shop" asp-action="Detail" asp-route-slug="@Model.Slug" class="text-dark">
                     @Model.Name
                 </a>
             </h4>

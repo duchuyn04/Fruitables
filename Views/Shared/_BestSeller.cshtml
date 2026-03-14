@@ -22,12 +22,12 @@
                         <div class="p-4 rounded bg-light">
                             <div class="row align-items-center">
                                 <div class="col-6">
-                                    <a asp-controller="Shop" asp-action="Detail" asp-route-id="@product.Id">
+                                    <a asp-controller="Shop" asp-action="Detail" asp-route-slug="@product.Slug">
                                         <img src="@primaryImage" class="img-fluid rounded-circle w-100" alt="@product.Name">
                                     </a>
                                 </div>
                                 <div class="col-6">
-                                    <a asp-controller="Shop" asp-action="Detail" asp-route-id="@product.Id" class="h5">@product.Name</a>
+                                    <a asp-controller="Shop" asp-action="Detail" asp-route-slug="@product.Slug" class="h5">@product.Name</a>
                                     <div class="d-flex my-3">
                                         @for (int i = 0; i < 5; i++)
                                         {

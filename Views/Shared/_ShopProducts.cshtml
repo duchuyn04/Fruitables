@@ -12,7 +12,7 @@
         <div class="col-md-6 col-lg-6 col-xl-4">
             <div class="rounded position-relative fruite-item">
                 <div class="fruite-img">
-                    <a asp-controller="Shop" asp-action="Detail" asp-route-id="@product.Id">
+                    <a asp-controller="Shop" asp-action="Detail" asp-route-slug="@product.Slug">
                         <img src="@primaryImage" class="img-fluid w-100 rounded-top" alt="@product.Name">
                     </a>
                 </div>
@@ -21,7 +21,7 @@
                 </div>
                 <div class="p-4 border border-secondary border-top-0 rounded-bottom">
                     <h4>
-                        <a asp-controller="Shop" asp-action="Detail" asp-route-id="@product.Id" class="text-dark">
+                        <a asp-controller="Shop" asp-action="Detail" asp-route-slug="@product.Slug" class="text-dark">
                             @product.Name
                         </a>
                     </h4>

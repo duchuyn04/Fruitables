@@ -27,7 +27,6 @@
                 <div class="navbar-nav mx-auto">
                     <a asp-controller="Home" asp-action="Index" class="nav-item nav-link @(currentController == "Home" && currentAction == "Index" ? "active" : "")">Home</a>
                     <a asp-controller="Shop" asp-action="Index" class="nav-item nav-link @(currentController == "Shop" && currentAction == "Index" ? "active" : "")">Shop</a>
-                    <a asp-controller="Shop" asp-action="Detail" class="nav-item nav-link @(currentController == "Shop" && currentAction == "Detail" ? "active" : "")">Shop Detail</a>
                     <div class="nav-item dropdown">
                         <a href="#" class="nav-link dropdown-toggle @(currentController == "Cart" || currentController == "Checkout" || currentController == "Testimonial" ? "active" : "")" data-bs-toggle="dropdown">Pages</a>
                         <div class="dropdown-menu m-0 rounded-0">

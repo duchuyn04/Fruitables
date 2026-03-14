@@ -113,7 +113,6 @@
             <nav class="hidden md:flex items-center gap-8">
                 <a asp-controller="Home" asp-action="Index" class="font-medium text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" style="text-decoration: none;">Home</a>
                 <a asp-controller="Shop" asp-action="Index" class="font-medium text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" style="text-decoration: none;">Shop</a>
-                <a asp-controller="Shop" asp-action="Detail" class="font-medium text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" style="text-decoration: none;">Shop Detail</a>
                 <div class="relative group custom-dropdown-hover dropdown">
                     <button class="flex items-center gap-1 font-medium text-primary hover:text-primary transition-colors dropdown-toggle border-0 bg-transparent p-0" data-bs-toggle="dropdown" aria-expanded="false">
                         Pages <span class="material-icons-outlined text-sm">expand_more</span>
@@ -199,7 +198,7 @@
                                 <div class="flex-grow flex flex-col md:flex-row md:items-center justify-between gap-4">
                                     <div class="space-y-1">
                                         <h4 class="text-base font-bold text-slate-800 dark:text-slate-100 mb-0">
-                                            <a asp-controller="Shop" asp-action="Detail" asp-route-id="@item.ProductId" class="hover:text-primary">@item.ProductName</a>
+                                            <a asp-controller="Shop" asp-action="Detail" asp-route-slug="@item.ProductSlug" class="hover:text-primary">@item.ProductName</a>
                                         </h4>
                                         <p class="text-[13px] text-slate-500 mb-0">Đơn giá: @item.Price.ToString("N0")đ</p>
                                         <p class="text-[12px] text-primary font-medium stock-info mb-0">Còn @item.StockQuantity sản phẩm</p>

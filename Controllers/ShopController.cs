@@ -33,17 +33,31 @@ public class ShopController : Controller
         return View(viewModel);
     }
 
-    public async Task<IActionResult> Detail(int? id, int page = 1, string? sortBy = null)
+
+    // Backward compatibility: redirect /Shop/Detail/7 → /Shop/Detail/ten-san-pham
+    [Route("Shop/Detail/{id:int}")]
+    public async Task<IActionResult> DetailById(int id)
     {
-        if (id == null) return NotFound();
+        var product = await _productService.GetProductByIdAsync(id);
+        if (product == null) return NotFound();
+        return RedirectPermanent($"/Shop/Detail/{product.Slug}");
+    }
+
+    [Route("Shop/Detail/{slug}")]
+
+    public async Task<IActionResult> Detail(string? slug, int page = 1, string? sortBy = null)
+    {
+        if (string.IsNullOrEmpty(slug)) return NotFound();
 
         var sessionId = GetSessionId();
         ViewBag.CartCount = await _cartService.GetCartCountAsync(sessionId);
 
-        var product = await _productService.GetProductByIdAsync(id.Value);
+        var product = await _productService.GetProductBySlugAsync(slug);
         if (product == null) return NotFound();
 
-        ViewBag.RelatedProducts = await _productService.GetRelatedProductsAsync(id.Value, 4);
+        var id = product.Id; // Get ID for other services
+
+        ViewBag.RelatedProducts = await _productService.GetRelatedProductsAsync(id, 4);
         // Lấy cây categories đầy đủ để hiển thị ở sidebar
         ViewBag.CategoryTree = await _categoryService.GetCategoryTreeAsync();
         ViewBag.FeaturedProducts = await _productService.GetFeaturedProductsAsync(3);
@@ -52,7 +66,7 @@ public class ShopController : Controller
         var userId = GetCurrentUserId();
         
         // Get review statistics
-        var statistics = await _reviewService.GetProductReviewStatisticsAsync(id.Value);
+        var statistics = await _reviewService.GetProductReviewStatisticsAsync(id);
         ViewBag.ReviewStatistics = statistics;
 
         // Parse sortBy string to enum
@@ -65,7 +79,7 @@ public class ShopController : Controller
         // Get reviews with pagination
         var reviewFilter = new ReviewFilterDto
         {
-            ProductId = id.Value,
+            ProductId = id,
             Page = page,
             PageSize = 10,
             SortBy = sortByEnum
@@ -77,7 +91,7 @@ public class ShopController : Controller
         ViewBag.CanReview = false;
         if (userId > 0)
         {
-            ViewBag.CanReview = await _reviewService.CanUserReviewProductAsync(userId, id.Value);
+            ViewBag.CanReview = await _reviewService.CanUserReviewProductAsync(userId, id);
         }
 
         return View(product);

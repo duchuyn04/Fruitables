@@ -32,6 +32,7 @@ public class CartService : ICartService
             {
                 ProductId = ci.ProductId,
                 ProductName = ci.Product.Name,
+                ProductSlug = ci.Product.Slug,
                 ProductImage = ci.Product.Images.FirstOrDefault(i => i.IsPrimary)?.ImageUrl 
                     ?? ci.Product.Images.FirstOrDefault()?.ImageUrl ?? "",
                 Price = ci.Price,

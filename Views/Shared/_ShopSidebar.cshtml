@@ -79,13 +79,13 @@
             var primaryImage = product.Images?.FirstOrDefault(i => i.IsPrimary)?.ImageUrl ?? product.Images?.FirstOrDefault()?.ImageUrl ?? "~/img/featur-1.jpg";
             <div class="d-flex align-items-center justify-content-start mb-3">
                 <div class="rounded me-4" style="width: 100px; height: 100px;">
-                    <a asp-controller="Shop" asp-action="Detail" asp-route-id="@product.Id">
+                    <a asp-controller="Shop" asp-action="Detail" asp-route-slug="@product.Slug">
                         <img src="@primaryImage" class="img-fluid rounded" alt="@product.Name">
                     </a>
                 </div>
                 <div>
                     <h6 class="mb-2">
-                        <a asp-controller="Shop" asp-action="Detail" asp-route-id="@product.Id">@product.Name</a>
+                        <a asp-controller="Shop" asp-action="Detail" asp-route-slug="@product.Slug">@product.Name</a>
                     </h6>
                     <div class="d-flex mb-2">
                         @for (int i = 0; i < 5; i++)
