@@ -1,4 +1,4 @@
-﻿@inject Fruitables.Services.Interfaces.ISettingsService SettingsService
+@inject Fruitables.Services.Interfaces.ISettingsService SettingsService
 @{
     var siteName = await SettingsService.GetSettingAsync(Fruitables.Constants.SettingKeys.SiteName, "Fruitables");
     var metaTitle = await SettingsService.GetSettingAsync(Fruitables.Constants.SettingKeys.MetaTitle);
@@ -100,6 +100,59 @@
         }
     </div>
 
+    <!-- Login Required Modal -->
+    <div id="loginRequiredOverlay" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(15,23,42,0.55); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); align-items:center; justify-content:center;">
+        <div style="background:#fff; border-radius:20px; padding:0; max-width:420px; width:90%; overflow:hidden; box-shadow:0 25px 60px rgba(0,0,0,0.25); transform:translateY(0); animation:loginModalIn 0.3s ease;">
+            <!-- Header gradient -->
+            <div style="background:linear-gradient(135deg,#81c408 0%,#5a9a00 100%); padding:28px 32px 24px; text-align:center; position:relative;">
+                <div style="width:64px;height:64px;background:rgba(255,255,255,0.2);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;border:2px solid rgba(255,255,255,0.4);">
+                    <i class="fas fa-lock" style="font-size:26px;color:#fff;"></i>
+                </div>
+                <h4 style="color:#fff;margin:0;font-size:1.3rem;font-weight:700;letter-spacing:0.01em;">Yêu cầu đăng nhập</h4>
+                <p style="color:rgba(255,255,255,0.85);margin:6px 0 0;font-size:0.9rem;">Bạn cần đăng nhập để tiếp tục</p>
+                <button onclick="hideLoginModal()" style="position:absolute;top:14px;right:16px;background:rgba(255,255,255,0.2);border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;color:#fff;font-size:16px;line-height:1;display:flex;align-items:center;justify-content:center;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.35)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <!-- Body -->
+            <div style="padding:28px 32px 32px; text-align:center;">
+                <p style="color:#475569;font-size:0.95rem;line-height:1.6;margin:0 0 24px;">
+                    Vui lòng <strong style="color:#81c408;">đăng nhập</strong> vào tài khoản của bạn để thêm sản phẩm vào giỏ hàng hoặc mua hàng.
+                </p>
+                <!-- Benefits list -->
+                <div style="background:#f8fafc;border-radius:12px;padding:16px;margin-bottom:24px;text-align:left;">
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;color:#475569;font-size:0.87rem;">
+                        <i class="fas fa-check-circle" style="color:#81c408;flex-shrink:0;"></i>
+                        <span>Theo dõi đơn hàng & lịch sử mua hàng</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;color:#475569;font-size:0.87rem;">
+                        <i class="fas fa-check-circle" style="color:#81c408;flex-shrink:0;"></i>
+                        <span>Lưu địa chỉ giao hàng tự động</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px;color:#475569;font-size:0.87rem;">
+                        <i class="fas fa-check-circle" style="color:#81c408;flex-shrink:0;"></i>
+                        <span>Thanh toán nhanh hơn mỗi lần mua</span>
+                    </div>
+                </div>
+                <!-- Buttons -->
+                <a id="loginRedirectBtn" href="/Account/Login" style="display:block;background:linear-gradient(135deg,#81c408 0%,#5a9a00 100%);color:#fff;text-decoration:none;padding:13px 24px;border-radius:12px;font-weight:700;font-size:1rem;margin-bottom:10px;transition:all 0.2s;box-shadow:0 4px 15px rgba(129,196,8,0.35);" onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 6px 20px rgba(129,196,8,0.45)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 15px rgba(129,196,8,0.35)'">
+                    <i class="fas fa-sign-in-alt me-2"></i>Đăng nhập ngay
+                </a>
+                <a href="/Account/Register" style="display:block;background:#f1f5f9;color:#475569;text-decoration:none;padding:11px 24px;border-radius:12px;font-weight:600;font-size:0.9rem;transition:background 0.2s;" onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='#f1f5f9'">
+                    Chưa có tài khoản? <strong style="color:#81c408;">Đăng ký miễn phí</strong>
+                </a>
+            </div>
+        </div>
+    </div>
+    <style>
+        @@keyframes loginModalIn {
+            from { opacity: 0; transform: scale(0.92) translateY(16px); }
+            to   { opacity: 1; transform: scale(1)   translateY(0); }
+        }
+    </style>
+
+
+
     <!-- Back to Top -->
     <a href="#" class="btn btn-primary border-3 border-primary rounded-circle back-to-top"><i class="fa fa-arrow-up"></i></a>
 
@@ -125,5 +178,69 @@
         });
     </script>
     @await RenderSectionAsync("Scripts", required: false)
+
+    <!-- Login Required Modal JS -->
+    <script>
+        // Expose auth state to JS from server
+        var _isAuthenticated = @(User.Identity?.IsAuthenticated == true ? "true" : "false");
+
+        // Modal helpers
+        function showLoginModal(returnUrl) {
+            var overlay = document.getElementById('loginRequiredOverlay');
+            var loginBtn = document.getElementById('loginRedirectBtn');
+            if (returnUrl) {
+                loginBtn.href = '/Account/Login?returnUrl=' + encodeURIComponent(returnUrl);
+            } else {
+                loginBtn.href = '/Account/Login';
+            }
+            overlay.style.display = 'flex';
+            // Re-trigger animation
+            var card = overlay.querySelector('div');
+            card.style.animation = 'none';
+            card.offsetHeight; // reflow
+            card.style.animation = 'loginModalIn 0.3s ease';
+        }
+
+        function hideLoginModal() {
+            document.getElementById('loginRequiredOverlay').style.display = 'none';
+        }
+
+        // Close on backdrop click
+        document.getElementById('loginRequiredOverlay').addEventListener('click', function(e) {
+            if (e.target === this) hideLoginModal();
+        });
+
+        // Intercept purchase forms when not authenticated
+        document.addEventListener('DOMContentLoaded', function () {
+            if (!_isAuthenticated) {
+                // All forms targeting Cart/AddToCart or Checkout/BuyNow
+                document.querySelectorAll(
+                    'form[action*="AddToCart"], form[action*="BuyNow"]'
+                ).forEach(function (form) {
+                    form.addEventListener('submit', function (e) {
+                        e.preventDefault();
+                        e.stopImmediatePropagation();
+                        showLoginModal(window.location.pathname + window.location.search);
+                    });
+                });
+
+                // Also intercept any submit button that references those forms via [form] attr
+                document.querySelectorAll('[type="submit"][form]').forEach(function(btn) {
+                    var formId = btn.getAttribute('form');
+                    var linkedForm = document.getElementById(formId);
+                    if (linkedForm && (
+                        (linkedForm.action || '').includes('AddToCart') ||
+                        (linkedForm.action || '').includes('BuyNow')
+                    )) {
+                        btn.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            e.stopImmediatePropagation();
+                            showLoginModal(window.location.pathname + window.location.search);
+                        }, true);
+                    }
+                });
+            }
+        });
+    </script>
 </body>
 </html>
