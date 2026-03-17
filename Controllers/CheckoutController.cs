@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Fruitables.Services.Interfaces;
@@ -7,6 +8,7 @@ using Fruitables.Models;
 
 namespace Fruitables.Controllers;
 
+[Authorize]
 public class CheckoutController : Controller
 {
     private readonly ICartService _cartService;
@@ -17,7 +19,6 @@ public class CheckoutController : Controller
     private readonly IShippingService _shippingService;
     private readonly ILogger<CheckoutController> _logger;
     
-    // Session keys for shipping snapshot (Requirements 6.1, 6.2, 6.3)
     private const string ShippingFeeSnapshotKey = "ShippingFeeSnapshot";
     private const string ShippingZoneSnapshotKey = "ShippingZoneSnapshot";
     private const string ShippingSnapshotTimeKey = "ShippingSnapshotTime";

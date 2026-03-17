@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Fruitables.Services.Interfaces;
 
@@ -23,6 +24,7 @@ public class CartController : Controller
     }
 
     [HttpPost]
+    [Authorize]
     public async Task<IActionResult> AddToCart(int productId, int quantity = 1)
     {
         var sessionId = GetSessionId();
