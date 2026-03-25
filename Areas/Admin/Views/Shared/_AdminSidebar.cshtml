@@ -79,7 +79,8 @@
             </a>
         </li>
         <li class="sidebar-nav-item">
-            <a href="#" class="sidebar-nav-link">
+            <a asp-action="Index" asp-controller="Coupon" asp-area="Admin"
+               class="sidebar-nav-link @(controller == "Coupon" ? "active" : "")">
                 <i class="fas fa-ticket-alt"></i>
                 <span>Mã giảm giá</span>
             </a>

@@ -1,0 +1,194 @@
+@model Fruitables.ViewModels.CouponListViewModel
+@{
+    ViewData["Title"] = "Quản lý mã giảm giá";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminDashboardLayout.cshtml";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="mb-1">Quản lý mã giảm giá</h4>
+        <p class="text-muted mb-0">Tạo và quản lý các mã giảm giá cho cửa hàng</p>
+    </div>
+    <a asp-action="Create" class="btn btn-primary">
+        <i class="fas fa-plus me-2"></i>Thêm mã giảm giá
+    </a>
+</div>
+
+<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
+    @if (TempData["Success"] != null)
+    {
+        <div class="toast show" role="alert" data-bs-autohide="true" data-bs-delay="5000">
+            <div class="toast-header bg-success text-white">
+                <i class="fas fa-check-circle me-2"></i>
+                <strong class="me-auto">Thành công</strong>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+            </div>
+            <div class="toast-body">@TempData["Success"]</div>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="toast show" role="alert" data-bs-autohide="true" data-bs-delay="5000">
+            <div class="toast-header bg-danger text-white">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                <strong class="me-auto">Lỗi</strong>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+            </div>
+            <div class="toast-body">@TempData["Error"]</div>
+        </div>
+    }
+</div>
+
+<div class="admin-card">
+    <div class="card-header">
+        <i class="fas fa-ticket-alt me-2"></i>Danh sách mã giảm giá
+    </div>
+    <div class="card-body p-0">
+        @if (Model.Coupons.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Mã</th>
+                            <th>Loại</th>
+                            <th>Giá trị</th>
+                            <th>Min. sản phẩm</th>
+                            <th>Min. đơn hàng</th>
+                            <th>Lượt dùng</th>
+                            <th>Hạn sử dụng</th>
+                            <th class="text-center">Trạng thái</th>
+                            <th class="text-center" style="width: 120px;">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var coupon in Model.Coupons)
+                        {
+                            <tr>
+                                <td><code class="fw-bold">@coupon.Code</code></td>
+                                <td>
+                                    @if (coupon.Type == Fruitables.Models.CouponType.Fixed)
+                                    {
+                                        <span class="badge bg-info">Cố định</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-purple" style="background:#6f42c1;">Phần trăm</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (coupon.Type == Fruitables.Models.CouponType.Fixed)
+                                    {
+                                        @coupon.Value.ToString("N0")<text>đ</text>
+                                    }
+                                    else
+                                    {
+                                        @coupon.Value<text>%</text>
+                                    }
+                                </td>
+                                <td>≥ @coupon.MinQuantity sp</td>
+                                <td>
+                                    @if (coupon.MinOrderAmount > 0)
+                                    {
+                                        @coupon.MinOrderAmount.ToString("N0")<text>đ</text>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">—</span>
+                                    }
+                                </td>
+                                <td>
+                                    @coupon.UsedCount
+                                    @if (coupon.MaxUses.HasValue)
+                                    {
+                                        <text>/ @coupon.MaxUses</text>
+                                    }
+                                    else
+                                    {
+                                        <text>/ ∞</text>
+                                    }
+                                </td>
+                                <td>
+                                    @if (coupon.EndDate.HasValue)
+                                    {
+                                        <span class="@(coupon.EndDate < DateTime.Now ? "text-danger" : "")">
+                                            @coupon.EndDate.Value.ToString("dd/MM/yyyy")
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">Không giới hạn</span>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    @if (coupon.IsActive)
+                                    {
+                                        <span class="badge bg-success">Hoạt động</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Tắt</span>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    <div class="d-flex gap-1 justify-content-center">
+                                        <a asp-action="Edit" asp-route-id="@coupon.Id"
+                                           class="btn btn-sm btn-outline-primary" title="Chỉnh sửa">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <button type="button" class="btn btn-sm btn-outline-danger"
+                                                onclick="confirmDelete(@coupon.Id, '@coupon.Code')" title="Xóa">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-5">
+                <i class="fas fa-ticket-alt fa-3x text-muted mb-3"></i>
+                <p class="text-muted">Chưa có mã giảm giá nào</p>
+                <a asp-action="Create" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Tạo mã đầu tiên
+                </a>
+            </div>
+        }
+    </div>
+</div>
+
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="fas fa-exclamation-triangle me-2"></i>Xóa mã giảm giá</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Bạn có chắc chắn muốn xóa mã <strong id="deleteCouponCode"></strong>?</p>
+                <p class="text-muted mb-0"><small>Hành động này không thể hoàn tác.</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <form id="deleteForm" method="post" style="display: inline;">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-danger">Xóa</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function confirmDelete(id, code) {
+        document.getElementById('deleteCouponCode').textContent = code;
+        document.getElementById('deleteForm').action = '@Url.Action("Delete", "Coupon", new { area = "Admin" })/' + id;
+        new bootstrap.Modal(document.getElementById('deleteModal')).show();
+    }
+</script>
+}

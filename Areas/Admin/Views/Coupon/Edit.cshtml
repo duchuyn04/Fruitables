@@ -1,0 +1,145 @@
+@model Fruitables.ViewModels.EditCouponViewModel
+@{
+    ViewData["Title"] = "Chỉnh sửa mã giảm giá";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminDashboardLayout.cshtml";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="mb-1">Chỉnh sửa: <code>@Model.Code</code></h4>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a asp-action="Index">Mã giảm giá</a></li>
+                <li class="breadcrumb-item active">Chỉnh sửa</li>
+            </ol>
+        </nav>
+    </div>
+    <a asp-action="Index" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Quay lại
+    </a>
+</div>
+
+<div class="admin-card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-ticket-alt me-2"></i>Thông tin mã giảm giá</span>
+        <small class="text-muted">Đã dùng: <strong>@Model.UsedCount</strong> lần</small>
+    </div>
+    <div class="card-body">
+        <form asp-action="Edit" asp-route-id="@Model.Id" method="post" novalidate>
+            <input asp-for="Id" type="hidden" />
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="Code" class="form-label">Mã giảm giá <span class="text-danger">*</span></label>
+                    <input asp-for="Code" class="form-control text-uppercase" />
+                    <span asp-validation-for="Code" class="text-danger"></span>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label asp-for="Type" class="form-label">Loại giảm giá <span class="text-danger">*</span></label>
+                    <select asp-for="Type" class="form-select" id="couponType">
+                        <option value="1">Cố định (Fixed) – giảm số tiền cụ thể</option>
+                        <option value="0">Phần trăm (%) – giảm theo %</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label asp-for="Value" class="form-label">
+                        Giá trị giảm <span class="text-danger">*</span>
+                        <span id="valueUnit" class="text-muted">@(Model.Type == Fruitables.Models.CouponType.Percentage ? "(%)" : "(đ)")</span>
+                    </label>
+                    <input asp-for="Value" class="form-control" type="number" min="0.01" step="1000" id="valueInput" />
+                    <div id="valuePreview" class="form-text text-primary fw-semibold"></div>
+                    <span asp-validation-for="Value" class="text-danger"></span>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label asp-for="MinQuantity" class="form-label">Số sản phẩm tối thiểu <span class="text-danger">*</span></label>
+                    <input asp-for="MinQuantity" class="form-control" type="number" min="1" />
+                    <div class="form-text">Tổng số lượng sản phẩm trong giỏ</div>
+                    <span asp-validation-for="MinQuantity" class="text-danger"></span>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label asp-for="MinOrderAmount" class="form-label">Giá trị đơn hàng tối thiểu</label>
+                    <input asp-for="MinOrderAmount" class="form-control" type="number" min="0" step="1000" id="minOrderInput" />
+                    <div id="minOrderPreview" class="form-text text-primary fw-semibold"></div>
+                    <div class="form-text">0 = không yêu cầu</div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label asp-for="MaxUses" class="form-label">Giới hạn lượt dùng</label>
+                    <input asp-for="MaxUses" class="form-control" type="number" min="1" placeholder="Để trống = không giới hạn" />
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label asp-for="StartDate" class="form-label">Ngày bắt đầu</label>
+                    <input asp-for="StartDate" class="form-control" type="datetime-local" />
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label asp-for="EndDate" class="form-label">Ngày kết thúc</label>
+                    <input asp-for="EndDate" class="form-control" type="datetime-local" />
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <div class="form-check form-switch">
+                    <input asp-for="IsActive" class="form-check-input" type="checkbox" />
+                    <label asp-for="IsActive" class="form-check-label">Kích hoạt mã giảm giá</label>
+                </div>
+            </div>
+
+            <hr class="my-3" />
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-2"></i>Lưu thay đổi
+                </button>
+                <a asp-action="Index" class="btn btn-outline-secondary">Hủy</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        var isPercent = document.getElementById('couponType').value === '0';
+
+        function updateValuePreview() {
+            var val = parseFloat(document.getElementById('valueInput').value);
+            var preview = document.getElementById('valuePreview');
+            if (isNaN(val) || val <= 0) {
+                preview.textContent = '';
+                return;
+            }
+            if (isPercent) {
+                preview.textContent = '→ Giảm ' + val + '%';
+            } else {
+                preview.textContent = '→ ' + val.toLocaleString('vi-VN') + ' VND';
+            }
+        }
+
+        document.getElementById('couponType').addEventListener('change', function () {
+            isPercent = this.value === '0';
+            document.getElementById('valueUnit').textContent = isPercent ? '(%)' : '(đ)';
+            updateValuePreview();
+        });
+
+        document.getElementById('valueInput').addEventListener('input', updateValuePreview);
+
+        document.getElementById('minOrderInput').addEventListener('input', function () {
+            var val = parseFloat(this.value);
+            var preview = document.getElementById('minOrderPreview');
+            if (isNaN(val) || val <= 0) { preview.textContent = ''; return; }
+            preview.textContent = '→ ' + val.toLocaleString('vi-VN') + ' VND';
+        });
+
+        document.querySelector('input[name="Code"]').addEventListener('input', function () {
+            this.value = this.value.toUpperCase();
+        });
+
+        // Hiển thị preview ngay khi load trang (đang edit, đã có giá trị sẵn)
+        updateValuePreview();
+    </script>
+}

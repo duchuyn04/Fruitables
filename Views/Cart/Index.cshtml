@@ -241,20 +241,22 @@
                             
                             @if (!string.IsNullOrEmpty(Model.CouponCode))
                             {
-                                <div class="mb-6 p-4 bg-white dark:bg-slate-800 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
+                                <div class="mb-6 p-4 bg-white dark:bg-slate-800 rounded-2xl border border-dashed border-green-300 dark:border-green-700">
                                     <div class="flex justify-between items-center mb-1">
-                                        <span class="text-sm font-semibold flex items-center gap-2 text-primary"><span class="material-icons-outlined text-sm">local_offer</span> Voucher đang dùng</span>
-                                        <a href="#" class="text-[11px] text-primary font-bold">Xem thêm</a>
+                                        <span class="text-sm font-semibold flex items-center gap-2 text-primary"><span class="material-icons-outlined text-sm">local_offer</span> Mã đang áp dụng</span>
+                                        <form asp-controller="Cart" asp-action="RemoveCoupon" method="post" class="m-0">
+                                            <button type="submit" class="text-[11px] text-red-400 font-bold border-0 bg-transparent p-0 hover:text-red-600">Bỏ mã</button>
+                                        </form>
                                     </div>
-                                    <div class="text-[11px] text-slate-400">Mã: @Model.CouponCode</div>
+                                    <div class="text-[13px] font-bold text-green-600">@Model.CouponCode</div>
+                                    <div class="text-[11px] text-slate-400">Giảm @Model.Discount.ToString("N0")đ</div>
                                 </div>
                             } else {
                                 <div class="mb-6 p-4 bg-white dark:bg-slate-800 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
                                     <div class="flex justify-between items-center mb-1">
                                         <span class="text-sm font-semibold flex items-center gap-2 text-primary"><span class="material-icons-outlined text-sm">local_offer</span> Voucher của tôi</span>
-                                        <a href="#" class="text-[11px] text-primary font-bold">Xem thêm</a>
                                     </div>
-                                    <div class="text-[11px] text-slate-400">Bạn đang có 3 voucher có thể sử dụng</div>
+                                    <div class="text-[11px] text-slate-400">Nhập mã giảm giá bên dưới để được giảm giá</div>
                                 </div>
                             }
 
@@ -357,6 +359,32 @@
                 <div class="flex-grow">
                     <h4 class="text-sm font-bold text-slate-800 dark:text-slate-100">Thành công</h4>
                     <p class="text-xs text-slate-500 mt-1">@TempData["Success"]</p>
+                </div>
+                <button class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 bg-transparent border-0" onclick="this.closest('.toast-item').remove()">
+                    <span class="material-icons-outlined text-sm">close</span>
+                </button>
+            </div>
+        }
+        @if (TempData["CouponSuccess"] != null)
+        {
+            <div class="toast-item bg-white dark:bg-slate-800 border-l-4 border-green-500 shadow-xl rounded-lg p-4 flex items-start gap-3 w-80 transform transition-all duration-300 translate-x-0 opacity-100">
+                <span class="material-icons-outlined text-green-500">local_offer</span>
+                <div class="flex-grow">
+                    <h4 class="text-sm font-bold text-slate-800 dark:text-slate-100">Mã giảm giá</h4>
+                    <p class="text-xs text-slate-500 mt-1">@TempData["CouponSuccess"]</p>
+                </div>
+                <button class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 bg-transparent border-0" onclick="this.closest('.toast-item').remove()">
+                    <span class="material-icons-outlined text-sm">close</span>
+                </button>
+            </div>
+        }
+        @if (TempData["CouponError"] != null)
+        {
+            <div class="toast-item bg-white dark:bg-slate-800 border-l-4 border-red-500 shadow-xl rounded-lg p-4 flex items-start gap-3 w-80 transform transition-all duration-300 translate-x-0 opacity-100">
+                <span class="material-icons-outlined text-red-500">error_outline</span>
+                <div class="flex-grow">
+                    <h4 class="text-sm font-bold text-slate-800 dark:text-slate-100">Không hợp lệ</h4>
+                    <p class="text-xs text-slate-500 mt-1">@TempData["CouponError"]</p>
                 </div>
                 <button class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 bg-transparent border-0" onclick="this.closest('.toast-item').remove()">
                     <span class="material-icons-outlined text-sm">close</span>

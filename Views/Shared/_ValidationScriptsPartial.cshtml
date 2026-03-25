@@ -1,2 +1,23 @@
-﻿<script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
+<script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
 <script src="~/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js"></script>
+<script>
+    // Việt hóa thông báo jQuery Validate
+    $.extend($.validator.messages, {
+        required:     "Trường này không được để trống.",
+        remote:       "Vui lòng kiểm tra lại trường này.",
+        email:        "Vui lòng nhập địa chỉ email hợp lệ.",
+        url:          "Vui lòng nhập URL hợp lệ.",
+        date:         "Vui lòng nhập ngày hợp lệ.",
+        dateISO:      "Vui lòng nhập ngày theo định dạng ISO.",
+        number:       "Vui lòng nhập số hợp lệ.",
+        digits:       "Chỉ được nhập số nguyên.",
+        equalTo:      "Giá trị không khớp.",
+        maxlength:    $.validator.format("Tối đa {0} ký tự."),
+        minlength:    $.validator.format("Ít nhất {0} ký tự."),
+        rangelength:  $.validator.format("Từ {0} đến {1} ký tự."),
+        range:        $.validator.format("Giá trị phải từ {0} đến {1}."),
+        max:          $.validator.format("Giá trị không được lớn hơn {0}."),
+        min:          $.validator.format("Giá trị không được nhỏ hơn {0}."),
+        step:         $.validator.format("Phải là bội số của {0}.")
+    });
+</script>
