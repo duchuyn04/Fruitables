@@ -63,6 +63,7 @@ builder.Services.AddScoped<IUserManagementService, UserManagementService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IShippingService, ShippingService>();
 builder.Services.AddScoped<IWordMaskingService, WordMaskingService>();
+builder.Services.AddScoped<ICouponService, CouponService>();
 
 // Add RBAC Services
 builder.Services.AddScoped<IRbacService, RbacService>();

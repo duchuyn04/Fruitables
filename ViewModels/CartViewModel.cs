@@ -10,11 +10,8 @@ public class CartViewModel
     public decimal Total { get; set; }
     public string? CouponCode { get; set; }
     public decimal Discount { get; set; }
+    public string? CouponMessage { get; set; }
     
-    /// <summary>
-    /// Thông tin phí vận chuyển chi tiết (theo khu vực)
-    /// Requirements 4.1, 4.2, 4.3, 4.4
-    /// </summary>
     public ShippingInfo? ShippingInfo { get; set; }
 }
 

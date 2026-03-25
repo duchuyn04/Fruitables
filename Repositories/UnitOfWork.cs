@@ -99,8 +99,13 @@ public class UnitOfWork : IUnitOfWork
     public IRepository<ProductLog> ProductLogs => 
         _productLogs ??= new Repository<ProductLog>(_context);
     
-    public IRepository<Address> Addresses => 
+    public IRepository<Address> Addresses =>
         _addresses ??= new Repository<Address>(_context);
+    
+    // Coupon repository
+    private IRepository<Coupon>? _coupons;
+    public IRepository<Coupon> Coupons =>
+        _coupons ??= new Repository<Coupon>(_context);
     
     // RBAC repository properties
     public IRepository<Role> Roles => 

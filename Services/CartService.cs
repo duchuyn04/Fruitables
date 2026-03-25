@@ -10,16 +10,18 @@ public class CartService : ICartService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IShippingService _shippingService;
+    private readonly ICouponService _couponService;
 
-    public CartService(IUnitOfWork unitOfWork, IShippingService shippingService)
+    public CartService(IUnitOfWork unitOfWork, IShippingService shippingService, ICouponService couponService)
     {
-        _unitOfWork = unitOfWork;
+        _unitOfWork      = unitOfWork;
         _shippingService = shippingService;
+        _couponService   = couponService;
     }
 
     public async Task<CartViewModel> GetCartAsync(string sessionId, string? district = null)
     {
-        var cart = await GetOrCreateCartAsync(sessionId);
+        var cart  = await GetOrCreateCartAsync(sessionId);
         var items = await _unitOfWork.CartItems.Query()
             .Where(ci => ci.CartId == cart.Id)
             .Include(ci => ci.Product)
@@ -30,24 +32,26 @@ public class CartService : ICartService
         {
             Items = items.Select(ci => new CartItemViewModel
             {
-                ProductId = ci.ProductId,
-                ProductName = ci.Product.Name,
-                ProductSlug = ci.Product.Slug,
-                ProductImage = ci.Product.Images.FirstOrDefault(i => i.IsPrimary)?.ImageUrl 
-                    ?? ci.Product.Images.FirstOrDefault()?.ImageUrl ?? "",
-                Price = ci.Price,
-                Quantity = ci.Quantity,
+                ProductId     = ci.ProductId,
+                ProductName   = ci.Product.Name,
+                ProductSlug   = ci.Product.Slug,
+                ProductImage  = ci.Product.Images.FirstOrDefault(i => i.IsPrimary)?.ImageUrl
+                                ?? ci.Product.Images.FirstOrDefault()?.ImageUrl ?? "",
+                Price         = ci.Price,
+                Quantity      = ci.Quantity,
                 StockQuantity = ci.Product.StockQuantity
             }).ToList()
         };
 
         cartViewModel.Subtotal = cartViewModel.Items.Sum(i => i.Total);
-        
-        // Calculate shipping using ShippingService
+
         var shippingInfo = await _shippingService.CalculateShippingAsync(cartViewModel.Subtotal, district ?? string.Empty);
         cartViewModel.ShippingInfo = shippingInfo;
-        cartViewModel.ShippingFee = shippingInfo.ShippingFee;
-        
+        cartViewModel.ShippingFee  = shippingInfo.ShippingFee;
+
+        cartViewModel.CouponCode = cart.CouponCode;
+        cartViewModel.Discount   = cart.CouponDiscount;
+
         cartViewModel.Total = cartViewModel.Subtotal + cartViewModel.ShippingFee - cartViewModel.Discount;
 
         return cartViewModel;
@@ -55,7 +59,7 @@ public class CartService : ICartService
 
     public async Task AddToCartAsync(string sessionId, int productId, int quantity = 1)
     {
-        var cart = await GetOrCreateCartAsync(sessionId);
+        var cart    = await GetOrCreateCartAsync(sessionId);
         var product = await _unitOfWork.Products.GetByIdAsync(productId);
         if (product == null) return;
 
@@ -70,10 +74,10 @@ public class CartService : ICartService
         {
             var cartItem = new CartItem
             {
-                CartId = cart.Id,
+                CartId    = cart.Id,
                 ProductId = productId,
-                Quantity = quantity,
-                Price = product.SalePrice ?? product.Price
+                Quantity  = quantity,
+                Price     = product.SalePrice ?? product.Price
             };
             await _unitOfWork.CartItems.AddAsync(cartItem);
         }
@@ -92,14 +96,10 @@ public class CartService : ICartService
         if (item != null)
         {
             if (quantity <= 0)
-            {
                 _unitOfWork.CartItems.Remove(item);
-            }
             else
-            {
-                // Limit quantity to stock available
                 item.Quantity = Math.Min(quantity, item.Product.StockQuantity);
-            }
+
             cart.UpdatedAt = DateTime.UtcNow;
             await _unitOfWork.SaveChangesAsync();
         }
@@ -144,10 +144,42 @@ public class CartService : ICartService
             .SumAsync(ci => ci.Quantity);
     }
 
-    public async Task ApplyCouponAsync(string sessionId, string couponCode)
+    public async Task<CouponApplyResult> ApplyCouponAsync(string sessionId, string couponCode)
     {
-        // TODO: Implement coupon logic
-        await Task.CompletedTask;
+        var cart  = await GetOrCreateCartAsync(sessionId);
+        var items = await _unitOfWork.CartItems.Query()
+            .Where(ci => ci.CartId == cart.Id)
+            .Include(ci => ci.Product)
+            .ToListAsync();
+
+        decimal subtotal  = items.Sum(ci => ci.Price * ci.Quantity);
+        int     itemCount = items.Sum(ci => ci.Quantity);
+
+        var result = await _couponService.ApplyCouponAsync(couponCode, subtotal, itemCount);
+
+        if (result.Success)
+        {
+            cart.CouponCode     = result.CouponCode;
+            cart.CouponDiscount = result.DiscountAmount;
+            cart.UpdatedAt      = DateTime.UtcNow;
+            await _unitOfWork.SaveChangesAsync();
+        }
+
+        return result;
+    }
+
+    public async Task RemoveCouponAsync(string sessionId)
+    {
+        var cart = await _unitOfWork.Carts.Query()
+            .FirstOrDefaultAsync(c => c.SessionId == sessionId);
+
+        if (cart != null)
+        {
+            cart.CouponCode     = null;
+            cart.CouponDiscount = 0;
+            cart.UpdatedAt      = DateTime.UtcNow;
+            await _unitOfWork.SaveChangesAsync();
+        }
     }
 
     private async Task<Cart> GetOrCreateCartAsync(string sessionId)

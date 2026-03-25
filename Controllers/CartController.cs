@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Fruitables.Services.Interfaces;
+using Fruitables.ViewModels;
 
 namespace Fruitables.Controllers;
 
@@ -8,11 +9,13 @@ public class CartController : Controller
 {
     private readonly ICartService _cartService;
     private readonly IShippingService _shippingService;
+    private readonly ICouponService _couponService;
 
-    public CartController(ICartService cartService, IShippingService shippingService)
+    public CartController(ICartService cartService, IShippingService shippingService, ICouponService couponService)
     {
         _cartService = cartService;
         _shippingService = shippingService;
+        _couponService = couponService;
     }
 
     public async Task<IActionResult> Index()
@@ -148,11 +151,58 @@ public class CartController : Controller
     }
 
     [HttpPost]
-    public async Task<IActionResult> ApplyCoupon(string couponCode)
+    public async Task<IActionResult> ApplyCoupon(string couponCode, string? returnUrl = null)
     {
         var sessionId = GetSessionId();
-        await _cartService.ApplyCouponAsync(sessionId, couponCode);
+        var result = await _cartService.ApplyCouponAsync(sessionId, couponCode);
+
+        if (result.Success)
+            TempData["CouponSuccess"] = result.Message;
+        else
+            TempData["CouponError"] = result.ErrorMessage;
+
+        if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+            return Redirect(returnUrl);
+
         return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> RemoveCoupon(string? returnUrl = null)
+    {
+        var sessionId = GetSessionId();
+        await _cartService.RemoveCouponAsync(sessionId);
+        TempData["CouponSuccess"] = "Đã bỏ mã giảm giá";
+
+        if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+            return Redirect(returnUrl);
+
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetAvailableCoupons()
+    {
+        var sessionId = GetSessionId();
+        var cart = await _cartService.GetCartAsync(sessionId);
+        var subtotal = cart.Subtotal;
+        var itemCount = cart.Items.Sum(i => i.Quantity);
+
+        var coupons = await _couponService.GetAvailableCouponsAsync(subtotal, itemCount);
+
+        return Json(coupons.Select(c => new
+        {
+            id             = c.Id,
+            code           = c.Code,
+            type           = c.Type == Fruitables.Models.CouponType.Percentage ? "percent" : "fixed",
+            value          = c.Value,
+            discountAmount = c.DiscountAmount,
+            minOrderAmount = c.MinOrderAmount,
+            minQuantity    = c.MinQuantity,
+            endDate        = c.EndDate?.ToString("dd/MM/yyyy"),
+            isEligible     = c.IsEligible,
+            reason         = c.IneligibleReason
+        }));
     }
 
     private string GetSessionId()

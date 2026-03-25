@@ -33,6 +33,9 @@ public interface IUnitOfWork : IDisposable
     // New repository for Address
     IRepository<Address> Addresses { get; }
     
+    // Coupon repository
+    IRepository<Coupon> Coupons { get; }
+    
     // RBAC repositories
     IRepository<Role> Roles { get; }
     IRepository<Permission> Permissions { get; }

@@ -10,5 +10,6 @@ public interface ICartService
     Task RemoveFromCartAsync(string sessionId, int productId);
     Task ClearCartAsync(string sessionId);
     Task<int> GetCartCountAsync(string sessionId);
-    Task ApplyCouponAsync(string sessionId, string couponCode);
+    Task<CouponApplyResult> ApplyCouponAsync(string sessionId, string couponCode);
+    Task RemoveCouponAsync(string sessionId);
 }
