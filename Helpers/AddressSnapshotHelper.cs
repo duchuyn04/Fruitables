@@ -3,9 +3,6 @@ using Fruitables.Models;
 
 namespace Fruitables.Helpers;
 
-/// <summary>
-/// Helper class for serializing and deserializing Address snapshots to/from JSON
-/// </summary>
 public static class AddressSnapshotHelper
 {
     private static readonly JsonSerializerOptions Options = new()
@@ -14,11 +11,7 @@ public static class AddressSnapshotHelper
         WriteIndented = false
     };
 
-    /// <summary>
-    /// Converts an Address object to a JSON snapshot string
-    /// </summary>
-    /// <param name="address">The address to serialize</param>
-    /// <returns>JSON string representation of the address</returns>
+    
     public static string ToSnapshot(Address address)
     {
         if (address == null)
@@ -41,11 +34,7 @@ public static class AddressSnapshotHelper
         return JsonSerializer.Serialize(snapshot, Options);
     }
 
-    /// <summary>
-    /// Converts a JSON snapshot string back to an Address object
-    /// </summary>
-    /// <param name="json">The JSON string to deserialize</param>
-    /// <returns>Address object or null if parsing fails</returns>
+    
     public static Address? FromSnapshot(string? json)
     {
         if (string.IsNullOrWhiteSpace(json))
@@ -72,8 +61,6 @@ public static class AddressSnapshotHelper
         }
         catch (Exception ex) when (ex is JsonException || ex is InvalidOperationException || ex is KeyNotFoundException)
         {
-            // Log error if needed, but return null gracefully
-            // InvalidOperationException is thrown when JSON element type doesn't match expected type
             return null;
         }
     }
