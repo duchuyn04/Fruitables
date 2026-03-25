@@ -251,11 +251,11 @@ public class ProductController : Controller
         if (!result.Success)
         {
             TempData["Error"] = result.ErrorMessage;
-            return RedirectToAction(nameof(Trash));
+            return RedirectToAction(nameof(Index));
         }
 
         TempData["Success"] = "Đã xóa vĩnh viễn sản phẩm!";
-        return RedirectToAction(nameof(Trash));
+        return RedirectToAction(nameof(Index));
     }
 
     #region Image Management
