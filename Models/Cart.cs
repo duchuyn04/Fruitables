@@ -14,6 +14,12 @@ public class Cart
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
+    // Mã giảm giá đang áp dụng
+    [MaxLength(50)]
+    public string? CouponCode { get; set; }
+    [System.ComponentModel.DataAnnotations.Schema.Column(TypeName = "decimal(10,2)")]
+    public decimal CouponDiscount { get; set; } = 0;
+
     // Navigation properties
     public virtual User? User { get; set; }
     public virtual ICollection<CartItem> Items { get; set; } = new List<CartItem>();

@@ -24,6 +24,8 @@ public class Coupon
     [Column(TypeName = "decimal(10,2)")]
     public decimal MinOrderAmount { get; set; } = 0;
 
+    public int MinQuantity { get; set; } = 1;
+
     public int? MaxUses { get; set; }
 
     public int UsedCount { get; set; } = 0;
