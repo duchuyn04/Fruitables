@@ -251,22 +251,22 @@
 
                             <!-- Price breakdown -->
                             <div class="px-3 py-3">
-                                <div class="d-flex justify-content-between text-muted mb-2">
+                                <div class="d-flex justify-content-between text-muted mb-2" id="checkout-subtotal-row">
                                     <span>Tạm tính</span>
                                     <span class="text-dark">@cart.Subtotal.ToString("N0")đ</span>
                                 </div>
 
                                 @if (cart.Discount > 0)
                                 {
-                                    <div class="d-flex justify-content-between mb-2">
+                                    <div class="d-flex justify-content-between mb-2" id="checkout-discount-row">
                                         <span class="text-success">
                                             <i class="fas fa-tag me-1"></i>Giảm giá
                                             @if (!string.IsNullOrEmpty(cart.CouponCode))
                                             {
-                                                <small class="text-muted">(@cart.CouponCode)</small>
+                                                <small class="text-muted" id="checkout-coupon-label">(@cart.CouponCode)</small>
                                             }
                                         </span>
-                                        <span class="text-success fw-semibold">-@cart.Discount.ToString("N0")đ</span>
+                                        <span class="text-success fw-semibold" id="checkout-discount-amount">-@cart.Discount.ToString("N0")đ</span>
                                     </div>
                                 }
 
@@ -1126,8 +1126,120 @@
             var selectedCode = document.getElementById('selectedCouponCode').value.trim();
             var code = selectedCode || currentCouponCode;
             if (!code) return;
-            document.getElementById('selectedCouponCode').value = code;
-            document.getElementById('applyCouponForm').submit();
+
+            var btn = document.getElementById('applyCouponBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Đang áp dụng...';
+
+            fetch('/Cart/ApplyCouponAjax', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ couponCode: code })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    // Đóng modal
+                    var modalEl = document.getElementById('couponModal');
+                    var modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+
+                    // Cập nhật currentCouponCode
+                    currentCouponCode = data.couponCode;
+
+                    // Cập nhật UI checkout
+                    updateCheckoutPricingUI(data);
+
+                    // Cập nhật dòng coupon trên trang
+                    updateCouponBanner(data.couponCode, data.discount);
+
+                    showCouponToast('success', data.message);
+                } else {
+                    showCouponToast('error', data.message || 'Không thể áp dụng mã giảm giá');
+                    btn.disabled = false;
+                    btn.innerHTML = 'Áp dụng';
+                }
+            })
+            .catch(function() {
+                showCouponToast('error', 'Đã xảy ra lỗi, vui lòng thử lại');
+                btn.disabled = false;
+                btn.innerHTML = 'Áp dụng';
+            });
+        }
+
+        function updateCheckoutPricingUI(data) {
+            var subtotal = data.subtotal || 0;
+            var discount = data.discount || 0;
+            var shippingFee = data.shippingFee || 0;
+            var total = data.total || (subtotal - discount + shippingFee);
+
+            // Cập nhật dòng giảm giá
+            var discountRow = document.getElementById('checkout-discount-row');
+            if (discount > 0) {
+                if (!discountRow) {
+                    // Tạo mới dòng discount nếu chưa có
+                    var subtotalRow = document.getElementById('checkout-subtotal-row');
+                    if (subtotalRow) {
+                        var newRow = document.createElement('div');
+                        newRow.id = 'checkout-discount-row';
+                        newRow.className = 'd-flex justify-content-between mb-2';
+                        newRow.innerHTML =
+                            '<span class="text-success"><i class="fas fa-tag me-1"></i>Giảm giá <small class="text-muted" id="checkout-coupon-label">(' + data.couponCode + ')</small></span>' +
+                            '<span class="text-success fw-semibold" id="checkout-discount-amount">-' + discount.toLocaleString('vi-VN') + 'đ</span>';
+                        subtotalRow.insertAdjacentElement('afterend', newRow);
+                    }
+                } else {
+                    var labelEl = document.getElementById('checkout-coupon-label');
+                    if (labelEl) labelEl.textContent = '(' + data.couponCode + ')';
+                    var amountEl = document.getElementById('checkout-discount-amount');
+                    if (amountEl) amountEl.textContent = '-' + discount.toLocaleString('vi-VN') + 'đ';
+                    discountRow.style.display = '';
+                }
+            } else if (discountRow) {
+                discountRow.style.display = 'none';
+            }
+
+            // Cập nhật tổng cộng
+            var totalEl = document.getElementById('totalAmount');
+            if (totalEl) totalEl.textContent = total.toLocaleString('vi-VN') + 'đ';
+
+            // Reset button
+            var btn = document.getElementById('applyCouponBtn');
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = 'Áp dụng';
+            }
+        }
+
+        function updateCouponBanner(code, discount) {
+            // Cập nhật banner chọn mã giảm giá ngoài trang checkout
+            var bannerSpan = document.querySelector('[onclick="openCouponModal()"] span:first-child');
+            if (bannerSpan) {
+                bannerSpan.innerHTML = 'Mã <strong class="text-danger">' + code + '</strong> &mdash; giảm <strong class="text-success">' + discount.toLocaleString('vi-VN') + 'đ</strong>';
+            }
+        }
+
+        function showCouponToast(type, message) {
+            var color = type === 'success' ? '#81c408' : '#dc3545';
+            var icon  = type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-circle';
+            var toastHtml = '<div class="toast show" role="alert" style="min-width:260px;">' +
+                '<div class="toast-header text-white" style="background:' + color + ';">' +
+                '<i class="' + icon + ' me-2"></i><strong class="me-auto">' +
+                (type === 'success' ? 'Thành công' : 'Lỗi') + '</strong>' +
+                '<button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button></div>' +
+                '<div class="toast-body">' + message + '</div></div>';
+            var container = document.querySelector('.toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+                container.style.zIndex = '1200';
+                document.body.appendChild(container);
+            }
+            var toastEl = document.createElement('div');
+            toastEl.innerHTML = toastHtml;
+            var toast = toastEl.firstChild;
+            container.appendChild(toast);
+            setTimeout(function() { toast.remove(); }, 4000);
         }
 
         function updateApplyCouponButtonState() {
