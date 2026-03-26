@@ -151,6 +151,34 @@ public class CartController : Controller
     }
 
     [HttpPost]
+    public async Task<IActionResult> ApplyCouponAjax([FromBody] ApplyCouponAjaxRequest request)
+    {
+        var sessionId = GetSessionId();
+        var result = await _cartService.ApplyCouponAsync(sessionId, request.CouponCode ?? "");
+
+        if (!result.Success)
+            return Json(new { success = false, message = result.ErrorMessage });
+
+        var cart = await _cartService.GetCartAsync(sessionId);
+
+        return Json(new
+        {
+            success      = true,
+            message      = result.Message,
+            couponCode   = result.CouponCode,
+            discount     = cart.Discount,
+            subtotal     = cart.Subtotal,
+            shippingFee  = cart.ShippingFee,
+            total        = cart.Total
+        });
+    }
+
+    public class ApplyCouponAjaxRequest
+    {
+        public string? CouponCode { get; set; }
+    }
+
+    [HttpPost]
     public async Task<IActionResult> ApplyCoupon(string couponCode, string? returnUrl = null)
     {
         var sessionId = GetSessionId();
