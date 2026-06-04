@@ -64,6 +64,7 @@ builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IShippingService, ShippingService>();
 builder.Services.AddScoped<IWordMaskingService, WordMaskingService>();
 builder.Services.AddScoped<ICouponService, CouponService>();
+builder.Services.AddScoped<IRealtimeNotifier, SignalRRealtimeNotifier>();
 
 // Add RBAC Services
 builder.Services.AddScoped<IRbacService, RbacService>();
@@ -115,6 +116,9 @@ builder.Services.AddSession(options =>
     options.Cookie.IsEssential = true;
 });
 
+// Add SignalR
+builder.Services.AddSignalR();
+
 // Add Data Protection to persist encryption keys to survive IIS App Pool recycles
 var keysDirectory = Path.Combine(builder.Environment.ContentRootPath, "App_Data", "Keys");
 builder.Services.AddDataProtection()
@@ -148,6 +152,8 @@ app.UseAuthorization();
 
 // Map API controllers (for AddressApiController and other API endpoints)
 app.MapControllers();
+
+app.MapHub<Fruitables.Hubs.EcommerceHub>("/hubs/ecommerce");
 
 app.MapControllerRoute(
     name: "areas",

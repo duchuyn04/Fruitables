@@ -64,7 +64,8 @@ namespace Fruitables.Tests
             await context.SaveChangesAsync();
 
             var logServiceMock = new Mock<IOrderLogService>();
-            var adminService = new OrderAdminService(context, logServiceMock.Object);
+            var notifierMock = new Mock<IRealtimeNotifier>();
+            var adminService = new OrderAdminService(context, logServiceMock.Object, notifierMock.Object);
 
             // Act
             var result = await adminService.UpdateOrderStatusAsync(new UpdateOrderStatusRequest
@@ -95,6 +96,9 @@ namespace Fruitables.Tests
             logServiceMock.Verify(
                 s => s.LogStatusChangeAsync(It.IsAny<int>(), It.IsAny<OrderStatus>(), It.IsAny<OrderStatus>(), It.IsAny<int>(), It.IsAny<string?>()),
                 Times.Never);
+
+            notifierMock.Verify(n => n.NotifyOrderUpdatedAsync(10, order.UserId, "Cancelled"), Times.Once);
+            notifierMock.Verify(n => n.NotifyStockChangedAsync(1, 7), Times.Once);
         }
 
         [Fact]
@@ -150,7 +154,8 @@ namespace Fruitables.Tests
             await context.SaveChangesAsync();
 
             var logServiceMock = new Mock<IOrderLogService>();
-            var adminService = new OrderAdminService(context, logServiceMock.Object);
+            var notifierMock = new Mock<IRealtimeNotifier>();
+            var adminService = new OrderAdminService(context, logServiceMock.Object, notifierMock.Object);
 
             // Act
             var result = await adminService.UpdateOrderStatusAsync(new UpdateOrderStatusRequest
@@ -166,6 +171,9 @@ namespace Fruitables.Tests
             Assert.Equal(OrderErrorType.InsufficientStock, result.ErrorType);
             Assert.Equal(OrderStatus.Cancelled, order.Status);
             Assert.Equal(2, (await context.Products.FindAsync(1))!.StockQuantity);
+
+            notifierMock.Verify(n => n.NotifyOrderUpdatedAsync(It.IsAny<int>(), It.IsAny<int?>(), It.IsAny<string>()), Times.Never);
+            notifierMock.Verify(n => n.NotifyStockChangedAsync(It.IsAny<int>(), It.IsAny<int>()), Times.Never);
         }
     }
 }

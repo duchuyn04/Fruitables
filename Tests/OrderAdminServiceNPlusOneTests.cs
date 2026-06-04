@@ -26,7 +26,7 @@ public class OrderAdminServiceNPlusOneTests
         context.Orders.Add(order);
         await context.SaveChangesAsync();
 
-        var adminService = new OrderAdminService(context, Mock.Of<IOrderLogService>());
+        var adminService = new OrderAdminService(context, Mock.Of<IOrderLogService>(), Mock.Of<IRealtimeNotifier>());
 
         var result = await adminService.UpdateOrderStatusAsync(new UpdateOrderStatusRequest
         {
@@ -54,7 +54,7 @@ public class OrderAdminServiceNPlusOneTests
         context.Orders.Add(order);
         await context.SaveChangesAsync();
 
-        var adminService = new OrderAdminService(context, Mock.Of<IOrderLogService>());
+        var adminService = new OrderAdminService(context, Mock.Of<IOrderLogService>(), Mock.Of<IRealtimeNotifier>());
 
         var result = await adminService.UpdateOrderStatusAsync(new UpdateOrderStatusRequest
         {

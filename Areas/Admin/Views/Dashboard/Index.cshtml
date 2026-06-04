@@ -188,3 +188,16 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        if (window.ecommerceHub) {
+            window.ecommerceHub.on("OrderCreated", function (data) {
+                window.location.reload();
+            });
+            window.ecommerceHub.on("OrderStatusChanged", function (data) {
+                window.location.reload();
+            });
+        }
+    </script>
+}

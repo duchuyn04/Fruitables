@@ -56,6 +56,18 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
 
+    <!-- SignalR -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.12/signalr.min.js"></script>
+    <script>
+        window.ecommerceHub = new signalR.HubConnectionBuilder()
+            .withUrl("/hubs/ecommerce")
+            .withAutomaticReconnect()
+            .build();
+            
+        window.ecommerceHub.start().catch(function (err) {
+            return console.error("SignalR Connection Error: ", err.toString());
+        });
+    </script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

@@ -11,11 +11,13 @@ public class OrderService : IOrderService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICartService _cartService;
+    private readonly IRealtimeNotifier _notifier;
 
-    public OrderService(IUnitOfWork unitOfWork, ICartService cartService)
+    public OrderService(IUnitOfWork unitOfWork, ICartService cartService, IRealtimeNotifier notifier)
     {
         _unitOfWork = unitOfWork;
         _cartService = cartService;
+        _notifier = notifier;
     }
 
     public async Task<Order> CreateOrderAsync(CheckoutViewModel model, string sessionId, int? userId = null)
@@ -190,6 +192,17 @@ public class OrderService : IOrderService
 
         // Clear cart only after the order and stock changes have committed.
         await _cartService.ClearCartAsync(sessionId);
+
+        // Notify Realtime Clients
+        await _notifier.NotifyOrderCreatedAsync(order.Id, order.UserId);
+        foreach (var group in productGroups)
+        {
+            if (products.TryGetValue(group.ProductId, out var product))
+            {
+                int currentStock = isInMemory ? product.StockQuantity : product.StockQuantity - group.Quantity;
+                await _notifier.NotifyStockChangedAsync(group.ProductId, currentStock);
+            }
+        }
 
         return order;
     }

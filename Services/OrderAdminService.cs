@@ -11,11 +11,13 @@ public class OrderAdminService : IOrderAdminService
 {
     private readonly ApplicationDbContext _context;
     private readonly IOrderLogService _logService;
+    private readonly IRealtimeNotifier _notifier;
 
-    public OrderAdminService(ApplicationDbContext context, IOrderLogService logService)
+    public OrderAdminService(ApplicationDbContext context, IOrderLogService logService, IRealtimeNotifier notifier)
     {
         _context = context;
         _logService = logService;
+        _notifier = notifier;
     }
 
     public async Task<OrderListResult> GetOrdersAsync(OrderListRequest request)
@@ -173,6 +175,19 @@ public class OrderAdminService : IOrderAdminService
                 await transaction.CommitAsync();
             }
 
+            // Realtime notification
+            await _notifier.NotifyOrderUpdatedAsync(order.Id, order.UserId, order.Status.ToString());
+            
+            // If status cancelled or restored, stock changed. Broadcast.
+            if (request.NewStatus == OrderStatus.Cancelled || oldStatus == OrderStatus.Cancelled)
+            {
+                foreach (var item in order.Items)
+                {
+                    var p = await _context.Products.FindAsync(item.ProductId);
+                    if (p != null) await _notifier.NotifyStockChangedAsync(p.Id, p.StockQuantity);
+                }
+            }
+
             return OrderResult.Ok(order);
         }
         catch (DbUpdateConcurrencyException)
@@ -275,6 +290,9 @@ public class OrderAdminService : IOrderAdminService
 
             // Log the change
             await _logService.LogPaymentStatusChangeAsync(order.Id, oldPaymentStatus, request.NewPaymentStatus, request.AdminId, request.Notes);
+
+            // Realtime notification
+            await _notifier.NotifyPaymentStatusChangedAsync(order.Id, order.UserId, order.PaymentStatus.ToString());
 
             return OrderResult.Ok(order);
         }
@@ -515,6 +533,27 @@ public class OrderAdminService : IOrderAdminService
             }
 
             await transaction.CommitAsync();
+
+            // Realtime notification
+            if (oldOrderStatus != request.NewOrderStatus)
+            {
+                await _notifier.NotifyOrderUpdatedAsync(order.Id, order.UserId, order.Status.ToString());
+                // Handle stock broadcast
+                if (request.NewOrderStatus == OrderStatus.Cancelled || request.NewOrderStatus == OrderStatus.Returned || 
+                    (oldOrderStatus == OrderStatus.Cancelled && request.NewOrderStatus != OrderStatus.Cancelled))
+                {
+                    foreach (var item in order.Items)
+                    {
+                        var p = await _context.Products.FindAsync(item.ProductId);
+                        if (p != null) await _notifier.NotifyStockChangedAsync(p.Id, p.StockQuantity);
+                    }
+                }
+            }
+            if (oldPaymentStatus != request.NewPaymentStatus)
+            {
+                await _notifier.NotifyPaymentStatusChangedAsync(order.Id, order.UserId, order.PaymentStatus.ToString());
+            }
+
             return OrderResult.Ok(order);
         }
         catch (DbUpdateConcurrencyException)
@@ -550,6 +589,9 @@ public class OrderAdminService : IOrderAdminService
         };
         _context.OrderNotes.Add(note);
         await _context.SaveChangesAsync();
+
+        await _notifier.NotifyOrderNoteAddedAsync(orderId, content);
+
         return note;
     }
 

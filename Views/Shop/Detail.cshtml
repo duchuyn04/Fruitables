@@ -337,5 +337,19 @@
                 updateQuantity(currentVal - 1);
             }
         }
+        
+        if (window.ecommerceHub) {
+            const currentProductId = @Model.Id;
+            
+            window.ecommerceHub.on("StockChanged", function(data) {
+                if (data.productId === currentProductId) {
+                    window.location.reload();
+                }
+            });
+            
+            window.ecommerceHub.start().then(() => {
+                return window.ecommerceHub.invoke("JoinProductGroup", currentProductId);
+            }).catch(err => console.error(err));
+        }
     </script>
 }

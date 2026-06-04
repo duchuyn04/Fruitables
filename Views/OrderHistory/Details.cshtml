@@ -447,5 +447,24 @@
                 return true;
             });
         });
+
+        if (window.ecommerceHub) {
+            const currentOrderId = @Model.Id;
+            
+            window.ecommerceHub.on("OrderStatusChanged", function(data) {
+                if (data.orderId === currentOrderId) {
+                    window.location.reload();
+                }
+            });
+            window.ecommerceHub.on("PaymentStatusChanged", function(data) {
+                if (data.orderId === currentOrderId) {
+                    window.location.reload();
+                }
+            });
+            
+            window.ecommerceHub.start().then(() => {
+                return window.ecommerceHub.invoke("JoinOrderGroup", currentOrderId);
+            }).catch(err => console.error(err));
+        }
     </script>
 }

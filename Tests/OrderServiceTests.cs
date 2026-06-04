@@ -44,7 +44,8 @@ namespace Fruitables.Tests
 
             cartServiceMock.Setup(c => c.GetCartAsync(sessionId, null)).ReturnsAsync(cart);
 
-            var orderService = new OrderService(unitOfWork, cartServiceMock.Object);
+            var notifierMock = new Mock<IRealtimeNotifier>();
+            var orderService = new OrderService(unitOfWork, cartServiceMock.Object, notifierMock.Object);
             var checkoutModel = new CheckoutViewModel
             {
                 FirstName = "Test",
@@ -103,7 +104,8 @@ namespace Fruitables.Tests
 
             cartServiceMock.Setup(c => c.GetCartAsync(sessionId, null)).ReturnsAsync(cart);
 
-            var orderService = new OrderService(unitOfWork, cartServiceMock.Object);
+            var notifierMock = new Mock<IRealtimeNotifier>();
+            var orderService = new OrderService(unitOfWork, cartServiceMock.Object, notifierMock.Object);
             var checkoutModel = new CheckoutViewModel
             {
                 FirstName = "Test",
@@ -159,7 +161,8 @@ namespace Fruitables.Tests
                     Subtotal = 60, ShippingFee = 15, Total = 75
                 });
 
-            var orderService = new OrderService(unitOfWork, cartServiceMock.Object);
+            var notifierMock = new Mock<IRealtimeNotifier>();
+            var orderService = new OrderService(unitOfWork, cartServiceMock.Object, notifierMock.Object);
             var checkoutModel = new CheckoutViewModel
             {
                 FirstName = "Test", StreetAddress = "123 St", Mobile = "0123456789",
@@ -231,7 +234,8 @@ namespace Fruitables.Tests
 
             cartServiceMock.Setup(c => c.GetCartAsync(sessionId, null)).ReturnsAsync(cart);
 
-            var orderService = new OrderService(unitOfWork, cartServiceMock.Object);
+            var notifierMock = new Mock<IRealtimeNotifier>();
+            var orderService = new OrderService(unitOfWork, cartServiceMock.Object, notifierMock.Object);
             var checkoutModel = new CheckoutViewModel
             {
                 FirstName = "Test",
@@ -268,6 +272,8 @@ namespace Fruitables.Tests
             Assert.Equal("Test", address!.FullName);
 
             cartServiceMock.Verify(c => c.ClearCartAsync(sessionId), Times.Once);
+            notifierMock.Verify(n => n.NotifyOrderCreatedAsync(order.Id, 100), Times.Once);
+            notifierMock.Verify(n => n.NotifyStockChangedAsync(1, 7), Times.Once);
         }
 
         [Fact]
@@ -318,7 +324,8 @@ namespace Fruitables.Tests
                     Subtotal = 30, ShippingFee = 15, Total = 45
                 });
 
-            var orderService = new OrderService(unitOfWork, cartServiceMock.Object);
+            var notifierMock = new Mock<IRealtimeNotifier>();
+            var orderService = new OrderService(unitOfWork, cartServiceMock.Object, notifierMock.Object);
             var checkoutModel = new CheckoutViewModel
             {
                 FirstName = "Test", StreetAddress = "123 St", Mobile = "0123456789",
@@ -336,6 +343,9 @@ namespace Fruitables.Tests
             // Stock unchanged (still 0 from concurrent deduct).
             var product = await context.Products.AsNoTracking().FirstAsync(p => p.Id == 1);
             Assert.Equal(0, product.StockQuantity);
+
+            notifierMock.Verify(n => n.NotifyOrderCreatedAsync(It.IsAny<int>(), It.IsAny<int?>()), Times.Never);
+            notifierMock.Verify(n => n.NotifyStockChangedAsync(It.IsAny<int>(), It.IsAny<int>()), Times.Never);
         }
 
         [Fact]
@@ -403,7 +413,8 @@ namespace Fruitables.Tests
             };
             cartServiceMock.Setup(c => c.GetCartAsync(sessionId, null)).ReturnsAsync(cart);
 
-            var orderService = new OrderService(unitOfWork, cartServiceMock.Object);
+            var notifierMock = new Mock<IRealtimeNotifier>();
+            var orderService = new OrderService(unitOfWork, cartServiceMock.Object, notifierMock.Object);
             var checkoutModel = new CheckoutViewModel
             {
                 FirstName = "Bulk",
