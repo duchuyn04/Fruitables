@@ -587,7 +587,7 @@
                     setTimeout(() => window.location.reload(), 1500);
                 }
             });
-            window.ecommerceHub.start().then(() => {
+            window.ecommerceHubReady.then(() => {
                 document.querySelectorAll('.cart-item').forEach(item => {
                     const pid = item.getAttribute('data-product-id');
                     if (pid) {

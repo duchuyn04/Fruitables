@@ -129,5 +129,63 @@ namespace Fruitables.Tests
             await Assert.ThrowsAsync<HubException>(() => hub.JoinOrderGroup(10, dbContext));
             mockGroupManager.Verify(g => g.AddToGroupAsync(It.IsAny<string>(), It.IsAny<string>(), default), Times.Never);
         }
+
+        [Fact]
+        public async Task JoinProductGroup_Anonymous_CanJoin()
+        {
+            var mockGroupManager = new Mock<IGroupManager>();
+            var mockContext = new Mock<HubCallerContext>();
+            mockContext.Setup(c => c.ConnectionId).Returns("conn4");
+
+            var hub = new EcommerceHub
+            {
+                Groups = mockGroupManager.Object,
+                Context = mockContext.Object
+            };
+
+            await hub.JoinProductGroup(5);
+
+            mockGroupManager.Verify(g => g.AddToGroupAsync("conn4", "Product:5", default), Times.Once);
+        }
+
+        [Fact]
+        public async Task JoinOrderGroup_Anonymous_CannotJoin()
+        {
+            var mockGroupManager = new Mock<IGroupManager>();
+            var mockContext = new Mock<HubCallerContext>();
+            mockContext.Setup(c => c.ConnectionId).Returns("conn5");
+            // No User setup
+
+            var hub = new EcommerceHub
+            {
+                Groups = mockGroupManager.Object,
+                Context = mockContext.Object
+            };
+
+            var options = CreateInMemoryOptions();
+            using var dbContext = new ApplicationDbContext(options);
+
+            await Assert.ThrowsAsync<HubException>(() => hub.JoinOrderGroup(5, dbContext));
+        }
+
+        [Fact]
+        public async Task JoinOrderGroup_InvalidId_Throws()
+        {
+            var hub = new EcommerceHub();
+            var options = CreateInMemoryOptions();
+            using var dbContext = new ApplicationDbContext(options);
+
+            await Assert.ThrowsAsync<HubException>(() => hub.JoinOrderGroup(0, dbContext));
+            await Assert.ThrowsAsync<HubException>(() => hub.JoinOrderGroup(-1, dbContext));
+        }
+
+        [Fact]
+        public async Task JoinProductGroup_InvalidId_Throws()
+        {
+            var hub = new EcommerceHub();
+
+            await Assert.ThrowsAsync<HubException>(() => hub.JoinProductGroup(0));
+            await Assert.ThrowsAsync<HubException>(() => hub.JoinProductGroup(-1));
+        }
     }
 }

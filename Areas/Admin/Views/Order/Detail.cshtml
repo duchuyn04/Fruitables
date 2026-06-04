@@ -767,23 +767,30 @@
     });
 
     // SignalR Realtime
-    const hubConnection = new signalR.HubConnectionBuilder()
-        .withUrl("/hubs/ecommerce")
-        .withAutomaticReconnect()
-        .build();
+    if (!window.ecommerceHub) {
+        window.ecommerceHub = new signalR.HubConnectionBuilder()
+            .withUrl("/hubs/ecommerce")
+            .withAutomaticReconnect()
+            .build();
+            
+        window.ecommerceHubReady = window.ecommerceHub.start();
+        window.ecommerceHubReady.catch(function (err) {
+            return console.error("SignalR Connection Error: ", err.toString());
+        });
+    }
 
-    hubConnection.on("OrderStatusChanged", function(data) {
+    window.ecommerceHub.on("OrderStatusChanged", function(data) {
         if (data.orderId === orderId) window.location.reload();
     });
-    hubConnection.on("PaymentStatusChanged", function(data) {
+    window.ecommerceHub.on("PaymentStatusChanged", function(data) {
         if (data.orderId === orderId) window.location.reload();
     });
-    hubConnection.on("OrderNoteAdded", function(data) {
+    window.ecommerceHub.on("OrderNoteAdded", function(data) {
         if (data.orderId === orderId) window.location.reload();
     });
 
-    hubConnection.start().then(() => {
-        return hubConnection.invoke("JoinOrderGroup", orderId);
+    window.ecommerceHubReady.then(() => {
+        return window.ecommerceHub.invoke("JoinOrderGroup", orderId);
     }).catch(err => console.error(err.toString()));
 </script>
 </body>

@@ -5,22 +5,24 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Fruitables.Hubs
 {
-    [Authorize]
     public class EcommerceHub : Hub
     {
         public override async Task OnConnectedAsync()
         {
-            // Join user-specific group
-            var userId = Context.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            if (!string.IsNullOrEmpty(userId))
+            if (Context.User?.Identity?.IsAuthenticated == true)
             {
-                await Groups.AddToGroupAsync(Context.ConnectionId, $"User:{userId}");
-            }
+                // Join user-specific group
+                var userId = Context.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (!string.IsNullOrEmpty(userId))
+                {
+                    await Groups.AddToGroupAsync(Context.ConnectionId, $"User:{userId}");
+                }
 
-            // Join Admins group if user is Admin or SuperAdmin
-            if (Context.User != null && (Context.User.IsInRole("Admin") || Context.User.IsInRole("SuperAdmin")))
-            {
-                await Groups.AddToGroupAsync(Context.ConnectionId, "Admins");
+                // Join Admins group if user is Admin or SuperAdmin
+                if (Context.User.IsInRole("Admin") || Context.User.IsInRole("SuperAdmin"))
+                {
+                    await Groups.AddToGroupAsync(Context.ConnectionId, "Admins");
+                }
             }
 
             await base.OnConnectedAsync();
@@ -28,6 +30,8 @@ namespace Fruitables.Hubs
 
         public async Task JoinOrderGroup(int orderId, [Microsoft.AspNetCore.Mvc.FromServices] Fruitables.Data.ApplicationDbContext dbContext)
         {
+            if (orderId <= 0) throw new HubException("Invalid orderId.");
+
             // Optional: verify if user owns the order or is admin
             if (Context.User != null && (Context.User.IsInRole("Admin") || Context.User.IsInRole("SuperAdmin")))
             {
@@ -52,19 +56,20 @@ namespace Fruitables.Hubs
 
         public async Task LeaveOrderGroup(int orderId)
         {
+            if (orderId <= 0) return;
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"Order:{orderId}");
         }
 
-        [AllowAnonymous]
         public async Task JoinProductGroup(int productId)
         {
+            if (productId <= 0) throw new HubException("Invalid productId.");
             // Anyone can join product group to see stock updates
             await Groups.AddToGroupAsync(Context.ConnectionId, $"Product:{productId}");
         }
 
-        [AllowAnonymous]
         public async Task LeaveProductGroup(int productId)
         {
+            if (productId <= 0) return;
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"Product:{productId}");
         }
     }

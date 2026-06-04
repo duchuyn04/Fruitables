@@ -462,7 +462,7 @@
                 }
             });
             
-            window.ecommerceHub.start().then(() => {
+            window.ecommerceHubReady.then(() => {
                 return window.ecommerceHub.invoke("JoinOrderGroup", currentOrderId);
             }).catch(err => console.error(err));
         }
