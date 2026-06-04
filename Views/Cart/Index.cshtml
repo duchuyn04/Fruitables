@@ -583,8 +583,31 @@
             window.ecommerceHub.on("StockChanged", function(data) {
                 const item = document.querySelector('.cart-item[data-product-id="' + data.productId + '"]');
                 if (item) {
-                    showToast('Tồn kho của một sản phẩm trong giỏ hàng đã thay đổi. Đang làm mới...', 'warning');
-                    setTimeout(() => window.location.reload(), 1500);
+                    item.setAttribute('data-stock', data.stock);
+                    const stockInfo = item.querySelector('.stock-info');
+                    if (stockInfo) {
+                        stockInfo.textContent = 'Còn ' + data.stock + ' sản phẩm';
+                    }
+                    
+                    const qtyInput = item.querySelector('.item-quantity');
+                    if (qtyInput) {
+                        let currentQty = parseInt(qtyInput.value);
+                        if (currentQty > data.stock && data.stock > 0) {
+                            showToast('Tồn kho của sản phẩm đã giảm. Đang điều chỉnh giỏ hàng...', 'warning');
+                            updateQuantity(data.productId, data.stock);
+                        } else {
+                            var plusBtn = item.querySelector('.btn-plus');
+                            if (plusBtn) {
+                                if (currentQty >= data.stock) {
+                                    plusBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                                    plusBtn.setAttribute('disabled', 'disabled');
+                                } else {
+                                    plusBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                                    plusBtn.removeAttribute('disabled');
+                                }
+                            }
+                        }
+                    }
                 }
             });
             window.ecommerceHubReady.then(() => {

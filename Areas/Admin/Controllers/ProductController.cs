@@ -12,11 +12,13 @@ public class ProductController : Controller
 {
     private readonly IProductAdminService _productAdminService;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IRealtimeNotifier _notifier;
 
-    public ProductController(IProductAdminService productAdminService, IUnitOfWork unitOfWork)
+    public ProductController(IProductAdminService productAdminService, IUnitOfWork unitOfWork, IRealtimeNotifier notifier)
     {
         _productAdminService = productAdminService;
         _unitOfWork = unitOfWork;
+        _notifier = notifier;
     }
 
     // GET: Admin/Product
@@ -127,21 +129,23 @@ public class ProductController : Controller
         if (id != request.Id)
             return BadRequest();
 
+        var existingProduct = await _productAdminService.GetProductByIdAsync(id);
+        if (existingProduct == null)
+        {
+            TempData["Error"] = "Không tìm thấy sản phẩm";
+            return RedirectToAction(nameof(Index));
+        }
+        int oldStock = existingProduct.StockQuantity;
+
         if (!ModelState.IsValid)
         {
-            var product = await _productAdminService.GetProductByIdAsync(id);
-            if (product == null)
-            {
-                TempData["Error"] = "Không tìm thấy sản phẩm";
-                return RedirectToAction(nameof(Index));
-            }
 
             var categories = await _unitOfWork.Categories.GetAllAsync();
             var allProductTags = await _unitOfWork.ProductTags.GetAllAsync();
 
             var viewModel = new EditProductViewModel
             {
-                Product = product,
+                Product = existingProduct,
                 Categories = categories.Where(c => !c.IsDeleted).ToList(),
                 AllTags = allProductTags.ToList()
             };
@@ -176,6 +180,11 @@ public class ProductController : Controller
         if (images != null && images.Any())
         {
             await _productAdminService.AddImagesAsync(id, images);
+        }
+
+        if (oldStock != request.StockQuantity)
+        {
+            await _notifier.NotifyStockChangedAsync(id, request.StockQuantity);
         }
 
         TempData["Success"] = "Cập nhật sản phẩm thành công!";

@@ -97,18 +97,18 @@
                             
                             <div class="d-flex gap-2 flex-wrap">
                                 <!-- Primary CTA: Mua ngay -->
-                                <button type="submit" form="buyNowForm" class="btn btn-buy-now px-4 py-2" @(Model.StockQuantity <= 0 ? "disabled" : "")>
+                                <button type="submit" id="btnBuyNow" form="buyNowForm" class="btn btn-buy-now px-4 py-2" @(Model.StockQuantity <= 0 ? "disabled" : "")>
                                     <i class="fa fa-bolt me-2"></i>Mua ngay
                                 </button>
                                 <!-- Secondary CTA: Thêm vào giỏ -->
-                                <button type="submit" form="addToCartForm" class="btn btn-add-cart px-4 py-2" @(Model.StockQuantity <= 0 ? "disabled" : "")>
+                                <button type="submit" id="btnAddToCart" form="addToCartForm" class="btn btn-add-cart px-4 py-2" @(Model.StockQuantity <= 0 ? "disabled" : "")>
                                     <i class="fa fa-shopping-bag me-2"></i>Thêm vào giỏ
                                 </button>
                             </div>
                         </div>
 
                         <!-- Stock status -->
-                        <div class="stock-status mb-3">
+                        <div class="stock-status mb-3" id="stockStatus">
                             @if (Model.StockQuantity > 0)
                             {
                                 <span class="text-success"><i class="fa fa-check-circle me-1"></i>Còn @Model.StockQuantity sản phẩm</span>
@@ -314,7 +314,7 @@
     <script src="~/js/review.js" asp-append-version="true"></script>
     <script>
         const minQty = @Model.MinOrderQuantity;
-        const maxQty = @Model.StockQuantity;
+        let maxQty = @Model.StockQuantity;
         
         function updateQuantity(newVal) {
             document.getElementById('quantity').value = newVal;
@@ -343,11 +343,29 @@
             
             window.ecommerceHub.on("StockChanged", function(data) {
                 if (data.productId === currentProductId) {
-                    if (typeof showRealtimeToast === 'function') {
-                        showRealtimeToast('Có người vừa mua sản phẩm này. Tồn kho đang được cập nhật...', true);
-                        setTimeout(() => window.location.reload(), 2000);
+                    maxQty = data.stock;
+                    var qtyInput = document.getElementById('quantity');
+                    var currentVal = parseInt(qtyInput.value);
+                    if (currentVal > maxQty && maxQty > 0) {
+                        updateQuantity(maxQty);
+                    }
+                    
+                    var stockStatus = document.getElementById('stockStatus');
+                    var btnBuyNow = document.getElementById('btnBuyNow');
+                    var btnAddToCart = document.getElementById('btnAddToCart');
+                    
+                    if (maxQty > 0) {
+                        stockStatus.innerHTML = '<span class="text-success"><i class="fa fa-check-circle me-1"></i>Còn ' + maxQty + ' sản phẩm</span>';
+                        btnBuyNow.removeAttribute('disabled');
+                        btnAddToCart.removeAttribute('disabled');
                     } else {
-                        window.location.reload();
+                        stockStatus.innerHTML = '<span class="text-danger"><i class="fa fa-times-circle me-1"></i>Hết hàng</span>';
+                        btnBuyNow.setAttribute('disabled', 'disabled');
+                        btnAddToCart.setAttribute('disabled', 'disabled');
+                    }
+                    
+                    if (typeof showRealtimeToast === 'function') {
+                        showRealtimeToast('Số lượng tồn kho vừa được cập nhật tự động!', false);
                     }
                 }
             });
