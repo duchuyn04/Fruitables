@@ -383,6 +383,11 @@ public class RbacRoleManagementTests
         // Remove perm A from Role A directly in DB
         var rpA = await ctx.RolePermissions.FirstAsync(rp => rp.RoleId == 10);
         ctx.RolePermissions.Remove(rpA);
+
+        // Remove perm B from Role B directly in DB to verify cache isolation
+        var rpB = await ctx.RolePermissions.FirstAsync(rp => rp.RoleId == 20);
+        ctx.RolePermissions.Remove(rpB);
+
         await ctx.SaveChangesAsync();
 
         // Invalidate Role A
