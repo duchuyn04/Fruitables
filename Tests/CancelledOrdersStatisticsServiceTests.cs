@@ -125,6 +125,53 @@ namespace Fruitables.Tests
         }
 
         [Fact]
+        public async Task GetReasonStatisticsAsync_DateOnlyEndDate_IncludesEveningVietnamOrders()
+        {
+            // endDate = 2026-06-03 (date-only, 00:00:00). Service dùng <= so sánh trực tiếp với
+            // Order.CreatedAt (stored Vietnam time). Order lúc 20:00 tối phải được tính vào.
+            var options = TestDbContextFactory.CreateSqliteOptions();
+            using var context = new ApplicationDbContext(options);
+
+            context.Orders.AddRange(
+                new Order { Id = 30, OrderNumber = "ORD-EVE", CreatedAt = new DateTime(2026, 6, 3, 20, 0, 0), Status = OrderStatus.Cancelled, CancelReason = "Lỗi" },
+                new Order { Id = 31, OrderNumber = "ORD-EAR", CreatedAt = new DateTime(2026, 6, 3, 2, 0, 0), Status = OrderStatus.Cancelled, CancelReason = "Lỗi" },
+                new Order { Id = 32, OrderNumber = "ORD-NXT", CreatedAt = new DateTime(2026, 6, 4, 1, 0, 0), Status = OrderStatus.Pending }
+            );
+            await context.SaveChangesAsync();
+
+            var service = new CancelledOrdersStatisticsService(new UnitOfWork(context));
+            var start = new DateTime(2026, 6, 3, 0, 0, 0);
+            var end = new DateTime(2026, 6, 3); // date-only: 00:00:00
+            var result = await service.GetReasonStatisticsAsync(start, end);
+
+            Assert.True(result.IsValid);
+            Assert.Equal(2, result.Data.TotalCancelledOrders);
+            Assert.Single(result.Data.Reasons, r => r.Reason == "Lỗi" && r.Count == 2);
+        }
+
+        [Fact]
+        public async Task ComparePeriodsAsync_DateOnlyBoundary_IncludesEveningVietnamOrders()
+        {
+            // currentEnd date-only mất order buổi tối 20:00 vì dùng <= so sánh trực tiếp.
+            var options = TestDbContextFactory.CreateSqliteOptions();
+            using var context = new ApplicationDbContext(options);
+
+            context.Orders.AddRange(
+                new Order { Id = 40, OrderNumber = "ORD-EVE", CreatedAt = new DateTime(2026, 6, 10, 20, 0, 0), Status = OrderStatus.Cancelled },
+                new Order { Id = 41, OrderNumber = "ORD-EAR", CreatedAt = new DateTime(2026, 6, 10, 2, 0, 0), Status = OrderStatus.Cancelled }
+            );
+            await context.SaveChangesAsync();
+
+            var service = new CancelledOrdersStatisticsService(new UnitOfWork(context));
+            var result = await service.ComparePeriodsAsync(
+                new DateTime(2026, 6, 10), new DateTime(2026, 6, 10), // date-only
+                new DateTime(2026, 6, 3), new DateTime(2026, 6, 3));
+
+            Assert.True(result.IsValid);
+            Assert.Equal(2, result.Data.CurrentPeriodCancelled);
+        }
+
+        [Fact]
         public async Task GetReasonStatisticsAsync_WorksOnSqliteProvider()
         {
             // Run the same scenario against SQLite to confirm the implementation does not rely on

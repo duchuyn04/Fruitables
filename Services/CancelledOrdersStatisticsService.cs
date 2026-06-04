@@ -31,20 +31,12 @@ public class CancelledOrdersStatisticsService : ICancelledOrdersStatisticsServic
                 $"Ngày bắt đầu ({startDate.Value:dd/MM/yyyy}) không được lớn hơn ngày kết thúc ({endDate.Value:dd/MM/yyyy}).");
         }
 
-        var allQuery = _unitOfWork.Orders.Query().AsNoTracking();
-        var cancelledQuery = _unitOfWork.Orders.Query().AsNoTracking().Where(o => o.Status == OrderStatus.Cancelled);
+        var (normStart, normEnd) = NormalizeStoredVietnamRange(startDate, endDate);
 
-        if (startDate.HasValue)
-        {
-            allQuery = allQuery.Where(o => o.CreatedAt >= startDate.Value);
-            cancelledQuery = cancelledQuery.Where(o => o.CreatedAt >= startDate.Value);
-        }
-
-        if (endDate.HasValue)
-        {
-            allQuery = allQuery.Where(o => o.CreatedAt <= endDate.Value);
-            cancelledQuery = cancelledQuery.Where(o => o.CreatedAt <= endDate.Value);
-        }
+        var allQuery = _unitOfWork.Orders.Query().AsNoTracking()
+            .Where(o => o.CreatedAt >= normStart && o.CreatedAt < normEnd);
+        var cancelledQuery = _unitOfWork.Orders.Query().AsNoTracking()
+            .Where(o => o.Status == OrderStatus.Cancelled && o.CreatedAt >= normStart && o.CreatedAt < normEnd);
 
         var totalOrders = await allQuery.CountAsync();
         var totalCancelled = await cancelledQuery.CountAsync();
@@ -85,16 +77,10 @@ public class CancelledOrdersStatisticsService : ICancelledOrdersStatisticsServic
                 $"Ngày bắt đầu ({startDate.Value:dd/MM/yyyy}) không được lớn hơn ngày kết thúc ({endDate.Value:dd/MM/yyyy}).");
         }
 
-        var query = _unitOfWork.Orders.Query().AsNoTracking();
+        var (normStart, normEnd) = NormalizeStoredVietnamRange(startDate, endDate);
 
-        if (startDate.HasValue)
-        {
-            query = query.Where(o => o.CreatedAt >= startDate.Value);
-        }
-        if (endDate.HasValue)
-        {
-            query = query.Where(o => o.CreatedAt <= endDate.Value);
-        }
+        var query = _unitOfWork.Orders.Query().AsNoTracking()
+            .Where(o => o.CreatedAt >= normStart && o.CreatedAt < normEnd);
 
         var orders = await query
             .Select(o => new OrderTrendDto
@@ -134,18 +120,11 @@ public class CancelledOrdersStatisticsService : ICancelledOrdersStatisticsServic
                 $"Ngày bắt đầu ({startDate.Value:dd/MM/yyyy}) không được lớn hơn ngày kết thúc ({endDate.Value:dd/MM/yyyy}).");
         }
 
+        var (normStart, normEnd) = NormalizeStoredVietnamRange(startDate, endDate);
+
         var query = _unitOfWork.Orders.Query()
             .AsNoTracking()
-            .Where(o => o.Status == OrderStatus.Cancelled);
-
-        if (startDate.HasValue)
-        {
-            query = query.Where(o => o.CreatedAt >= startDate.Value);
-        }
-        if (endDate.HasValue)
-        {
-            query = query.Where(o => o.CreatedAt <= endDate.Value);
-        }
+            .Where(o => o.Status == OrderStatus.Cancelled && o.CreatedAt >= normStart && o.CreatedAt < normEnd);
 
         var totalCancelled = await query.CountAsync();
 
@@ -207,12 +186,15 @@ public class CancelledOrdersStatisticsService : ICancelledOrdersStatisticsServic
             .AsNoTracking()
             .Where(o => o.Status == OrderStatus.Cancelled);
 
+        var (_, currentExclEnd) = NormalizeStoredVietnamRange(currentStart, currentEnd);
+        var (_, previousExclEnd) = NormalizeStoredVietnamRange(previousStart, previousEnd);
+
         var currentCount = await cancelledQuery
-            .Where(o => o.CreatedAt >= currentStart && o.CreatedAt <= currentEnd)
+            .Where(o => o.CreatedAt >= currentStart && o.CreatedAt < currentExclEnd)
             .CountAsync();
 
         var previousCount = await cancelledQuery
-            .Where(o => o.CreatedAt >= previousStart && o.CreatedAt <= previousEnd)
+            .Where(o => o.CreatedAt >= previousStart && o.CreatedAt < previousExclEnd)
             .CountAsync();
 
         var changeAmount = currentCount - previousCount;
@@ -242,6 +224,32 @@ public class CancelledOrdersStatisticsService : ICancelledOrdersStatisticsServic
     }
 
     #region Helper Methods
+
+    /// <summary>
+    /// Chuẩn hóa range nửa-mở theo stored Vietnam time: start giữ nguyên, end date-only → AddDays(1),
+    /// end có time → +1 tick. Kết quả trả về (start, exclusiveEnd) cho WHERE CreatedAt >= start AND CreatedAt &lt; exclusiveEnd.
+    /// Order.CreatedAt được stored Vietnam time, không convert UTC lần nữa.
+    /// </summary>
+    private static (DateTime start, DateTime exclusiveEnd) NormalizeStoredVietnamRange(
+        DateTime? startDate, DateTime? endDate)
+    {
+        var start = startDate ?? DateTime.MinValue;
+        DateTime exclusiveEnd;
+
+        if (!endDate.HasValue)
+        {
+            exclusiveEnd = DateTime.MaxValue;
+        }
+        else
+        {
+            var end = endDate.Value;
+            exclusiveEnd = end.TimeOfDay == TimeSpan.Zero
+                ? end.Date.AddDays(1)   // date-only: 00:00 → next day 00:00
+                : end.AddTicks(1);      // has time: advance 1 tick for half-open
+        }
+
+        return (start, exclusiveEnd);
+    }
 
     /// <summary>
     /// Xây dựng dữ liệu xu hướng theo ngày

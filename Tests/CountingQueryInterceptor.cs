@@ -70,6 +70,25 @@ public class CountingQueryInterceptor : DbCommandInterceptor
         return base.ReaderExecutingAsync(command, eventData, result, cancellationToken);
     }
 
+    public override InterceptionResult<object> ScalarExecuting(
+        DbCommand command,
+        CommandEventData eventData,
+        InterceptionResult<object> result)
+    {
+        CountQuery(command);
+        return base.ScalarExecuting(command, eventData, result);
+    }
+
+    public override ValueTask<InterceptionResult<object>> ScalarExecutingAsync(
+        DbCommand command,
+        CommandEventData eventData,
+        InterceptionResult<object> result,
+        CancellationToken cancellationToken = default)
+    {
+        CountQuery(command);
+        return base.ScalarExecutingAsync(command, eventData, result, cancellationToken);
+    }
+
     private void CountQuery(DbCommand command)
     {
         var text = command.CommandText;
