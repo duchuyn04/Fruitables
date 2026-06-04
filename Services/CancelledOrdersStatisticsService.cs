@@ -31,20 +31,27 @@ public class CancelledOrdersStatisticsService : ICancelledOrdersStatisticsServic
                 $"Ngày bắt đầu ({startDate.Value:dd/MM/yyyy}) không được lớn hơn ngày kết thúc ({endDate.Value:dd/MM/yyyy}).");
         }
 
-        // Get all orders and cancelled orders
-        var allOrders = await GetAllOrdersAsync();
-        var cancelledOrders = await GetCancelledOrdersAsync();
+        var allQuery = _unitOfWork.Orders.Query().AsNoTracking();
+        var cancelledQuery = _unitOfWork.Orders.Query().AsNoTracking().Where(o => o.Status == OrderStatus.Cancelled);
 
-        // Filter by date range if provided
-        if (startDate.HasValue && endDate.HasValue)
+        if (startDate.HasValue)
         {
-            allOrders = FilterByDateRange(allOrders, startDate.Value, endDate.Value);
-            cancelledOrders = FilterByDateRange(cancelledOrders, startDate.Value, endDate.Value);
+            allQuery = allQuery.Where(o => o.CreatedAt >= startDate.Value);
+            cancelledQuery = cancelledQuery.Where(o => o.CreatedAt >= startDate.Value);
         }
 
-        var totalOrders = allOrders.Count;
-        var totalCancelled = cancelledOrders.Count;
-        var totalCancelledValue = cancelledOrders.Sum(o => o.Total);
+        if (endDate.HasValue)
+        {
+            allQuery = allQuery.Where(o => o.CreatedAt <= endDate.Value);
+            cancelledQuery = cancelledQuery.Where(o => o.CreatedAt <= endDate.Value);
+        }
+
+        var totalOrders = await allQuery.CountAsync();
+        var totalCancelled = await cancelledQuery.CountAsync();
+
+        // SQLite does not support Sum on decimal; materialize and sum in memory.
+        var totalValues = await cancelledQuery.Select(o => o.Total).ToListAsync();
+        var totalCancelledValue = totalValues.Sum();
 
         // Calculate cancellation rate (Requirements: 1.2)
         var cancellationRate = totalOrders > 0
@@ -65,7 +72,6 @@ public class CancelledOrdersStatisticsService : ICancelledOrdersStatisticsServic
         });
     }
 
-
     /// <inheritdoc />
     public async Task<CancelledOrdersResult<CancelledOrdersTrendViewModel>> GetTrendAsync(
         TrendPeriod period,
@@ -79,27 +85,37 @@ public class CancelledOrdersStatisticsService : ICancelledOrdersStatisticsServic
                 $"Ngày bắt đầu ({startDate.Value:dd/MM/yyyy}) không được lớn hơn ngày kết thúc ({endDate.Value:dd/MM/yyyy}).");
         }
 
-        var allOrders = await GetAllOrdersAsync();
-        var cancelledOrders = await GetCancelledOrdersAsync();
+        var query = _unitOfWork.Orders.Query().AsNoTracking();
 
-        if (startDate.HasValue && endDate.HasValue)
+        if (startDate.HasValue)
         {
-            allOrders = FilterByDateRange(allOrders, startDate.Value, endDate.Value);
-            cancelledOrders = FilterByDateRange(cancelledOrders, startDate.Value, endDate.Value);
+            query = query.Where(o => o.CreatedAt >= startDate.Value);
         }
+        if (endDate.HasValue)
+        {
+            query = query.Where(o => o.CreatedAt <= endDate.Value);
+        }
+
+        var orders = await query
+            .Select(o => new OrderTrendDto
+            {
+                CreatedAt = o.CreatedAt,
+                Status = o.Status
+            })
+            .ToListAsync();
 
         var result = new CancelledOrdersTrendViewModel { Period = period };
 
         switch (period)
         {
             case TrendPeriod.Daily:
-                BuildDailyTrend(result, allOrders, cancelledOrders, startDate, endDate);
+                BuildDailyTrend(result, orders, startDate, endDate);
                 break;
             case TrendPeriod.Weekly:
-                BuildWeeklyTrend(result, allOrders, cancelledOrders, startDate, endDate);
+                BuildWeeklyTrend(result, orders, startDate, endDate);
                 break;
             case TrendPeriod.Monthly:
-                BuildMonthlyTrend(result, allOrders, cancelledOrders, startDate, endDate);
+                BuildMonthlyTrend(result, orders, startDate, endDate);
                 break;
         }
 
@@ -118,32 +134,50 @@ public class CancelledOrdersStatisticsService : ICancelledOrdersStatisticsServic
                 $"Ngày bắt đầu ({startDate.Value:dd/MM/yyyy}) không được lớn hơn ngày kết thúc ({endDate.Value:dd/MM/yyyy}).");
         }
 
-        var cancelledOrders = await GetCancelledOrdersAsync();
+        var query = _unitOfWork.Orders.Query()
+            .AsNoTracking()
+            .Where(o => o.Status == OrderStatus.Cancelled);
 
-        if (startDate.HasValue && endDate.HasValue)
+        if (startDate.HasValue)
         {
-            cancelledOrders = FilterByDateRange(cancelledOrders, startDate.Value, endDate.Value);
+            query = query.Where(o => o.CreatedAt >= startDate.Value);
+        }
+        if (endDate.HasValue)
+        {
+            query = query.Where(o => o.CreatedAt <= endDate.Value);
         }
 
-        var totalCancelled = cancelledOrders.Count;
+        var totalCancelled = await query.CountAsync();
 
-        // Group by reason, treating null/empty as "Không có lý do" (Requirements: 4.2)
-        var reasonGroups = cancelledOrders
-            .GroupBy(o => string.IsNullOrWhiteSpace(o.CancelReason) ? "Không có lý do" : o.CancelReason)
-            .Select(g => new CancelReasonItem
+        // Materialize just the reasons (small set vs full order) and normalize/group in memory.
+        // EF Core's GroupBy + string.IsNullOrWhiteSpace translation is provider-dependent, so
+        // we keep the aggregation deterministic across SQL Server, SQLite, and InMemory.
+        var reasonRows = await query
+            .Select(o => o.CancelReason)
+            .ToListAsync();
+
+        var reasonGroups = reasonRows
+            .GroupBy(reason => string.IsNullOrWhiteSpace(reason) ? "Không có lý do" : reason)
+            .Select(g => new
             {
                 Reason = g.Key,
-                Count = g.Count(),
-                Percentage = totalCancelled > 0
-                    ? Math.Round((decimal)g.Count() / totalCancelled * 100, 2)
-                    : 0
+                Count = g.Count()
             })
-            .OrderByDescending(r => r.Count) // Requirements: 4.3
+            .OrderByDescending(r => r.Count)
             .ToList();
+
+        var reasonItems = reasonGroups.Select(r => new CancelReasonItem
+        {
+            Reason = r.Reason,
+            Count = r.Count,
+            Percentage = totalCancelled > 0
+                ? Math.Round((decimal)r.Count / totalCancelled * 100, 2)
+                : 0
+        }).ToList();
 
         return CancelledOrdersResult<CancelReasonStatisticsViewModel>.Success(new CancelReasonStatisticsViewModel
         {
-            Reasons = reasonGroups,
+            Reasons = reasonItems,
             TotalCancelledOrders = totalCancelled
         });
     }
@@ -169,13 +203,18 @@ public class CancelledOrdersStatisticsService : ICancelledOrdersStatisticsServic
                 $"Ngày bắt đầu kỳ trước ({previousStart:dd/MM/yyyy}) không được lớn hơn ngày kết thúc ({previousEnd:dd/MM/yyyy}).");
         }
 
-        var cancelledOrders = await GetCancelledOrdersAsync();
+        var cancelledQuery = _unitOfWork.Orders.Query()
+            .AsNoTracking()
+            .Where(o => o.Status == OrderStatus.Cancelled);
 
-        var currentCancelled = FilterByDateRange(cancelledOrders, currentStart, currentEnd);
-        var previousCancelled = FilterByDateRange(cancelledOrders, previousStart, previousEnd);
+        var currentCount = await cancelledQuery
+            .Where(o => o.CreatedAt >= currentStart && o.CreatedAt <= currentEnd)
+            .CountAsync();
 
-        var currentCount = currentCancelled.Count;
-        var previousCount = previousCancelled.Count;
+        var previousCount = await cancelledQuery
+            .Where(o => o.CreatedAt >= previousStart && o.CreatedAt <= previousEnd)
+            .CountAsync();
+
         var changeAmount = currentCount - previousCount;
 
         // Calculate change percent (Requirements: 5.2, 5.3, 5.4)
@@ -202,76 +241,14 @@ public class CancelledOrdersStatisticsService : ICancelledOrdersStatisticsServic
         });
     }
 
-
     #region Helper Methods
-
-    /// <summary>
-    /// Lấy tất cả đơn hàng
-    /// </summary>
-    private async Task<List<Order>> GetAllOrdersAsync()
-    {
-        return await _unitOfWork.Orders.Query()
-            .AsNoTracking()
-            .ToListAsync();
-    }
-
-    /// <summary>
-    /// Lấy tất cả đơn hàng bị hủy (OrderStatus = Cancelled)
-    /// </summary>
-    private async Task<List<Order>> GetCancelledOrdersAsync()
-    {
-        return await _unitOfWork.Orders.Query()
-            .AsNoTracking()
-            .Where(o => o.Status == OrderStatus.Cancelled)
-            .ToListAsync();
-    }
-
-    /// <summary>
-    /// Lọc đơn hàng theo khoảng thời gian.
-    /// Chuyển đổi CreatedAt (UTC) sang giờ Việt Nam trước khi so sánh.
-    /// </summary>
-    private static List<Order> FilterByDateRange(List<Order> orders, DateTime startDate, DateTime endDate)
-    {
-        return orders.Where(o =>
-        {
-            var vietnamTime = ConvertToVietnamTime(o.CreatedAt);
-            return vietnamTime >= startDate && vietnamTime <= endDate;
-        }).ToList();
-    }
-
-    /// <summary>
-    /// Chuyển đổi DateTime UTC sang giờ Việt Nam (UTC+7)
-    /// </summary>
-    private static DateTime ConvertToVietnamTime(DateTime utcDateTime)
-    {
-        if (utcDateTime.Kind == DateTimeKind.Local)
-        {
-            utcDateTime = utcDateTime.ToUniversalTime();
-        }
-        else if (utcDateTime.Kind == DateTimeKind.Unspecified)
-        {
-            utcDateTime = DateTime.SpecifyKind(utcDateTime, DateTimeKind.Utc);
-        }
-
-        try
-        {
-            var vietnamTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
-            return TimeZoneInfo.ConvertTimeFromUtc(utcDateTime, vietnamTimeZone);
-        }
-        catch (TimeZoneNotFoundException)
-        {
-            var vietnamTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Asia/Ho_Chi_Minh");
-            return TimeZoneInfo.ConvertTimeFromUtc(utcDateTime, vietnamTimeZone);
-        }
-    }
 
     /// <summary>
     /// Xây dựng dữ liệu xu hướng theo ngày
     /// </summary>
     private static void BuildDailyTrend(
         CancelledOrdersTrendViewModel result,
-        List<Order> allOrders,
-        List<Order> cancelledOrders,
+        List<OrderTrendDto> orders,
         DateTime? startDate,
         DateTime? endDate)
     {
@@ -283,20 +260,13 @@ public class CancelledOrdersStatisticsService : ICancelledOrdersStatisticsServic
         {
             var dayEnd = date.AddDays(1).AddTicks(-1);
 
-            var dayAllOrders = allOrders.Where(o =>
+            var dayOrders = orders.Where(o =>
             {
-                var vietnamTime = ConvertToVietnamTime(o.CreatedAt);
-                return vietnamTime >= date && vietnamTime <= dayEnd;
+                return o.CreatedAt >= date && o.CreatedAt <= dayEnd;
             }).ToList();
 
-            var dayCancelledOrders = cancelledOrders.Where(o =>
-            {
-                var vietnamTime = ConvertToVietnamTime(o.CreatedAt);
-                return vietnamTime >= date && vietnamTime <= dayEnd;
-            }).ToList();
-
-            var cancelledCount = dayCancelledOrders.Count;
-            var totalCount = dayAllOrders.Count;
+            var cancelledCount = dayOrders.Count(o => o.Status == OrderStatus.Cancelled);
+            var totalCount = dayOrders.Count;
             var rate = totalCount > 0 ? Math.Round((decimal)cancelledCount / totalCount * 100, 2) : 0;
 
             result.Labels.Add(date.ToString("dd/MM"));
@@ -305,14 +275,12 @@ public class CancelledOrdersStatisticsService : ICancelledOrdersStatisticsServic
         }
     }
 
-
     /// <summary>
     /// Xây dựng dữ liệu xu hướng theo tuần
     /// </summary>
     private static void BuildWeeklyTrend(
         CancelledOrdersTrendViewModel result,
-        List<Order> allOrders,
-        List<Order> cancelledOrders,
+        List<OrderTrendDto> orders,
         DateTime? startDate,
         DateTime? endDate)
     {
@@ -328,20 +296,13 @@ public class CancelledOrdersStatisticsService : ICancelledOrdersStatisticsServic
         {
             var weekEnd = weekStart.AddDays(7).AddTicks(-1);
 
-            var weekAllOrders = allOrders.Where(o =>
+            var weekOrders = orders.Where(o =>
             {
-                var vietnamTime = ConvertToVietnamTime(o.CreatedAt);
-                return vietnamTime >= weekStart && vietnamTime <= weekEnd;
+                return o.CreatedAt >= weekStart && o.CreatedAt <= weekEnd;
             }).ToList();
 
-            var weekCancelledOrders = cancelledOrders.Where(o =>
-            {
-                var vietnamTime = ConvertToVietnamTime(o.CreatedAt);
-                return vietnamTime >= weekStart && vietnamTime <= weekEnd;
-            }).ToList();
-
-            var cancelledCount = weekCancelledOrders.Count;
-            var totalCount = weekAllOrders.Count;
+            var cancelledCount = weekOrders.Count(o => o.Status == OrderStatus.Cancelled);
+            var totalCount = weekOrders.Count;
             var rate = totalCount > 0 ? Math.Round((decimal)cancelledCount / totalCount * 100, 2) : 0;
 
             result.Labels.Add($"W{GetWeekOfYear(weekStart)}");
@@ -357,8 +318,7 @@ public class CancelledOrdersStatisticsService : ICancelledOrdersStatisticsServic
     /// </summary>
     private static void BuildMonthlyTrend(
         CancelledOrdersTrendViewModel result,
-        List<Order> allOrders,
-        List<Order> cancelledOrders,
+        List<OrderTrendDto> orders,
         DateTime? startDate,
         DateTime? endDate)
     {
@@ -373,20 +333,13 @@ public class CancelledOrdersStatisticsService : ICancelledOrdersStatisticsServic
         {
             var nextMonth = monthStart.AddMonths(1);
 
-            var monthAllOrders = allOrders.Where(o =>
+            var monthOrders = orders.Where(o =>
             {
-                var vietnamTime = ConvertToVietnamTime(o.CreatedAt);
-                return vietnamTime >= monthStart && vietnamTime < nextMonth;
+                return o.CreatedAt >= monthStart && o.CreatedAt < nextMonth;
             }).ToList();
 
-            var monthCancelledOrders = cancelledOrders.Where(o =>
-            {
-                var vietnamTime = ConvertToVietnamTime(o.CreatedAt);
-                return vietnamTime >= monthStart && vietnamTime < nextMonth;
-            }).ToList();
-
-            var cancelledCount = monthCancelledOrders.Count;
-            var totalCount = monthAllOrders.Count;
+            var cancelledCount = monthOrders.Count(o => o.Status == OrderStatus.Cancelled);
+            var totalCount = monthOrders.Count;
             var rate = totalCount > 0 ? Math.Round((decimal)cancelledCount / totalCount * 100, 2) : 0;
 
             result.Labels.Add(monthStart.ToString("MM/yyyy"));
@@ -407,4 +360,10 @@ public class CancelledOrdersStatisticsService : ICancelledOrdersStatisticsServic
     }
 
     #endregion
+
+    private class OrderTrendDto
+    {
+        public DateTime CreatedAt { get; set; }
+        public OrderStatus Status { get; set; }
+    }
 }

@@ -455,9 +455,9 @@ public class ProductAdminService : IProductAdminService
 
     public async Task<ProductResult> UpdateTagsAsync(int productId, List<string> tagNames)
     {
-        var products = await _unitOfWork.Products
-            .FindAsync(p => p.Id == productId);
-        var product = products.FirstOrDefault();
+        var product = await _unitOfWork.Products.Query()
+            .Include(p => p.Tags)
+            .FirstOrDefaultAsync(p => p.Id == productId);
 
         if (product == null)
             return ProductResult.Fail(ProductErrorType.NotFound, $"Không tìm thấy sản phẩm với ID {productId}");
@@ -475,15 +475,21 @@ public class ProductAdminService : IProductAdminService
         // Clear existing tags for this product
         product.Tags.Clear();
 
+        // Query all existing tags at once
+        var lowercaseTagNames = tagNames.Select(t => t.ToLowerInvariant()).ToList();
+        var existingTags = await _unitOfWork.ProductTags.Query()
+            .Where(t => lowercaseTagNames.Contains(t.Name.ToLower()))
+            .ToListAsync();
+
+        var existingTagsDict = existingTags
+            .GroupBy(t => t.Name.ToLowerInvariant())
+            .ToDictionary(g => g.Key, g => g.First());
+
         // Add new tags
         foreach (var tagName in tagNames)
         {
-            // Check if tag already exists
-            var existingTags = await _unitOfWork.ProductTags
-                .FindAsync(t => t.Name.ToLower() == tagName.ToLower());
-            var tag = existingTags.FirstOrDefault();
-
-            if (tag == null)
+            var key = tagName.ToLowerInvariant();
+            if (!existingTagsDict.TryGetValue(key, out var tag))
             {
                 // Create new tag
                 tag = new ProductTag
@@ -492,6 +498,7 @@ public class ProductAdminService : IProductAdminService
                     Slug = GenerateSlug(tagName)
                 };
                 await _unitOfWork.ProductTags.AddAsync(tag);
+                existingTagsDict[key] = tag;
             }
 
             // Add tag to product

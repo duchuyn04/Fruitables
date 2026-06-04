@@ -557,10 +557,87 @@ public class RbacService : IRbacService
     
     public async Task AssignPermissionsToRoleAsync(int roleId, List<int> permissionIds, int adminId)
     {
-        foreach (var permissionId in permissionIds)
+        if (permissionIds == null || !permissionIds.Any())
+            return;
+
+        // Validate role exists and is active
+        var role = await _unitOfWork.Roles.GetByIdAsync(roleId);
+        if (role == null)
         {
-            await AssignPermissionToRoleAsync(roleId, permissionId, adminId);
+            _logger.LogWarning("Attempt to assign permissions to non-existent role {RoleId} by admin {AdminId}", roleId, adminId);
+            throw new InvalidOperationException("Role not found");
         }
+        
+        if (!role.IsActive)
+        {
+            _logger.LogWarning("Attempt to assign permissions to inactive role {RoleId} by admin {AdminId}", roleId, adminId);
+            throw new InvalidOperationException("Cannot assign permission to inactive role");
+        }
+
+        // Validate permissions exist
+        var uniquePermissionIds = permissionIds.Distinct().ToList();
+        var permissions = await _unitOfWork.Permissions.Query()
+            .Where(p => uniquePermissionIds.Contains(p.Id))
+            .ToListAsync();
+
+        if (permissions.Count != uniquePermissionIds.Count)
+        {
+            _logger.LogWarning("Attempt to assign non-existent permissions to role {RoleId} by admin {AdminId}", roleId, adminId);
+            throw new InvalidOperationException("One or more permissions not found");
+        }
+
+        var permissionsDict = permissions.ToDictionary(p => p.Id);
+
+        // Check if already assigned
+        var existingMappings = await _unitOfWork.RolePermissions.Query()
+            .Where(rp => rp.RoleId == roleId && uniquePermissionIds.Contains(rp.PermissionId))
+            .Select(rp => rp.PermissionId)
+            .ToListAsync();
+
+        var toAssignIds = uniquePermissionIds.Except(existingMappings).ToList();
+        if (!toAssignIds.Any())
+        {
+            return; // All are already assigned
+        }
+
+        var newRolePermissions = new List<RolePermission>();
+        foreach (var permissionId in toAssignIds)
+        {
+            var rolePermission = new RolePermission
+            {
+                RoleId = roleId,
+                PermissionId = permissionId,
+                AssignedAt = DateTime.UtcNow,
+                AssignedByAdminId = adminId
+            };
+            await _unitOfWork.RolePermissions.AddAsync(rolePermission);
+            newRolePermissions.Add(rolePermission);
+        }
+
+        // Save to generate IDs
+        await _unitOfWork.SaveChangesAsync();
+
+        // Create audit logs
+        foreach (var rolePermission in newRolePermissions)
+        {
+            var permissionName = permissionsDict[rolePermission.PermissionId].Name;
+            await CreateAuditLogAsync(
+                "Assign",
+                "RolePermission",
+                rolePermission.Id,
+                adminId,
+                null,
+                JsonSerializer.Serialize(new { RoleId = roleId, PermissionId = rolePermission.PermissionId, PermissionName = permissionName })
+            );
+        }
+
+        // Save audit logs
+        await _unitOfWork.SaveChangesAsync();
+        
+        // Invalidate cache for all users with this role
+        await InvalidateRoleCacheAsync(roleId);
+        
+        _logger.LogInformation("{Count} permissions assigned to role {RoleId} by admin {AdminId}", toAssignIds.Count, roleId, adminId);
     }
     
     public async Task RevokePermissionFromRoleAsync(int roleId, int permissionId, int adminId)
@@ -614,107 +691,166 @@ public class RbacService : IRbacService
     
     public async Task AssignRoleToUserAsync(int userId, int roleId, int adminId)
     {
-        // Validate user exists
-        var user = await _unitOfWork.Users.GetByIdAsync(userId);
-        if (user == null)
-        {
-            _logger.LogWarning("Attempt to assign role to non-existent user {UserId} by admin {AdminId}", userId, adminId);
-            throw new InvalidOperationException("User not found");
-        }
-        
-        // Validate role exists and is active
-        var role = await _unitOfWork.Roles.GetByIdAsync(roleId);
-        if (role == null)
-        {
-            _logger.LogWarning("Attempt to assign non-existent role {RoleId} to user {UserId} by admin {AdminId}", roleId, userId, adminId);
-            throw new InvalidOperationException("Role not found");
-        }
-        
-        if (!role.IsActive)
-        {
-            _logger.LogWarning("Attempt to assign inactive role {RoleId} to user {UserId} by admin {AdminId}", roleId, userId, adminId);
-            throw new InvalidOperationException("Cannot assign inactive role");
-        }
-        
-        // Check if already assigned (idempotence)
-        var existing = await _unitOfWork.UserRoleMappings
-            .Query()
-            .FirstOrDefaultAsync(ur => ur.UserId == userId && ur.RoleId == roleId);
-            
-        if (existing != null)
-        {
-            _logger.LogDebug("Role {RoleId} already assigned to user {UserId}", roleId, userId);
-            
-            // Still need to remove OTHER roles to ensure they only have this one role
-            var otherRoles = await _unitOfWork.UserRoleMappings
-                .Query()
-                .Where(ur => ur.UserId == userId && ur.RoleId != roleId)
-                .ToListAsync();
-                
-            if (otherRoles.Any())
-            {
-                _unitOfWork.UserRoleMappings.RemoveRange(otherRoles);
-                await _unitOfWork.SaveChangesAsync();
-                await SyncUserLegacyRoleAsync(userId);
-                await InvalidateUserCacheAsync(userId);
-            }
-            
-            return; // Idempotent - no error, just return
-        }
-
-        // Revoke all existing roles for this user before assigning the new one
-        var allExistingRoles = await _unitOfWork.UserRoleMappings
-            .Query()
-            .Where(ur => ur.UserId == userId)
-            .ToListAsync();
-            
-        if (allExistingRoles.Any())
-        {
-            _unitOfWork.UserRoleMappings.RemoveRange(allExistingRoles);
-            
-            foreach (var existingRole in allExistingRoles)
-            {
-                _logger.LogInformation("Revoked previous role {RoleId} from user {UserId} before assigning new role", existingRole.RoleId, userId);
-            }
-        }
-        
-        var userRole = new UserRoleMapping
-        {
-            UserId = userId,
-            RoleId = roleId,
-            AssignedAt = DateTime.UtcNow,
-            AssignedByAdminId = adminId
-        };
-        
-        await _unitOfWork.UserRoleMappings.AddAsync(userRole);
-        await _unitOfWork.SaveChangesAsync();
-        
-        // Sync legacy User.Role field for backward compatibility
-        await SyncUserLegacyRoleAsync(userId);
-        
-        // Create audit log
-        await CreateAuditLogAsync(
-            "Assign",
-            "UserRole",
-            userRole.Id,
-            adminId,
-            null,
-            JsonSerializer.Serialize(new { UserId = userId, RoleId = roleId, RoleName = role.Name })
-        );
-        await _unitOfWork.SaveChangesAsync();
-        
-        // Invalidate cache for this user
-        await InvalidateUserCacheAsync(userId);
-        
-        _logger.LogInformation("Role {RoleId} assigned to user {UserId} by admin {AdminId}", roleId, userId, adminId);
+        // Delegate to the atomic (transactional) multi-role path so that any failure inside the
+        // role-assignment flow rolls back all mapping changes, audit logs, and the legacy role sync.
+        await AssignRolesToUserAsync(userId, new List<int> { roleId }, adminId);
     }
     
     public async Task AssignRolesToUserAsync(int userId, List<int> roleIds, int adminId)
     {
-        foreach (var roleId in roleIds)
+        if (roleIds == null || !roleIds.Any())
+            return;
+
+        // Enforce single-role restriction
+        var uniqueRoleIds = roleIds.Distinct().ToList();
+        if (uniqueRoleIds.Count > 1)
         {
-            await AssignRoleToUserAsync(userId, roleId, adminId);
+            throw new InvalidOperationException("Users can only have a single role assigned.");
         }
+
+        // Validate user exists
+        var user = await _unitOfWork.Users.GetByIdAsync(userId);
+        if (user == null)
+        {
+            _logger.LogWarning("Attempt to assign roles to non-existent user {UserId} by admin {AdminId}", userId, adminId);
+            throw new InvalidOperationException("User not found");
+        }
+
+        // Get existing role mappings for user
+        var existingMappings = await _unitOfWork.UserRoleMappings.Query()
+            .Include(ur => ur.Role)
+            .Where(ur => ur.UserId == userId)
+            .ToListAsync();
+
+        var existingRoleIds = existingMappings.Select(m => m.RoleId).ToList();
+
+        // Load all role info in batch for validation and audit logs
+        var allRoleIds = uniqueRoleIds.Union(existingRoleIds).Distinct().ToList();
+        var roles = await _unitOfWork.Roles.Query()
+            .Where(r => allRoleIds.Contains(r.Id))
+            .ToListAsync();
+
+        var rolesDict = roles.ToDictionary(r => r.Id);
+
+        // Validate role(s) to add
+        foreach (var reqRoleId in uniqueRoleIds)
+        {
+            if (!rolesDict.TryGetValue(reqRoleId, out var r))
+            {
+                _logger.LogWarning("Attempt to assign non-existent roles to user {UserId} by admin {AdminId}", userId, adminId);
+                throw new InvalidOperationException("One or more roles not found");
+            }
+
+            if (!r.IsActive)
+            {
+                _logger.LogWarning("Attempt to assign inactive roles to user {UserId} by admin {AdminId}", userId, adminId);
+                throw new InvalidOperationException("Cannot assign inactive role");
+            }
+        }
+
+        var toAddIds = uniqueRoleIds.Except(existingRoleIds).ToList();
+        var toRemove = existingMappings.Where(m => !uniqueRoleIds.Contains(m.RoleId)).ToList();
+
+        if (!toAddIds.Any() && !toRemove.Any())
+        {
+            return; // No changes needed
+        }
+
+        // Wrap the whole multi-write flow in a single transaction so any failure rolls back
+        // mapping changes, audit logs, and the legacy User.Role sync together.
+        var supportsTransactions = !(_unitOfWork.DatabaseProviderName?.Contains("InMemory") ?? false);
+        Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction? transaction = null;
+        if (supportsTransactions)
+        {
+            transaction = await _unitOfWork.BeginTransactionAsync();
+        }
+
+        try
+        {
+            // Stage removals
+            if (toRemove.Any())
+            {
+                _unitOfWork.UserRoleMappings.RemoveRange(toRemove);
+                foreach (var mapping in toRemove)
+                {
+                    var roleName = mapping.Role?.Name ?? (rolesDict.TryGetValue(mapping.RoleId, out var r) ? r.Name : "Unknown");
+                    await CreateAuditLogAsync(
+                        "Revoke",
+                        "UserRole",
+                        mapping.Id,
+                        adminId,
+                        JsonSerializer.Serialize(new { UserId = userId, RoleId = mapping.RoleId, RoleName = roleName }),
+                        null
+                    );
+                }
+            }
+
+            // Stage additions
+            var newMappings = new List<UserRoleMapping>();
+            if (toAddIds.Any())
+            {
+                foreach (var roleId in toAddIds)
+                {
+                    var userRole = new UserRoleMapping
+                    {
+                        UserId = userId,
+                        RoleId = roleId,
+                        AssignedAt = DateTime.UtcNow,
+                        AssignedByAdminId = adminId
+                    };
+                    await _unitOfWork.UserRoleMappings.AddAsync(userRole);
+                    newMappings.Add(userRole);
+                }
+            }
+
+            // Persist mapping changes so new IDs are available for audit logs.
+            await _unitOfWork.SaveChangesAsync();
+
+            // Stage assignment audit logs (now that we have the new mapping IDs).
+            if (newMappings.Any())
+            {
+                foreach (var mapping in newMappings)
+                {
+                    var roleName = rolesDict.TryGetValue(mapping.RoleId, out var r) ? r.Name : "Unknown";
+                    await CreateAuditLogAsync(
+                        "Assign",
+                        "UserRole",
+                        mapping.Id,
+                        adminId,
+                        null,
+                        JsonSerializer.Serialize(new { UserId = userId, RoleId = mapping.RoleId, RoleName = roleName })
+                    );
+                }
+                await _unitOfWork.SaveChangesAsync();
+            }
+
+            // Sync legacy User.Role field for backward compatibility. Runs inside the transaction;
+            // its internal SaveChangesAsync participates in the same unit of work.
+            await SyncUserLegacyRoleAsync(userId);
+
+            if (transaction != null)
+            {
+                await transaction.CommitAsync();
+            }
+        }
+        catch
+        {
+            if (transaction != null)
+            {
+                await transaction.RollbackAsync();
+            }
+            throw;
+        }
+        finally
+        {
+            transaction?.Dispose();
+        }
+
+        // Invalidate cache for this user
+        await InvalidateUserCacheAsync(userId);
+
+        _logger.LogInformation("Roles updated for user {UserId} by admin {AdminId}. Added: {AddedCount}, Removed: {RemovedCount}",
+            userId, adminId, toAddIds.Count, toRemove.Count);
     }
     
     public async Task RevokeRoleFromUserAsync(int userId, int roleId, int adminId)

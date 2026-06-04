@@ -6,9 +6,8 @@ using Microsoft.AspNetCore.Mvc.Filters;
 
 namespace Fruitables.Filters;
 
-/// <summary>
-/// Authorization filter that checks if user has required permissions
-/// </summary>
+// Authorization filter kiểm tra quyền truy cập dựa trên RequirePermissionAttribute.
+// Hỗ trợ AND (cần tất cả) và OR (cần ít nhất một) logic.
 public class RequirePermissionFilter : IAsyncAuthorizationFilter
 {
     private readonly IRbacService _rbacService;
@@ -24,18 +23,18 @@ public class RequirePermissionFilter : IAsyncAuthorizationFilter
 
     public async Task OnAuthorizationAsync(AuthorizationFilterContext context)
     {
-        // Check if action or controller has RequirePermissionAttribute
+        // Lấy danh sách RequirePermissionAttribute từ endpoint metadata
         var permissionAttributes = context.ActionDescriptor.EndpointMetadata
             .OfType<RequirePermissionAttribute>()
             .ToList();
 
-        // If no permission attributes, allow access
+        // Không có attribute → cho phép truy cập
         if (!permissionAttributes.Any())
         {
             return;
         }
 
-        // Check if user is authenticated
+        // Kiểm tra user đã đăng nhập chưa
         if (context.HttpContext.User?.Identity?.IsAuthenticated != true)
         {
             _logger.LogWarning("Unauthenticated user attempted to access {Action}",
@@ -45,7 +44,7 @@ public class RequirePermissionFilter : IAsyncAuthorizationFilter
             return;
         }
 
-        // Get user ID from claims
+        // Lấy userId từ claims
         var userIdClaim = context.HttpContext.User.FindFirst(ClaimTypes.NameIdentifier);
         if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
         {
@@ -54,19 +53,19 @@ public class RequirePermissionFilter : IAsyncAuthorizationFilter
             return;
         }
 
-        // Check each permission attribute (multiple attributes are combined with AND logic)
+        // Duyệt từng attribute (nhiều attribute → logic AND giữa chúng)
         foreach (var attribute in permissionAttributes)
         {
             bool hasPermission;
 
             if (attribute.Logic == PermissionLogic.Or)
             {
-                // User needs at least one of the permissions
+                // User cần có ít nhất 1 trong các quyền
                 hasPermission = await _rbacService.HasAnyPermissionAsync(userId, attribute.Permissions);
             }
             else // PermissionLogic.And
             {
-                // User needs all of the permissions
+                // User cần có tất cả quyền
                 hasPermission = await _rbacService.HasAllPermissionsAsync(userId, attribute.Permissions);
             }
 
@@ -82,7 +81,7 @@ public class RequirePermissionFilter : IAsyncAuthorizationFilter
                     logicStr,
                     permissionsStr);
 
-                // Log access denied to audit log
+                // Ghi log audit
                 await LogAccessDeniedAsync(userId, context.ActionDescriptor.DisplayName ?? "Unknown", permissionsStr);
 
                 context.Result = new ForbidResult();
@@ -90,20 +89,15 @@ public class RequirePermissionFilter : IAsyncAuthorizationFilter
             }
         }
 
-        // All permission checks passed, allow access
+        // Tất cả kiểm tra đều pass
         _logger.LogDebug("User {UserId} granted access to {Action}", userId, context.ActionDescriptor.DisplayName);
     }
 
-    /// <summary>
-    /// Log access denied event to audit log
-    /// </summary>
+    // Ghi log khi truy cập bị từ chối
     private async Task LogAccessDeniedAsync(int userId, string action, string requiredPermissions)
     {
         try
         {
-            // Note: We're logging this as a system action (adminId = userId)
-            // In a real scenario, you might want to create a separate audit log table for access attempts
-            // For now, we'll just log it using the logger
             _logger.LogWarning(
                 "Access denied: User {UserId} attempted to access {Action} without required permissions: {Permissions}",
                 userId,

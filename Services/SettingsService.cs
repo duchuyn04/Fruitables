@@ -156,11 +156,14 @@ public class SettingsService : ISettingsService
     {
         try
         {
+            var keys = settings.Keys.ToList();
+            var existingSettings = await _unitOfWork.Settings.Query()
+                .Where(s => keys.Contains(s.Key))
+                .ToDictionaryAsync(s => s.Key);
+
             foreach (var kvp in settings)
             {
-                var setting = await _unitOfWork.Settings.Query().FirstOrDefaultAsync(s => s.Key == kvp.Key);
-
-                if (setting == null)
+                if (!existingSettings.TryGetValue(kvp.Key, out var setting))
                 {
                     setting = new Setting { Key = kvp.Key, Value = kvp.Value, Group = group };
                     await _unitOfWork.Settings.AddAsync(setting);

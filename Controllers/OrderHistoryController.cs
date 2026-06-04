@@ -9,27 +9,26 @@ using Fruitables.ViewModels;
 
 namespace Fruitables.Controllers;
 
-/// <summary>
-/// Controller quản lý lịch sử đơn hàng của khách hàng
-/// </summary>
+// Controller lịch sử đơn hàng: danh sách, lọc, chi tiết, hủy đơn.
+// Yêu cầu đăng nhập ([Authorize]).
 [Authorize]
 public class OrderHistoryController : Controller
 {
     private readonly IOrderHistoryService _orderHistoryService;
     private readonly IMemoryCache _cache;
+    // Cache key cho dropdown trạng thái đơn hàng
     private const string OrderStatusesCacheKey = "OrderHistory_Statuses";
     private const int MaxPageSize = 50;
     private const int MaxSearchTermLength = 50;
 
+    // Inject service lịch sử đơn hàng + memory cache (cho dropdown status)
     public OrderHistoryController(IOrderHistoryService orderHistoryService, IMemoryCache cache)
     {
         _orderHistoryService = orderHistoryService;
         _cache = cache;
     }
 
-    /// <summary>
-    /// GET: /OrderHistory - Danh sách đơn hàng với phân trang và lọc
-    /// </summary>
+    // GET: /OrderHistory — danh sách đơn hàng + phân trang + lọc
     [HttpGet]
     public async Task<IActionResult> Index(OrderHistoryFilterViewModel filter)
     {
@@ -39,7 +38,7 @@ public class OrderHistoryController : Controller
             return RedirectToAction("Login", "Account");
         }
 
-        // Validate và sanitize input parameters
+        // Validate + sanitize input trước khi query
         filter = SanitizeFilter(filter);
 
         var result = await _orderHistoryService.GetOrderHistoryAsync(userId.Value, filter);
@@ -50,17 +49,14 @@ public class OrderHistoryController : Controller
         return View(result);
     }
 
-    /// <summary>
-    /// GET: /OrderHistory/Filter - AJAX endpoint để lọc đơn hàng real-time
-    /// Trả về PartialView chứa danh sách đơn hàng và phân trang
-    /// </summary>
+    // GET: /OrderHistory/Filter — AJAX endpoint lọc real-time, trả PartialView
     [HttpGet]
     public async Task<IActionResult> Filter(OrderHistoryFilterViewModel filter)
     {
         var userId = GetCurrentUserId();
         if (!userId.HasValue)
         {
-            // Trả về 401 cho AJAX request
+            // AJAX request → trả 401, không redirect
             if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
             {
                 return Unauthorized();
@@ -68,7 +64,7 @@ public class OrderHistoryController : Controller
             return RedirectToAction("Login", "Account");
         }
 
-        // Validate và sanitize input parameters
+        // Validate + sanitize input
         filter = SanitizeFilter(filter);
 
         try
@@ -77,20 +73,16 @@ public class OrderHistoryController : Controller
 
             ViewBag.Filter = filter;
 
-            // Trả về PartialView cho AJAX request
             return PartialView("_OrderListContainer", result);
         }
+        // Bắt exception chung → trả error partial
         catch (Exception)
         {
-            // Log exception nếu cần
-            // Trả về error partial view
             return PartialView("_OrderListError", "Có lỗi xảy ra khi tải danh sách đơn hàng. Vui lòng thử lại.");
         }
     }
 
-    /// <summary>
-    /// GET: /OrderHistory/Details/{id} - Chi tiết đơn hàng
-    /// </summary>
+    // GET: /OrderHistory/Details/{id} — chi tiết đơn hàng
     [HttpGet]
     public async Task<IActionResult> Details(int id)
     {
@@ -101,6 +93,7 @@ public class OrderHistoryController : Controller
         }
 
         var orderDetail = await _orderHistoryService.GetOrderDetailAsync(id, userId.Value);
+        // Kiểm tra tồn tại + quyền sở hữu
         if (orderDetail == null)
         {
             TempData["ErrorMessage"] = "Không tìm thấy đơn hàng hoặc bạn không có quyền xem đơn hàng này.";
@@ -110,9 +103,7 @@ public class OrderHistoryController : Controller
         return View(orderDetail);
     }
 
-    /// <summary>
-    /// POST: /OrderHistory/Cancel/{id} - Hủy đơn hàng
-    /// </summary>
+    // POST: /OrderHistory/Cancel/{id} — hủy đơn hàng
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Cancel(int id, string cancelReason)
@@ -123,14 +114,14 @@ public class OrderHistoryController : Controller
             return RedirectToAction("Login", "Account");
         }
 
-        // Validate order id
+        // Validate ID đơn hàng
         if (id <= 0)
         {
             TempData["ErrorMessage"] = "Mã đơn hàng không hợp lệ.";
             return RedirectToAction(nameof(Index));
         }
 
-        // Validate và sanitize cancel reason
+        // Sanitize + validate lý do hủy (chống XSS, tối thiểu 5 ký tự)
         var sanitizedReason = SanitizeCancelReason(cancelReason);
         if (string.IsNullOrWhiteSpace(sanitizedReason))
         {
@@ -149,9 +140,7 @@ public class OrderHistoryController : Controller
         return RedirectToAction(nameof(Details), new { id });
     }
 
-    /// <summary>
-    /// Sanitize cancel reason để tránh XSS và injection
-    /// </summary>
+    // Sanitize lý do hủy: trim, giới hạn 500 ký tự, yêu cầu >= 5 ký tự, encode HTML
     private static string? SanitizeCancelReason(string? reason)
     {
         if (string.IsNullOrWhiteSpace(reason))
@@ -159,20 +148,19 @@ public class OrderHistoryController : Controller
             return null;
         }
 
-        // Trim và giới hạn độ dài (max 500 ký tự)
         var sanitized = reason.Trim();
         if (sanitized.Length > 500)
         {
             sanitized = sanitized[..500];
         }
 
-        // Yêu cầu tối thiểu 5 ký tự
+        // Tối thiểu 5 ký tự (sau trim)
         if (sanitized.Length < 5)
         {
             return null;
         }
 
-        // Loại bỏ các ký tự HTML nguy hiểm
+        // Encode HTML entities chống XSS
         sanitized = sanitized
             .Replace("<", "&lt;")
             .Replace(">", "&gt;")
@@ -182,9 +170,7 @@ public class OrderHistoryController : Controller
         return sanitized;
     }
 
-    /// <summary>
-    /// Lấy userId từ claims
-    /// </summary>
+    // Helper: lấy userId từ claims cookie
     private int? GetCurrentUserId()
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -195,9 +181,7 @@ public class OrderHistoryController : Controller
         return null;
     }
 
-    /// <summary>
-    /// Lấy danh sách trạng thái đơn hàng cho dropdown filter (với caching)
-    /// </summary>
+    // Lấy danh sách trạng thái đơn hàng có cache (refresh 24h)
     private List<SelectListItem> GetOrderStatusesCached()
     {
         return _cache.GetOrCreate(OrderStatusesCacheKey, entry =>
@@ -208,9 +192,7 @@ public class OrderHistoryController : Controller
         })!;
     }
 
-    /// <summary>
-    /// Lấy danh sách trạng thái đơn hàng cho dropdown filter
-    /// </summary>
+    // Danh sách trạng thái cho dropdown filter
     private static List<SelectListItem> GetOrderStatuses()
     {
         return new List<SelectListItem>
@@ -224,39 +206,34 @@ public class OrderHistoryController : Controller
         };
     }
 
-    /// <summary>
-    /// Validate và sanitize filter parameters để tránh injection attacks
-    /// </summary>
+    // Validate + sanitize filter params chống injection
     private static OrderHistoryFilterViewModel SanitizeFilter(OrderHistoryFilterViewModel filter)
     {
-        // Validate page và pageSize
+        // Giới hạn page/pageSize
         filter.Page = filter.Page < 1 ? 1 : filter.Page;
         filter.PageSize = filter.PageSize < 1 ? 10 : Math.Min(filter.PageSize, MaxPageSize);
 
-        // Sanitize search term - chỉ cho phép alphanumeric và dấu gạch ngang
+        // SearchTerm: chỉ cho phép alphanumeric + dấu gạch ngang + dấu cách
         if (!string.IsNullOrWhiteSpace(filter.SearchTerm))
         {
-            // Giới hạn độ dài
             var searchTerm = filter.SearchTerm.Trim();
             if (searchTerm.Length > MaxSearchTermLength)
             {
                 searchTerm = searchTerm[..MaxSearchTermLength];
             }
 
-            // Chỉ cho phép ký tự an toàn (alphanumeric, dấu gạch ngang, dấu cách)
             filter.SearchTerm = Regex.Replace(searchTerm, @"[^\w\s\-]", "", RegexOptions.None, TimeSpan.FromMilliseconds(100));
         }
 
-        // Validate status - đảm bảo là giá trị enum hợp lệ
+        // Status: chỉ chấp nhận giá trị enum hợp lệ
         if (filter.Status.HasValue && !Enum.IsDefined(typeof(OrderStatus), filter.Status.Value))
         {
             filter.Status = null;
         }
 
-        // Validate date range
+        // Date range: nếu FromDate > ToDate thì swap
         if (filter.FromDate.HasValue && filter.ToDate.HasValue && filter.FromDate > filter.ToDate)
         {
-            // Swap dates nếu FromDate > ToDate
             (filter.FromDate, filter.ToDate) = (filter.ToDate, filter.FromDate);
         }
 
@@ -264,9 +241,7 @@ public class OrderHistoryController : Controller
     }
 }
 
-/// <summary>
-/// Helper class cho dropdown
-/// </summary>
+// Helper class cho dropdown trong View
 public class SelectListItem
 {
     public string Value { get; set; } = string.Empty;

@@ -6,22 +6,20 @@ using Fruitables.ViewModels;
 
 namespace Fruitables.Controllers;
 
-/// <summary>
-/// Controller quản lý thông tin profile người dùng
-/// </summary>
+// Controller quản lý hồ sơ người dùng: xem, sửa, upload/xóa avatar.
+// Yêu cầu đăng nhập ([Authorize]).
 [Authorize]
 public class ProfileController : Controller
 {
     private readonly IProfileService _profileService;
 
+    // Inject profile service (CRUD thông tin + avatar)
     public ProfileController(IProfileService profileService)
     {
         _profileService = profileService;
     }
 
-    /// <summary>
-    /// GET: /Profile - Xem thông tin profile
-    /// </summary>
+    // GET: /Profile — xem thông tin cá nhân
     [HttpGet]
     public async Task<IActionResult> Index()
     {
@@ -41,9 +39,7 @@ public class ProfileController : Controller
         return View(result.Profile);
     }
 
-    /// <summary>
-    /// GET: /Profile/Edit - Form chỉnh sửa profile
-    /// </summary>
+    // GET: /Profile/Edit — form chỉnh sửa profile
     [HttpGet]
     public async Task<IActionResult> Edit()
     {
@@ -60,6 +56,7 @@ public class ProfileController : Controller
             return RedirectToAction(nameof(Index));
         }
 
+        // Map profile sang UpdateProfileRequest để pre-fill form
         var model = new UpdateProfileRequest
         {
             UserId = result.Profile!.Id,
@@ -71,9 +68,7 @@ public class ProfileController : Controller
         return View(model);
     }
 
-    /// <summary>
-    /// POST: /Profile/Edit - Lưu thông tin profile
-    /// </summary>
+    // POST: /Profile/Edit — lưu thông tin
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(UpdateProfileRequest model)
@@ -86,6 +81,7 @@ public class ProfileController : Controller
 
         model.UserId = userId.Value;
 
+        // Validate form
         if (!ModelState.IsValid)
         {
             var profileResult = await _profileService.GetProfileAsync(userId.Value);
@@ -106,9 +102,7 @@ public class ProfileController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    /// <summary>
-    /// POST: /Profile/UploadAvatar - Upload avatar mới
-    /// </summary>
+    // POST: /Profile/UploadAvatar — upload ảnh đại diện
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> UploadAvatar(IFormFile avatar)
@@ -119,6 +113,7 @@ public class ProfileController : Controller
             return RedirectToAction("Login", "Account");
         }
 
+        // Kiểm tra file được chọn
         if (avatar == null || avatar.Length == 0)
         {
             TempData["ErrorMessage"] = "Vui lòng chọn file ảnh";
@@ -136,9 +131,7 @@ public class ProfileController : Controller
         return RedirectToAction(nameof(Edit));
     }
 
-    /// <summary>
-    /// POST: /Profile/DeleteAvatar - Xóa avatar
-    /// </summary>
+    // POST: /Profile/DeleteAvatar — xóa ảnh đại diện
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteAvatar()
@@ -160,9 +153,7 @@ public class ProfileController : Controller
         return RedirectToAction(nameof(Edit));
     }
 
-    /// <summary>
-    /// Lấy userId từ claims
-    /// </summary>
+    // Helper: lấy userId từ claims cookie
     private int? GetCurrentUserId()
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;

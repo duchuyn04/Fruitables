@@ -3,6 +3,7 @@ using Fruitables.Services.Interfaces;
 
 namespace Fruitables.Controllers;
 
+// Controller hiển thị trang testimonials (cảm nhận khách hàng).
 public class TestimonialController : Controller
 {
     private readonly ITestimonialService _testimonialService;
@@ -14,6 +15,7 @@ public class TestimonialController : Controller
         _cartService = cartService;
     }
 
+    // GET: Danh sách testimonials đang active
     public async Task<IActionResult> Index()
     {
         var sessionId = GetSessionId();
@@ -22,6 +24,7 @@ public class TestimonialController : Controller
         return View(testimonials);
     }
 
+    // Helper: lấy/tạo SessionId
     private string GetSessionId()
     {
         var sessionId = HttpContext.Session.GetString("SessionId");

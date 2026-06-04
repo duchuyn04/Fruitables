@@ -198,12 +198,16 @@ public class OrderRepository : Repository<Order>, IOrderRepository
             order.Status = OrderStatus.Cancelled;
             order.CancelReason = cancelReason;
 
-            // 3. Restore stock for each product
+            // 3. Restore stock for each product in batch
             var restoredItems = new List<StockRestoreItem>();
+            var productIds = order.Items.Select(item => item.ProductId).Distinct().ToList();
+            var products = await _context.Products
+                .Where(p => productIds.Contains(p.Id))
+                .ToDictionaryAsync(p => p.Id);
+
             foreach (var item in order.Items)
             {
-                var product = await _context.Products.FindAsync(item.ProductId);
-                if (product != null)
+                if (products.TryGetValue(item.ProductId, out var product))
                 {
                     product.StockQuantity += item.Quantity;
                     restoredItems.Add(new StockRestoreItem

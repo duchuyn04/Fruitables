@@ -3,53 +3,33 @@ using Fruitables.ViewModels;
 
 namespace Fruitables.Repositories.Interfaces;
 
-/// <summary>
-/// Repository interface cho Review entity
-/// </summary>
+// Interface repository cho Review entity: thêm các truy vấn đặc thù ngoài CRUD cơ bản.
 public interface IReviewRepository : IRepository<Review>
 {
-    /// <summary>
-    /// Lấy reviews của sản phẩm với pagination và filtering
-    /// </summary>
+    // Lấy danh sách review của 1 sản phẩm với phân trang, sắp xếp, lọc
     Task<PagedResult<Review>> GetProductReviewsAsync(ReviewFilterDto filter);
     
-    /// <summary>
-    /// Lấy review theo ID với includes
-    /// </summary>
+    // Lấy 1 review kèm thông tin user + product (includes)
     Task<Review?> GetReviewWithDetailsAsync(int reviewId);
     
-    /// <summary>
-    /// Lấy review của user cho sản phẩm cụ thể
-    /// </summary>
+    // Lấy review của 1 user cho 1 sản phẩm cụ thể (kiểm tra đã review chưa)
     Task<Review?> GetUserReviewForProductAsync(int userId, int productId);
     
-    /// <summary>
-    /// Lấy thống kê reviews của sản phẩm
-    /// </summary>
+    // Thống kê đánh giá sản phẩm: điểm TB, phân bố sao, tổng số review
     Task<ReviewStatistics> GetProductReviewStatisticsAsync(int productId);
     
-    /// <summary>
-    /// Lấy tất cả reviews cho admin với pagination và filtering
-    /// </summary>
+    // Lấy tất cả reviews cho admin (phân trang + filter theo trạng thái, ngày, search)
     Task<PagedResult<Review>> GetAllReviewsForAdminAsync(ReviewAdminFilterDto filter);
     
-    /// <summary>
-    /// Kiểm tra user đã review sản phẩm chưa
-    /// </summary>
+    // Kiểm tra user đã review sản phẩm chưa (true/false)
     Task<bool> HasUserReviewedProductAsync(int userId, int productId);
     
-    /// <summary>
-    /// Đếm số reviews của user trong khoảng thời gian
-    /// </summary>
+    // Đếm số reviews của user trong khoảng thời gian (giới hạn spam)
     Task<int> CountUserReviewsInPeriodAsync(int userId, DateTime fromDate);
     
-    /// <summary>
-    /// Lấy reviews cần kiểm duyệt (pending)
-    /// </summary>
+    // Lấy danh sách review chờ kiểm duyệt (pending moderation)
     Task<List<Review>> GetPendingReviewsAsync();
     
-    /// <summary>
-    /// Lấy reviews bị báo cáo nhiều
-    /// </summary>
+    // Lấy review bị báo cáo nhiều lần (theo ngưỡng minReportCount)
     Task<List<Review>> GetReportedReviewsAsync(int minReportCount = 1);
 }

@@ -7,6 +7,8 @@ using Fruitables.ViewModels;
 
 namespace Fruitables.Controllers;
 
+// Controller đánh giá sản phẩm: CRUD + report + mark helpful + debug.
+// Yêu cầu đăng nhập ([Authorize]), ngoại trừ GetReviews (AllowAnonymous).
 [Authorize]
 [Route("[controller]")]
 public class ReviewController : Controller
@@ -20,15 +22,14 @@ public class ReviewController : Controller
         _logger = logger;
     }
 
-    /// <summary>
-    /// Tạo review mới
-    /// </summary>
+    // POST: /Review/Create — tạo đánh giá mới (JSON body)
     [HttpPost("Create")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create([FromBody] CreateReviewDto dto)
     {
         try
         {
+            // Validate input
             if (!ModelState.IsValid)
             {
                 return BadRequest(new { success = false, message = "Dữ liệu không hợp lệ", errors = ModelState });
@@ -51,9 +52,7 @@ public class ReviewController : Controller
         }
     }
 
-    /// <summary>
-    /// Cập nhật review
-    /// </summary>
+    // PUT: /Review/{id} — cập nhật đánh giá
     [HttpPut("{id}")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(int id, [FromBody] UpdateReviewDto dto)
@@ -82,9 +81,7 @@ public class ReviewController : Controller
         }
     }
 
-    /// <summary>
-    /// Xóa review
-    /// </summary>
+    // DELETE: /Review/{id} — xóa đánh giá
     [HttpDelete("{id}")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(int id)
@@ -108,9 +105,7 @@ public class ReviewController : Controller
         }
     }
 
-    /// <summary>
-    /// Báo cáo review vi phạm
-    /// </summary>
+    // POST: /Review/{id}/report — báo cáo vi phạm
     [HttpPost("{id}/report")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Report(int id, [FromBody] ReportReviewDto dto)
@@ -139,6 +134,7 @@ public class ReviewController : Controller
         }
     }
 
+    // POST: /Review/{id}/helpful — đánh dấu hữu ích
     [HttpPost("{id}/helpful")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> MarkHelpful(int id)
@@ -162,9 +158,7 @@ public class ReviewController : Controller
         }
     }
 
-    /// <summary>
-    /// Kiểm tra user có thể review sản phẩm không
-    /// </summary>
+    // GET: /Review/can-review/{productId} — kiểm tra user có được review sản phẩm không
     [HttpGet("can-review/{productId}")]
     public async Task<IActionResult> CanReview(int productId)
     {
@@ -181,9 +175,8 @@ public class ReviewController : Controller
             return StatusCode(500, new { canReview = false });
         }
     }
-    /// <summary>
-    /// Kiểm tra chi tiết quyền review của user (dùng để debug)
-    /// </summary>
+
+    // GET: /Review/check-permission/{productId} — debug chi tiết quyền review
     [HttpGet("check-permission/{productId}")]
     public async Task<IActionResult> CheckPermission(int productId)
     {
@@ -209,17 +202,13 @@ public class ReviewController : Controller
         }
     }
 
-    /// <summary>
-    /// Debug: Xem đơn hàng của user có chứa sản phẩm nào
-    /// </summary>
+    // GET: /Review/debug-orders/{productId} — debug xem user có đơn mua sản phẩm không
     [HttpGet("debug-orders/{productId}")]
     public async Task<IActionResult> DebugOrders(int productId)
     {
         try
         {
             var userId = GetCurrentUserId();
-            
-            // Lấy tất cả đơn hàng của user
             var orders = await _reviewService.GetUserOrdersWithProductAsync(userId, productId);
 
             return Ok(new
@@ -236,14 +225,14 @@ public class ReviewController : Controller
         }
     }
 
-    
-    // Lấy danh sách review qua AJAX (không reload trang)
+    // GET: /Review/GetReviews — lấy danh sách review qua AJAX (không cần login)
     [HttpGet("GetReviews")]
     [AllowAnonymous]
     public async Task<IActionResult> GetReviews(int productId, string sortBy = "newest", int page = 1)
     {
         try
         {
+            // Parse sortBy string sang enum, mặc định Newest
             ReviewSortBy sortByEnum = ReviewSortBy.Newest;
             if (!string.IsNullOrEmpty(sortBy) && Enum.TryParse<ReviewSortBy>(sortBy, true, out var parsedSort))
             {
@@ -291,12 +280,14 @@ public class ReviewController : Controller
         }
     }
 
+    // Helper: lấy userId, throw nếu chưa đăng nhập
     private int GetCurrentUserId()
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         return int.Parse(userIdClaim ?? "0");
     }
 
+    // Helper: lấy userId, trả 0 nếu anonymous (dùng cho GetReviews)
     private int GetCurrentUserIdOrZero()
     {
         if (User.Identity?.IsAuthenticated == true)

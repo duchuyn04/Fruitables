@@ -78,26 +78,29 @@ public class DashboardService : IDashboardService
     public async Task<RevenueStatistics> GetRevenueStatisticsAsync()
     {
         var today = DateTime.UtcNow.Date;
+        var tomorrow = today.AddDays(1);
         var firstDayOfMonth = new DateTime(today.Year, today.Month, 1, 0, 0, 0, DateTimeKind.Utc);
         var firstDayOfLastMonth = firstDayOfMonth.AddMonths(-1);
 
-        var paidOrders = await _unitOfWork.Orders.Query()
-            .Where(o => o.PaymentStatus == PaymentStatus.Paid)
-            .ToListAsync();
+        var query = _unitOfWork.Orders.Query()
+            .Where(o => o.PaymentStatus == PaymentStatus.Paid);
 
-        var totalRevenue = paidOrders.Sum(o => o.Total);
+        // Project counts and sums in a single query
+        var stats = await query
+            .GroupBy(o => 1)
+            .Select(g => new
+            {
+                Total = g.Sum(o => o.Total),
+                Today = g.Sum(o => o.CreatedAt >= today && o.CreatedAt < tomorrow ? o.Total : 0),
+                ThisMonth = g.Sum(o => o.CreatedAt >= firstDayOfMonth ? o.Total : 0),
+                LastMonth = g.Sum(o => o.CreatedAt >= firstDayOfLastMonth && o.CreatedAt < firstDayOfMonth ? o.Total : 0)
+            })
+            .FirstOrDefaultAsync();
 
-        var todayRevenue = paidOrders
-            .Where(o => o.CreatedAt.Date == today)
-            .Sum(o => o.Total);
-
-        var monthlyRevenue = paidOrders
-            .Where(o => o.CreatedAt >= firstDayOfMonth)
-            .Sum(o => o.Total);
-
-        var lastMonthRevenue = paidOrders
-            .Where(o => o.CreatedAt >= firstDayOfLastMonth && o.CreatedAt < firstDayOfMonth)
-            .Sum(o => o.Total);
+        var totalRevenue = stats?.Total ?? 0;
+        var todayRevenue = stats?.Today ?? 0;
+        var monthlyRevenue = stats?.ThisMonth ?? 0;
+        var lastMonthRevenue = stats?.LastMonth ?? 0;
 
         decimal growthPercent = 0;
         if (lastMonthRevenue > 0)
@@ -106,7 +109,7 @@ public class DashboardService : IDashboardService
         }
         else if (monthlyRevenue > 0)
         {
-            growthPercent = 100; // Từ 0 lên có doanh thu = 100% growth
+            growthPercent = 100;
         }
 
         return new RevenueStatistics
@@ -123,16 +126,29 @@ public class DashboardService : IDashboardService
         var today = DateTime.UtcNow.Date;
         var tomorrow = today.AddDays(1);
 
-        var orders = await _unitOfWork.Orders.Query().ToListAsync();
+        var query = _unitOfWork.Orders.Query();
+
+        var stats = await query
+            .GroupBy(o => 1)
+            .Select(g => new
+            {
+                Total = g.Count(),
+                Today = g.Count(o => o.CreatedAt >= today && o.CreatedAt < tomorrow),
+                Pending = g.Count(o => o.Status == OrderStatus.Pending),
+                Processing = g.Count(o => o.Status == OrderStatus.Processing),
+                Delivered = g.Count(o => o.Status == OrderStatus.Delivered),
+                Cancelled = g.Count(o => o.Status == OrderStatus.Cancelled)
+            })
+            .FirstOrDefaultAsync();
 
         return new OrderStatistics
         {
-            TotalOrders = orders.Count,
-            TodayOrders = orders.Count(o => o.CreatedAt >= today && o.CreatedAt < tomorrow),
-            PendingOrders = orders.Count(o => o.Status == OrderStatus.Pending),
-            ProcessingOrders = orders.Count(o => o.Status == OrderStatus.Processing),
-            DeliveredOrders = orders.Count(o => o.Status == OrderStatus.Delivered),
-            CancelledOrders = orders.Count(o => o.Status == OrderStatus.Cancelled)
+            TotalOrders = stats?.Total ?? 0,
+            TodayOrders = stats?.Today ?? 0,
+            PendingOrders = stats?.Pending ?? 0,
+            ProcessingOrders = stats?.Processing ?? 0,
+            DeliveredOrders = stats?.Delivered ?? 0,
+            CancelledOrders = stats?.Cancelled ?? 0
         };
     }
 
@@ -141,45 +157,79 @@ public class DashboardService : IDashboardService
         // Xử lý threshold âm
         var threshold = Math.Max(0, lowStockThreshold);
 
-        var products = await _unitOfWork.Products.Query().ToListAsync();
-        var activeProducts = products.Where(p => p.IsActive).ToList();
+        var query = _unitOfWork.Products.Query();
+
+        var stats = await query
+            .GroupBy(p => 1)
+            .Select(g => new
+            {
+                Total = g.Count(),
+                Active = g.Count(p => p.IsActive),
+                OutOfStock = g.Count(p => p.StockQuantity <= 0),
+                LowStock = g.Count(p => p.StockQuantity > 0 && p.StockQuantity <= threshold),
+                TotalStock = g.Where(p => p.IsActive).Sum(p => p.StockQuantity)
+            })
+            .FirstOrDefaultAsync();
 
         return new InventoryStatistics
         {
-            TotalProducts = products.Count,
-            ActiveProducts = activeProducts.Count,
-            OutOfStockProducts = products.Count(p => p.StockQuantity <= 0),
-            LowStockProducts = products.Count(p => p.StockQuantity > 0 && p.StockQuantity <= threshold),
-            TotalStockQuantity = activeProducts.Sum(p => p.StockQuantity)
+            TotalProducts = stats?.Total ?? 0,
+            ActiveProducts = stats?.Active ?? 0,
+            OutOfStockProducts = stats?.OutOfStock ?? 0,
+            LowStockProducts = stats?.LowStock ?? 0,
+            TotalStockQuantity = stats?.TotalStock ?? 0
         };
     }
 
     public async Task<GrowthChartData> GetGrowthChartDataAsync(ChartPeriod period)
     {
-        var result = new GrowthChartData();
         var today = DateTime.UtcNow.Date;
-
-        var paidOrders = await _unitOfWork.Orders.Query()
-            .Where(o => o.PaymentStatus == PaymentStatus.Paid)
-            .ToListAsync();
+        DateTime minDate = today;
 
         switch (period)
         {
             case ChartPeriod.Last7Days:
-                result = BuildDailyChartData(paidOrders, today, 7);
+                minDate = today.AddDays(-6);
                 break;
             case ChartPeriod.Last30Days:
-                result = BuildDailyChartData(paidOrders, today, 30);
+                minDate = today.AddDays(-29);
                 break;
             case ChartPeriod.Last12Months:
-                result = BuildMonthlyChartData(paidOrders, today, 12);
+                minDate = new DateTime(today.Year, today.Month, 1).AddMonths(-11);
+                break;
+        }
+
+        var query = _unitOfWork.Orders.Query()
+            .AsNoTracking()
+            .Where(o => o.PaymentStatus == PaymentStatus.Paid && o.CreatedAt >= minDate);
+
+        var orders = await query
+            .Select(o => new OrderDto 
+            { 
+                CreatedAt = o.CreatedAt, 
+                Total = o.Total 
+            })
+            .ToListAsync();
+
+        var result = new GrowthChartData();
+
+        switch (period)
+        {
+            case ChartPeriod.Last7Days:
+                result = BuildDailyChartData(orders, today, 7);
+                break;
+            case ChartPeriod.Last30Days:
+                result = BuildDailyChartData(orders, today, 30);
+                break;
+            case ChartPeriod.Last12Months:
+                result = BuildMonthlyChartData(orders, today, 12);
                 break;
         }
 
         return result;
     }
 
-    private static GrowthChartData BuildDailyChartData(List<Order> orders, DateTime today, int days)
+    private static GrowthChartData BuildDailyChartData(List<OrderDto> orders, DateTime today, int days)
     {
         var result = new GrowthChartData();
 
@@ -196,7 +246,7 @@ public class DashboardService : IDashboardService
         return result;
     }
 
-    private static GrowthChartData BuildMonthlyChartData(List<Order> orders, DateTime today, int months)
+    private static GrowthChartData BuildMonthlyChartData(List<OrderDto> orders, DateTime today, int months)
     {
         var result = new GrowthChartData();
 
@@ -212,5 +262,11 @@ public class DashboardService : IDashboardService
         }
 
         return result;
+    }
+
+    private class OrderDto
+    {
+        public DateTime CreatedAt { get; set; }
+        public decimal Total { get; set; }
     }
 }

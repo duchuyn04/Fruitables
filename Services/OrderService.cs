@@ -21,8 +21,41 @@ public class OrderService : IOrderService
     public async Task<Order> CreateOrderAsync(CheckoutViewModel model, string sessionId, int? userId = null)
     {
         var cart = await _cartService.GetCartAsync(sessionId);
-        
-        // Use shipping fee from model.Cart if available (snapshot from checkout), otherwise from fresh cart
+
+        // Load products batch and validate before any mutation.
+        var productIds = cart.Items.Select(i => i.ProductId).Distinct().ToList();
+        var products = await _unitOfWork.Products.Query()
+            .Where(p => productIds.Contains(p.Id))
+            .ToDictionaryAsync(p => p.Id);
+
+        var missingProductIds = productIds.Except(products.Keys).ToList();
+        if (missingProductIds.Any())
+        {
+            throw new InvalidOperationException("Một số sản phẩm không tồn tại trong hệ thống.");
+        }
+
+        // Group cart lines by product so duplicate lines don't bypass the stock check.
+        // Reused for validation, in-memory mutation, and atomic conditional update.
+        var productGroups = cart.Items
+            .GroupBy(i => i.ProductId)
+            .Select(g => new
+            {
+                ProductId = g.Key,
+                Quantity = g.Sum(i => i.Quantity),
+                ProductNames = g.Select(i => i.ProductName).Distinct().ToList()
+            })
+            .ToList();
+
+        var insufficientGroups = productGroups
+            .Where(g => !products.ContainsKey(g.ProductId) || products[g.ProductId].StockQuantity < g.Quantity)
+            .ToList();
+        if (insufficientGroups.Any())
+        {
+            var itemNames = string.Join(", ", insufficientGroups.SelectMany(g => g.ProductNames).Distinct());
+            throw new InvalidOperationException($"Các sản phẩm sau không đủ số lượng tồn kho: {itemNames}");
+        }
+
+        // Use shipping fee from model.Cart if available (snapshot from checkout), otherwise from fresh cart.
         var shippingFee = model.Cart?.ShippingFee ?? cart.ShippingFee;
 
         var order = new Order
@@ -31,7 +64,7 @@ public class OrderService : IOrderService
             OrderNumber = GenerateOrderNumber(),
             Status = OrderStatus.Pending,
             Subtotal = cart.Subtotal,
-            ShippingFee = shippingFee, // Use snapshot shipping fee (Requirements 6.3, 8.1, 8.2)
+            ShippingFee = shippingFee, // Snapshot shipping fee (Requirements 6.3, 8.1, 8.2).
             Discount = cart.Discount,
             Total = cart.Subtotal + shippingFee - cart.Discount,
             PaymentMethod = model.PaymentMethod,
@@ -40,7 +73,7 @@ public class OrderService : IOrderService
             Notes = model.Notes
         };
 
-        // Add order items and deduct stock
+        // Build order items (stock deduction is handled atomically inside the transaction below).
         foreach (var item in cart.Items)
         {
             order.Items.Add(new OrderItem
@@ -51,32 +84,25 @@ public class OrderService : IOrderService
                 Price = item.Price,
                 Total = item.Total
             });
-
-            // Deduct stock immediately when order is placed
-            var product = await _unitOfWork.Products.GetByIdAsync(item.ProductId);
-            if (product != null)
-            {
-                product.StockQuantity -= item.Quantity;
-            }
         }
 
-        // Handle address - either use selected address or create new one
+        // Resolve the shipping address. New address is queued but not saved until the transaction commits.
         Address? shippingAddress = null;
-        
+
         if (model.SelectedAddressId.HasValue)
         {
-            // Use existing address
             shippingAddress = await _unitOfWork.Addresses.GetByIdAsync(model.SelectedAddressId.Value);
-            order.AddressId = model.SelectedAddressId.Value;
+            if (shippingAddress != null)
+            {
+                order.AddressId = shippingAddress.Id;
+            }
         }
         else if (!string.IsNullOrEmpty(model.StreetAddress))
         {
-            // Create new address
-            var fullName = model.FullName ?? model.FirstName.Trim();
             shippingAddress = new Address
             {
                 UserId = userId,
-                FullName = fullName,
+                FullName = !string.IsNullOrEmpty(model.FullName) ? model.FullName : model.FirstName.Trim(),
                 Phone = model.Mobile,
                 ProvinceCode = model.ProvinceCode,
                 ProvinceName = model.ProvinceName ?? string.Empty,
@@ -88,23 +114,81 @@ public class OrderService : IOrderService
                 IsDefault = false,
                 CreatedAt = DateTime.UtcNow.AddHours(7)
             };
-            
-            await _unitOfWork.Addresses.AddAsync(shippingAddress);
-            await _unitOfWork.SaveChangesAsync(); // Save to get ID
-            
-            order.AddressId = shippingAddress.Id;
         }
 
-        // Create snapshot of shipping address
         if (shippingAddress != null)
         {
             order.ShippingSnapshot = AddressSnapshotHelper.ToSnapshot(shippingAddress);
         }
 
-        await _unitOfWork.Orders.AddAsync(order);
-        await _unitOfWork.SaveChangesAsync();
+        // Stage the new address + order + stock changes; one save commits all of them.
+        if (model.SelectedAddressId == null && !string.IsNullOrEmpty(model.StreetAddress) && shippingAddress != null)
+        {
+            await _unitOfWork.Addresses.AddAsync(shippingAddress);
+            order.Address = shippingAddress;
+        }
 
-        // Clear cart after order
+        await _unitOfWork.Orders.AddAsync(order);
+
+        // InMemory provider does not support transactions or ExecuteUpdateAsync.
+        var providerName = _unitOfWork.DatabaseProviderName ?? string.Empty;
+        var isInMemory = providerName.Contains("InMemory");
+        Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction? transaction = null;
+        if (!isInMemory)
+        {
+            transaction = await _unitOfWork.BeginTransactionAsync();
+        }
+
+        try
+        {
+            if (isInMemory)
+            {
+                // InMemory: mutate tracked entities directly.
+                foreach (var group in productGroups)
+                {
+                    if (products.TryGetValue(group.ProductId, out var product))
+                    {
+                        product.StockQuantity -= group.Quantity;
+                    }
+                }
+            }
+            else
+            {
+                // Atomic conditional update: deduct stock only if sufficient remains.
+                // Prevents oversell when two requests race on the same product.
+                foreach (var group in productGroups)
+                {
+                    var rows = await _unitOfWork.Products.Query()
+                        .Where(p => p.Id == group.ProductId && p.StockQuantity >= group.Quantity)
+                        .ExecuteUpdateAsync(s => s.SetProperty(p => p.StockQuantity, p => p.StockQuantity - group.Quantity));
+
+                    if (rows == 0)
+                    {
+                        throw new InvalidOperationException($"Sản phẩm mã {group.ProductId} không đủ số lượng tồn kho.");
+                    }
+                }
+            }
+
+            await _unitOfWork.SaveChangesAsync();
+            if (transaction != null)
+            {
+                await transaction.CommitAsync();
+            }
+        }
+        catch
+        {
+            if (transaction != null)
+            {
+                await transaction.RollbackAsync();
+            }
+            throw;
+        }
+        finally
+        {
+            transaction?.Dispose();
+        }
+
+        // Clear cart only after the order and stock changes have committed.
         await _cartService.ClearCartAsync(sessionId);
 
         return order;

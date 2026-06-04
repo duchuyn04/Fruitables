@@ -44,4 +44,9 @@ public interface IUnitOfWork : IDisposable
     IRepository<RbacAuditLog> RbacAuditLogs { get; }
     
     Task<int> SaveChangesAsync();
+
+    // Exposed so services can wrap atomic flows (e.g. order create, role assign).
+    Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction BeginTransaction();
+    Task<Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction> BeginTransactionAsync();
+    string? DatabaseProviderName { get; }
 }

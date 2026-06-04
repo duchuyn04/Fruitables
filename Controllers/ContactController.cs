@@ -3,17 +3,20 @@ using Fruitables.Services.Interfaces;
 
 namespace Fruitables.Controllers;
 
+// Controller trang liên hệ: hiển thị form + gửi tin nhắn.
 public class ContactController : Controller
 {
     private readonly IContactService _contactService;
     private readonly ICartService _cartService;
 
+    // Inject 2 service: contact (gửi tin nhắn), cart (đếm giỏ hàng)
     public ContactController(IContactService contactService, ICartService cartService)
     {
         _contactService = contactService;
         _cartService = cartService;
     }
 
+    // GET: Hiển thị form liên hệ
     public async Task<IActionResult> Index()
     {
         var sessionId = GetSessionId();
@@ -21,10 +24,12 @@ public class ContactController : Controller
         return View();
     }
 
+    // POST: Gửi tin nhắn liên hệ
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> SendMessage(string name, string email, string message)
     {
+        // Validate required fields
         if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(email) || string.IsNullOrEmpty(message))
         {
             TempData["Error"] = "Please fill in all fields.";
@@ -36,6 +41,7 @@ public class ContactController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    // Helper: lấy/tạo SessionId
     private string GetSessionId()
     {
         var sessionId = HttpContext.Session.GetString("SessionId");

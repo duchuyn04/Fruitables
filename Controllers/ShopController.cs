@@ -5,6 +5,7 @@ using System.Security.Claims;
 
 namespace Fruitables.Controllers;
 
+// Controller cửa hàng: danh sách sản phẩm (có lọc/tìm kiếm/phân trang) và chi tiết sản phẩm.
 public class ShopController : Controller
 {
     private readonly IProductService _productService;
@@ -12,6 +13,7 @@ public class ShopController : Controller
     private readonly ICartService _cartService;
     private readonly IReviewService _reviewService;
 
+    // Inject 4 service: product, category (tree + filter), cart (đếm giỏ hàng), review (hiển thị đánh giá)
     public ShopController(
         IProductService productService,
         ICategoryService categoryService,
@@ -24,6 +26,7 @@ public class ShopController : Controller
         _reviewService = reviewService;
     }
 
+    // GET: /Shop — danh sách sản phẩm với lọc (category, search, price, sort) + phân trang
     public async Task<IActionResult> Index(int? categoryId, string? search, decimal? minPrice, decimal? maxPrice, string? sortBy, int page = 1)
     {
         var sessionId = GetSessionId();
@@ -33,8 +36,7 @@ public class ShopController : Controller
         return View(viewModel);
     }
 
-
-    // Backward compatibility: redirect /Shop/Detail/7 → /Shop/Detail/ten-san-pham
+    // GET: /Shop/Detail/{id} — redirect từ ID cũ sang slug mới (301 permanent)
     [Route("Shop/Detail/{id:int}")]
     public async Task<IActionResult> DetailById(int id)
     {
@@ -43,8 +45,8 @@ public class ShopController : Controller
         return RedirectPermanent($"/Shop/Detail/{product.Slug}");
     }
 
+    // GET: /Shop/Detail/{slug} — chi tiết sản phẩm + related products + review
     [Route("Shop/Detail/{slug}")]
-
     public async Task<IActionResult> Detail(string? slug, int page = 1, string? sortBy = null)
     {
         if (string.IsNullOrEmpty(slug)) return NotFound();
@@ -55,28 +57,27 @@ public class ShopController : Controller
         var product = await _productService.GetProductBySlugAsync(slug);
         if (product == null) return NotFound();
 
-        var id = product.Id; // Get ID for other services
+        var id = product.Id;
 
         ViewBag.RelatedProducts = await _productService.GetRelatedProductsAsync(id, 4);
-        // Lấy cây categories đầy đủ để hiển thị ở sidebar
         ViewBag.CategoryTree = await _categoryService.GetCategoryTreeAsync();
         ViewBag.FeaturedProducts = await _productService.GetFeaturedProductsAsync(3);
 
-        // Load review data
+        // Load thông tin đánh giá
         var userId = GetCurrentUserId();
         
-        // Get review statistics
+        // Thống kê đánh giá (sao, số lượng)
         var statistics = await _reviewService.GetProductReviewStatisticsAsync(id);
         ViewBag.ReviewStatistics = statistics;
 
-        // Parse sortBy string to enum
+        // Parse sortBy string sang enum
         ReviewSortBy sortByEnum = ReviewSortBy.Newest;
         if (!string.IsNullOrEmpty(sortBy) && Enum.TryParse<ReviewSortBy>(sortBy, true, out var parsedSort))
         {
             sortByEnum = parsedSort;
         }
 
-        // Get reviews with pagination
+        // Danh sách review có phân trang
         var reviewFilter = new ReviewFilterDto
         {
             ProductId = id,
@@ -87,7 +88,7 @@ public class ShopController : Controller
         var reviews = await _reviewService.GetProductReviewsAsync(reviewFilter, userId);
         ViewBag.Reviews = reviews;
 
-        // Check if user can review
+        // Kiểm tra user hiện tại có được review không
         ViewBag.CanReview = false;
         if (userId > 0)
         {
@@ -97,6 +98,7 @@ public class ShopController : Controller
         return View(product);
     }
 
+    // Helper: lấy/tạo SessionId cho giỏ hàng
     private string GetSessionId()
     {
         var sessionId = HttpContext.Session.GetString("SessionId");
@@ -108,6 +110,7 @@ public class ShopController : Controller
         return sessionId;
     }
 
+    // Helper: lấy userId từ claims, trả 0 nếu anonymous
     private int GetCurrentUserId()
     {
         if (User.Identity?.IsAuthenticated == true)

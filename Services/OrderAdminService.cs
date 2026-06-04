@@ -111,6 +111,14 @@ public class OrderAdminService : IOrderAdminService
 
     public async Task<OrderResult> UpdateOrderStatusAsync(UpdateOrderStatusRequest request)
     {
+        // The InMemory provider (used by unit tests) does not support transactions; fall back to a single save.
+        var supportsTransactions = !(_context.Database.ProviderName?.Contains("InMemory") ?? false);
+        Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction? transaction = null;
+        if (supportsTransactions)
+        {
+            transaction = await _context.Database.BeginTransactionAsync();
+        }
+
         try
         {
             // Get order with items
@@ -123,63 +131,102 @@ public class OrderAdminService : IOrderAdminService
 
             // Validate status transition
             if (!IsValidStatusTransition(order.Status, request.NewStatus))
-                return OrderResult.Fail(OrderErrorType.InvalidStatusTransition, 
+                return OrderResult.Fail(OrderErrorType.InvalidStatusTransition,
                     $"Không thể chuyển từ {order.Status} sang {request.NewStatus}");
 
-            // Handle stock management
-            // Stock is deducted when order is placed (in OrderService.CreateOrderAsync)
-            // So we only need to restore stock when cancelling, and deduct when restoring from cancelled
+            // Stock is deducted when the order is placed in OrderService.CreateOrderAsync.
+            // Cancel → restore; restore from cancelled → deduct.
             if (request.NewStatus == OrderStatus.Cancelled && order.Status != OrderStatus.Cancelled)
             {
-                // Restore stock when cancelling (stock was deducted when order was placed)
                 await RestoreStockForOrder(order);
             }
             else if (order.Status == OrderStatus.Cancelled && request.NewStatus != OrderStatus.Cancelled)
             {
-                // Deduct stock when restoring from cancelled
                 var insufficientItems = await CheckAndDeductStockForOrder(order);
                 if (insufficientItems.Any())
+                {
+                    if (transaction != null)
+                    {
+                        await transaction.RollbackAsync();
+                    }
                     return OrderResult.FailWithInsufficientStock(insufficientItems);
+                }
             }
 
-            // Update order status
+            // Stage status update + history so a single SaveChanges commits the full atomic flow.
             var oldStatus = order.Status;
             order.Status = request.NewStatus;
+            _context.OrderStatusHistories.Add(new OrderStatusHistory
+            {
+                OrderId = order.Id,
+                OldStatus = oldStatus,
+                NewStatus = request.NewStatus,
+                AdminId = request.AdminId,
+                Notes = request.Notes,
+                CreatedAt = DateTime.UtcNow
+            });
+
             await _context.SaveChangesAsync();
 
-            // Log the change
-            await _logService.LogStatusChangeAsync(order.Id, oldStatus, request.NewStatus, request.AdminId, request.Notes);
+            if (transaction != null)
+            {
+                await transaction.CommitAsync();
+            }
 
             return OrderResult.Ok(order);
         }
         catch (DbUpdateConcurrencyException)
         {
-            return OrderResult.Fail(OrderErrorType.ConcurrencyConflict, 
+            if (transaction != null)
+            {
+                await transaction.RollbackAsync();
+            }
+            return OrderResult.Fail(OrderErrorType.ConcurrencyConflict,
                 "Đơn hàng đã được cập nhật bởi người dùng khác. Vui lòng tải lại dữ liệu.");
+        }
+        catch
+        {
+            if (transaction != null)
+            {
+                await transaction.RollbackAsync();
+            }
+            throw;
+        }
+        finally
+        {
+            transaction?.Dispose();
         }
     }
 
     private async Task RestoreStockForOrder(Order order)
     {
+        var productIds = order.Items.Select(item => item.ProductId).Distinct().ToList();
+        var products = await _context.Products
+            .Where(p => productIds.Contains(p.Id))
+            .ToDictionaryAsync(p => p.Id);
+
         foreach (var item in order.Items)
         {
-            var product = await _context.Products.FindAsync(item.ProductId);
-            if (product != null)
+            if (products.TryGetValue(item.ProductId, out var product))
             {
                 product.StockQuantity += item.Quantity;
             }
         }
-        await _context.SaveChangesAsync();
     }
 
     private async Task<List<InsufficientStockItem>> CheckAndDeductStockForOrder(Order order)
     {
         var insufficientItems = new List<InsufficientStockItem>();
 
+        var productIds = order.Items.Select(item => item.ProductId).Distinct().ToList();
+        var products = await _context.Products
+            .Where(p => productIds.Contains(p.Id))
+            .ToDictionaryAsync(p => p.Id);
+
         // First check if all items have sufficient stock
         foreach (var item in order.Items)
         {
-            var product = await _context.Products.FindAsync(item.ProductId);
+            products.TryGetValue(item.ProductId, out var product);
             if (product == null || product.StockQuantity < item.Quantity)
             {
                 insufficientItems.Add(new InsufficientStockItem
@@ -197,13 +244,11 @@ public class OrderAdminService : IOrderAdminService
         {
             foreach (var item in order.Items)
             {
-                var product = await _context.Products.FindAsync(item.ProductId);
-                if (product != null)
+                if (products.TryGetValue(item.ProductId, out var product))
                 {
                     product.StockQuantity -= item.Quantity;
                 }
             }
-            await _context.SaveChangesAsync();
         }
 
         return insufficientItems;

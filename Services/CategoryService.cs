@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Microsoft.EntityFrameworkCore;
 using Fruitables.Models;
 using Fruitables.Repositories.Interfaces;
 using Fruitables.Services.Interfaces;
@@ -202,22 +203,20 @@ public class CategoryService : ICategoryService
             }
 
             // Delete all products in this category (they have no orders)
+            // Delete product images
+            var images = await _unitOfWork.ProductImages.Query()
+                .Where(pi => productIds.Contains(pi.ProductId))
+                .ToListAsync();
+            _unitOfWork.ProductImages.RemoveRange(images);
+
+            // Delete product variants
+            var variants = await _unitOfWork.ProductVariants.Query()
+                .Where(pv => productIds.Contains(pv.ProductId))
+                .ToListAsync();
+            _unitOfWork.ProductVariants.RemoveRange(variants);
+
             foreach (var product in category.Products.ToList())
             {
-                // Delete product images
-                var images = (await _unitOfWork.ProductImages.FindAsync(pi => pi.ProductId == product.Id)).ToList();
-                foreach (var image in images)
-                {
-                    _unitOfWork.ProductImages.Remove(image);
-                }
-
-                // Delete product variants
-                var variants = (await _unitOfWork.ProductVariants.FindAsync(pv => pv.ProductId == product.Id)).ToList();
-                foreach (var variant in variants)
-                {
-                    _unitOfWork.ProductVariants.Remove(variant);
-                }
-
                 // Clear tags
                 product.Tags.Clear();
 

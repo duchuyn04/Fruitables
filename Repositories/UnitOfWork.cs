@@ -128,6 +128,18 @@ public class UnitOfWork : IUnitOfWork
         return await _context.SaveChangesAsync();
     }
 
+    public Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction BeginTransaction()
+    {
+        return _context.Database.BeginTransaction();
+    }
+
+    public Task<Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction> BeginTransactionAsync()
+    {
+        return _context.Database.BeginTransactionAsync();
+    }
+
+    public string? DatabaseProviderName => _context.Database.ProviderName;
+
     public void Dispose()
     {
         _context.Dispose();

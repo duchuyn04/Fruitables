@@ -6,6 +6,8 @@ using Fruitables.Services.Interfaces;
 
 namespace Fruitables.Controllers;
 
+// Controller quản lý địa chỉ giao hàng của user: CRUD + đặt mặc định.
+// Yêu cầu đăng nhập ([Authorize]).
 [Authorize]
 public class AddressController : Controller
 {
@@ -13,6 +15,7 @@ public class AddressController : Controller
     private readonly IProfileService _profileService;
     private readonly IVietnamAddressService _vietnamAddressService;
 
+    // Inject 3 service: address CRUD, profile (lấy tên/điện thoại), address VN (sanitize + tra cứu)
     public AddressController(
         IAddressService addressService, 
         IProfileService profileService,
@@ -23,7 +26,7 @@ public class AddressController : Controller
         _vietnamAddressService = vietnamAddressService;
     }
 
-    // GET: Address/Index
+    // GET: Danh sách địa chỉ của user
     public async Task<IActionResult> Index()
     {
         var userId = GetCurrentUserId();
@@ -36,7 +39,7 @@ public class AddressController : Controller
         return View(addresses);
     }
 
-    // GET: Address/Create
+    // GET: Form thêm địa chỉ mới
     public async Task<IActionResult> Create()
     {
         var userId = GetCurrentUserId();
@@ -45,7 +48,7 @@ public class AddressController : Controller
             return RedirectToAction("Login", "Account");
         }
 
-        // Pre-fill from user profile if available
+        // Pre-fill tên + SĐT từ profile nếu có
         var address = new Address();
         var profileResult = await _profileService.GetProfileAsync(userId.Value);
         if (profileResult.Success && profileResult.Profile != null)
@@ -57,7 +60,7 @@ public class AddressController : Controller
         return View(address);
     }
 
-    // POST: Address/Create
+    // POST: Xử lý thêm địa chỉ
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(Address address)
@@ -68,6 +71,7 @@ public class AddressController : Controller
             return RedirectToAction("Login", "Account");
         }
 
+        // Validate form
         if (!ModelState.IsValid)
         {
             return View(address);
@@ -75,17 +79,18 @@ public class AddressController : Controller
 
         try
         {
-            // Sanitize StreetAddress to prevent XSS (Requirements 4.3)
+            // Sanitize địa chỉ để chống XSS
             address.StreetAddress = _vietnamAddressService.SanitizeStreetAddress(address.StreetAddress);
             
             var setAsDefault = address.IsDefault;
             address.UserId = userId.Value;
-            address.IsDefault = false; // Let service handle first address default
+            // Để service xử lý: địa chỉ đầu tiên tự động là mặc định
+            address.IsDefault = false;
             
-            // Address model stores all code and name fields (Requirements 5.2)
+            // Tạo địa chỉ mới
             var created = await _addressService.CreateAddressAsync(address);
             
-            // If user checked "set as default", call SetDefaultAddressAsync
+            // Nếu user chọn "đặt làm mặc định" → gọi service set default
             if (setAsDefault)
             {
                 await _addressService.SetDefaultAddressAsync(userId.Value, created.Id);
@@ -94,6 +99,7 @@ public class AddressController : Controller
             TempData["SuccessMessage"] = "Địa chỉ đã được thêm thành công.";
             return RedirectToAction(nameof(Index));
         }
+        // Lỗi business logic từ service
         catch (ArgumentException ex)
         {
             ModelState.AddModelError("", ex.Message);
@@ -101,7 +107,7 @@ public class AddressController : Controller
         }
     }
 
-    // GET: Address/Edit/5
+    // GET: Form chỉnh sửa địa chỉ
     public async Task<IActionResult> Edit(int id)
     {
         var userId = GetCurrentUserId();
@@ -111,6 +117,7 @@ public class AddressController : Controller
         }
 
         var address = await _addressService.GetAddressByIdAsync(id);
+        // Kiểm tra tồn tại + thuộc về user hiện tại
         if (address == null || address.UserId != userId.Value)
         {
             return NotFound();
@@ -119,7 +126,7 @@ public class AddressController : Controller
         return View(address);
     }
 
-    // POST: Address/Edit/5
+    // POST: Xử lý chỉnh sửa địa chỉ
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(int id, Address address)
@@ -130,18 +137,20 @@ public class AddressController : Controller
             return RedirectToAction("Login", "Account");
         }
 
+        // ID trong URL phải khớp với ID trong form
         if (id != address.Id)
         {
             return BadRequest();
         }
 
-        // Verify ownership
+        // Kiểm tra quyền sở hữu
         var existing = await _addressService.GetAddressByIdAsync(id);
         if (existing == null || existing.UserId != userId.Value)
         {
             return NotFound();
         }
 
+        // Validate form
         if (!ModelState.IsValid)
         {
             return View(address);
@@ -149,17 +158,18 @@ public class AddressController : Controller
 
         try
         {
-            // Sanitize StreetAddress to prevent XSS (Requirements 4.3)
+            // Sanitize địa chỉ chống XSS
             address.StreetAddress = _vietnamAddressService.SanitizeStreetAddress(address.StreetAddress);
             
             var setAsDefault = address.IsDefault;
             address.UserId = userId.Value;
-            address.IsDefault = existing.IsDefault; // Keep current default status for update
+            // Giữ nguyên trạng thái default hiện tại khi update
+            address.IsDefault = existing.IsDefault;
             
-            // Address model stores all code and name fields (Requirements 5.2, 8.1)
+            // Cập nhật địa chỉ
             await _addressService.UpdateAddressAsync(address);
             
-            // If user checked "set as default" and it wasn't already default
+            // Nếu user chọn "đặt làm mặc định" và trước đó chưa phải default
             if (setAsDefault && !existing.IsDefault)
             {
                 await _addressService.SetDefaultAddressAsync(userId.Value, id);
@@ -175,7 +185,7 @@ public class AddressController : Controller
         }
     }
 
-    // POST: Address/Delete/5
+    // POST: Xóa địa chỉ
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(int id)
@@ -186,6 +196,7 @@ public class AddressController : Controller
             return RedirectToAction("Login", "Account");
         }
 
+        // Kiểm tra tồn tại + quyền sở hữu
         var address = await _addressService.GetAddressByIdAsync(id);
         if (address == null || address.UserId != userId.Value)
         {
@@ -205,7 +216,7 @@ public class AddressController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    // POST: Address/SetDefault/5
+    // POST: Đặt địa chỉ mặc định (hỗ trợ cả AJAX và form submit)
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> SetDefault(int id)
@@ -213,6 +224,7 @@ public class AddressController : Controller
         var userId = GetCurrentUserId();
         if (!userId.HasValue)
         {
+            // AJAX request → trả JSON
             if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
                 return Json(new { success = false, message = "Unauthorized" });
             return RedirectToAction("Login", "Account");
@@ -228,7 +240,7 @@ public class AddressController : Controller
 
         var result = await _addressService.SetDefaultAddressAsync(userId.Value, id);
         
-        // Return JSON for AJAX requests
+        // AJAX → trả JSON
         if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
         {
             return Json(new { 
@@ -237,6 +249,7 @@ public class AddressController : Controller
             });
         }
         
+        // Form submit → redirect với thông báo
         if (result)
         {
             TempData["SuccessMessage"] = "Địa chỉ mặc định đã được cập nhật.";
@@ -249,7 +262,7 @@ public class AddressController : Controller
         return RedirectToAction(nameof(Index));
     }
     
-    // POST: Address/DeleteAjax/5 - AJAX endpoint
+    // POST: Xóa địa chỉ bằng AJAX (trả JSON, kèm ID địa chỉ mặc định mới nếu có)
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteAjax(int id)
@@ -260,6 +273,7 @@ public class AddressController : Controller
             return Json(new { success = false, message = "Unauthorized" });
         }
 
+        // Kiểm tra tồn tại + quyền sở hữu
         var address = await _addressService.GetAddressByIdAsync(id);
         if (address == null || address.UserId != userId.Value)
         {
@@ -268,7 +282,7 @@ public class AddressController : Controller
 
         var result = await _addressService.DeleteAddressAsync(id);
         
-        // Get new default address ID if any
+        // Sau khi xóa, lấy địa chỉ mặc định mới (nếu có) để frontend cập nhật UI
         int? newDefaultId = null;
         if (result)
         {
@@ -283,12 +297,11 @@ public class AddressController : Controller
         });
     }
 
-    /// <summary>
-    /// Lấy userId từ claims
-    /// </summary>
+    // Helper: Lấy userId từ claims trong cookie
     private int? GetCurrentUserId()
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        // Parse string → int, trả null nếu không hợp lệ
         if (int.TryParse(userIdClaim, out var userId))
         {
             return userId;

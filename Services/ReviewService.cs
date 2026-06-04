@@ -666,30 +666,47 @@ public class ReviewService : IReviewService
     {
         try
         {
-            var allReviews = await _unitOfWork.Reviews.Query().ToListAsync();
             var now = DateTime.UtcNow;
             var today = now.Date;
             var weekAgo = now.AddDays(-7);
             var monthAgo = now.AddMonths(-1);
 
-            var validReviews = allReviews.Where(r => !r.IsDeleted && !r.IsHidden).ToList();
+            var query = _unitOfWork.Reviews.Query();
+            var counts = await query
+                .GroupBy(r => 1)
+                .Select(g => new
+                {
+                    Total = g.Count(),
+                    Pending = g.Sum(r => r.Status == ReviewStatus.Pending && !r.IsDeleted ? 1 : 0),
+                    Approved = g.Sum(r => r.Status == ReviewStatus.Approved && !r.IsDeleted ? 1 : 0),
+                    Rejected = g.Sum(r => r.Status == ReviewStatus.Rejected && !r.IsDeleted ? 1 : 0),
+                    Hidden = g.Sum(r => r.IsHidden && !r.IsDeleted ? 1 : 0),
+                    Deleted = g.Sum(r => r.IsDeleted ? 1 : 0),
+                    Reported = g.Sum(r => r.ReportCount > 0 && !r.IsDeleted ? 1 : 0),
+                    Valid = g.Sum(r => !r.IsDeleted && !r.IsHidden ? 1 : 0),
+                    AverageRating = g.Where(r => !r.IsDeleted && !r.IsHidden).Average(r => (decimal?)r.Rating) ?? 0,
+                    Today = g.Sum(r => r.CreatedAt >= today ? 1 : 0),
+                    Week = g.Sum(r => r.CreatedAt >= weekAgo ? 1 : 0),
+                    Month = g.Sum(r => r.CreatedAt >= monthAgo ? 1 : 0)
+                })
+                .FirstOrDefaultAsync();
 
             var stats = new ReviewAdminStatistics
             {
-                TotalReviews = allReviews.Count,
-                PendingReviews = allReviews.Count(r => r.Status == ReviewStatus.Pending && !r.IsDeleted),
-                ApprovedReviews = allReviews.Count(r => r.Status == ReviewStatus.Approved && !r.IsDeleted),
-                RejectedReviews = allReviews.Count(r => r.Status == ReviewStatus.Rejected && !r.IsDeleted),
-                HiddenReviews = allReviews.Count(r => r.IsHidden && !r.IsDeleted),
-                DeletedReviews = allReviews.Count(r => r.IsDeleted),
-                ReportedReviews = allReviews.Count(r => r.ReportCount > 0 && !r.IsDeleted),
-                ValidReviews = validReviews.Count,
+                TotalReviews = counts?.Total ?? 0,
+                PendingReviews = counts?.Pending ?? 0,
+                ApprovedReviews = counts?.Approved ?? 0,
+                RejectedReviews = counts?.Rejected ?? 0,
+                HiddenReviews = counts?.Hidden ?? 0,
+                DeletedReviews = counts?.Deleted ?? 0,
+                ReportedReviews = counts?.Reported ?? 0,
+                ValidReviews = counts?.Valid ?? 0,
                 TotalReports = await _unitOfWork.ReviewReports.CountAsync(),
                 PendingReports = await _unitOfWork.ReviewReports.CountPendingReportsAsync(),
-                AverageRating = validReviews.Any() ? (decimal)validReviews.Average(r => r.Rating) : 0,
-                ReviewsToday = allReviews.Count(r => r.CreatedAt >= today),
-                ReviewsThisWeek = allReviews.Count(r => r.CreatedAt >= weekAgo),
-                ReviewsThisMonth = allReviews.Count(r => r.CreatedAt >= monthAgo)
+                AverageRating = counts?.AverageRating ?? 0,
+                ReviewsToday = counts?.Today ?? 0,
+                ReviewsThisWeek = counts?.Week ?? 0,
+                ReviewsThisMonth = counts?.Month ?? 0
             };
 
             // Top reviewed products

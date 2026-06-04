@@ -5,12 +5,15 @@ using Fruitables.ViewModels;
 
 namespace Fruitables.Controllers;
 
+// Controller giỏ hàng: thêm/sửa/xóa sản phẩm, tính phí ship, áp dụng mã giảm giá.
+// Hỗ trợ cả form submit và AJAX endpoints. Dùng SessionId để định danh giỏ hàng (guest/anonymous).
 public class CartController : Controller
 {
     private readonly ICartService _cartService;
     private readonly IShippingService _shippingService;
     private readonly ICouponService _couponService;
 
+    // Inject 3 service: cart (CRUD sản phẩm), shipping (tính phí vận chuyển), coupon (mã giảm giá)
     public CartController(ICartService cartService, IShippingService shippingService, ICouponService couponService)
     {
         _cartService = cartService;
@@ -18,6 +21,7 @@ public class CartController : Controller
         _couponService = couponService;
     }
 
+    // GET: Hiển thị giỏ hàng
     public async Task<IActionResult> Index()
     {
         var sessionId = GetSessionId();
@@ -26,6 +30,7 @@ public class CartController : Controller
         return View(cart);
     }
 
+    // POST: Thêm sản phẩm vào giỏ (yêu cầu đăng nhập)
     [HttpPost]
     [Authorize]
     public async Task<IActionResult> AddToCart(int productId, int quantity = 1)
@@ -36,6 +41,7 @@ public class CartController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    // POST: Cập nhật số lượng sản phẩm (form submit)
     [HttpPost]
     public async Task<IActionResult> UpdateQuantity(int productId, int quantity)
     {
@@ -44,6 +50,7 @@ public class CartController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    // POST: Xóa sản phẩm khỏi giỏ (form submit)
     [HttpPost]
     public async Task<IActionResult> RemoveFromCart(int productId)
     {
@@ -52,6 +59,7 @@ public class CartController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    // POST: Cập nhật số lượng bằng AJAX (JSON body) — trả về thông tin giỏ hàng mới
     [HttpPost]
     public async Task<IActionResult> UpdateQuantityAjax([FromBody] UpdateQuantityRequest request)
     {
@@ -85,6 +93,7 @@ public class CartController : Controller
         });
     }
 
+    // POST: Xóa sản phẩm bằng AJAX — trả về thông tin giỏ hàng mới
     [HttpPost]
     public async Task<IActionResult> RemoveFromCartAjax([FromBody] RemoveFromCartRequest request)
     {
@@ -113,6 +122,7 @@ public class CartController : Controller
         });
     }
     
+    // POST: Tính phí vận chuyển bằng AJAX — dùng ShippingService tính theo subtotal + quận/huyện
     [HttpPost]
     public async Task<IActionResult> CalculateShippingAjax([FromBody] CalculateShippingRequest request)
     {
@@ -133,23 +143,27 @@ public class CartController : Controller
         });
     }
 
+    // Request DTO cho cập nhật số lượng
     public class UpdateQuantityRequest
     {
         public int ProductId { get; set; }
         public int Quantity { get; set; }
     }
 
+    // Request DTO cho xóa sản phẩm
     public class RemoveFromCartRequest
     {
         public int ProductId { get; set; }
     }
     
+    // Request DTO cho tính phí ship
     public class CalculateShippingRequest
     {
         public decimal Subtotal { get; set; }
         public string? District { get; set; }
     }
 
+    // POST: Áp dụng mã giảm giá bằng AJAX — gọi cart service apply coupon, trả về giỏ hàng mới
     [HttpPost]
     public async Task<IActionResult> ApplyCouponAjax([FromBody] ApplyCouponAjaxRequest request)
     {
@@ -173,11 +187,13 @@ public class CartController : Controller
         });
     }
 
+    // Request DTO cho áp dụng coupon
     public class ApplyCouponAjaxRequest
     {
         public string? CouponCode { get; set; }
     }
 
+    // POST: Áp dụng mã giảm giá (form submit) — redirect về trang trước hoặc giỏ hàng
     [HttpPost]
     public async Task<IActionResult> ApplyCoupon(string couponCode, string? returnUrl = null)
     {
@@ -189,12 +205,14 @@ public class CartController : Controller
         else
             TempData["CouponError"] = result.ErrorMessage;
 
+        // Redirect về returnUrl nếu hợp lệ (chống open redirect)
         if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
             return Redirect(returnUrl);
 
         return RedirectToAction(nameof(Index));
     }
 
+    // POST: Bỏ mã giảm giá
     [HttpPost]
     public async Task<IActionResult> RemoveCoupon(string? returnUrl = null)
     {
@@ -208,6 +226,7 @@ public class CartController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    // GET: Lấy danh sách mã giảm giá khả dụng (dựa trên subtotal + số lượng item)
     [HttpGet]
     public async Task<IActionResult> GetAvailableCoupons()
     {
@@ -233,6 +252,7 @@ public class CartController : Controller
         }));
     }
 
+    // Helper: lấy/tạo SessionId — cho phép guest user có giỏ hàng riêng (lưu trong session server)
     private string GetSessionId()
     {
         var sessionId = HttpContext.Session.GetString("SessionId");
