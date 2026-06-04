@@ -343,7 +343,12 @@
             
             window.ecommerceHub.on("StockChanged", function(data) {
                 if (data.productId === currentProductId) {
-                    window.location.reload();
+                    if (typeof showRealtimeToast === 'function') {
+                        showRealtimeToast('Có người vừa mua sản phẩm này. Tồn kho đang được cập nhật...', true);
+                        setTimeout(() => window.location.reload(), 2000);
+                    } else {
+                        window.location.reload();
+                    }
                 }
             });
             

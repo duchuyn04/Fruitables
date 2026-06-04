@@ -453,12 +453,22 @@
             
             window.ecommerceHub.on("OrderStatusChanged", function(data) {
                 if (data.orderId === currentOrderId) {
-                    window.location.reload();
+                    if (typeof showRealtimeToast === 'function') {
+                        showRealtimeToast('Trạng thái đơn hàng vừa được cập nhật. Đang tải lại...', false);
+                        setTimeout(() => window.location.reload(), 1500);
+                    } else {
+                        window.location.reload();
+                    }
                 }
             });
             window.ecommerceHub.on("PaymentStatusChanged", function(data) {
                 if (data.orderId === currentOrderId) {
-                    window.location.reload();
+                    if (typeof showRealtimeToast === 'function') {
+                        showRealtimeToast('Trạng thái thanh toán vừa được cập nhật. Đang tải lại...', false);
+                        setTimeout(() => window.location.reload(), 1500);
+                    } else {
+                        window.location.reload();
+                    }
                 }
             });
             
