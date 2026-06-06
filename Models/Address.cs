@@ -9,27 +9,27 @@ public class Address
 
     public int? UserId { get; set; }
 
-    [Required, MaxLength(200)]
+    [Required(ErrorMessage = "Vui lòng nhập họ và tên"), MaxLength(200)]
     public string FullName { get; set; } = string.Empty;
 
-    [Required, MaxLength(20)]
+    [Required(ErrorMessage = "Vui lòng nhập số điện thoại"), MaxLength(20)]
     [RegularExpression(@"^\d{10,11}$", ErrorMessage = "Số điện thoại phải có 10-11 chữ số")]
     public string Phone { get; set; } = string.Empty;
 
     // Structured address fields
-    [Required, MaxLength(20)]
+    [Required(ErrorMessage = "Vui lòng chọn Tỉnh/Thành phố"), MaxLength(20)]
     public string ProvinceCode { get; set; } = string.Empty;
 
-    [Required, MaxLength(100)]
+    [Required(ErrorMessage = "Vui lòng chọn Tỉnh/Thành phố"), MaxLength(100)]
     public string ProvinceName { get; set; } = string.Empty;
 
-    [Required, MaxLength(20)]
+    [Required(ErrorMessage = "Vui lòng chọn Phường/Xã"), MaxLength(20)]
     public string CommuneCode { get; set; } = string.Empty;
 
-    [Required, MaxLength(100)]
+    [Required(ErrorMessage = "Vui lòng chọn Phường/Xã"), MaxLength(100)]
     public string CommuneName { get; set; } = string.Empty;
 
-    [Required, MaxLength(200)]
+    [Required(ErrorMessage = "Vui lòng nhập số nhà, tên đường"), MaxLength(200)]
     public string StreetAddress { get; set; } = string.Empty;
 
     [NotMapped]

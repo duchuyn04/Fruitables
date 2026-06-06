@@ -12,6 +12,7 @@ public class CheckoutViewModel
     // Full name field (combines FirstName + LastName)
     public string? FullName { get; set; }
 
+    [Required(ErrorMessage = "Vui lòng nhập tên")]
     [Display(Name = "First Name")]
     public string FirstName { get; set; } = string.Empty;
 
@@ -22,16 +23,19 @@ public class CheckoutViewModel
     public string? CompanyName { get; set; }
 
     // Structured address fields
+    [Required(ErrorMessage = "Vui lòng chọn Tỉnh/Thành phố")]
     [Display(Name = "Tỉnh/Thành phố")]
     public string ProvinceCode { get; set; } = string.Empty;
 
     public string? ProvinceName { get; set; }
 
+    [Required(ErrorMessage = "Vui lòng chọn Phường/Xã")]
     [Display(Name = "Phường/Xã")]
     public string CommuneCode { get; set; } = string.Empty;
 
     public string? CommuneName { get; set; }
 
+    [Required(ErrorMessage = "Vui lòng nhập số nhà, tên đường")]
     [MaxLength(200, ErrorMessage = "Địa chỉ không được vượt quá 200 ký tự")]
     [Display(Name = "Số nhà, Tên đường")]
     public string StreetAddress { get; set; } = string.Empty;
@@ -44,6 +48,7 @@ public class CheckoutViewModel
     [Display(Name = "Postcode/Zip")]
     public string? Postcode { get; set; }
 
+    [Required(ErrorMessage = "Vui lòng nhập số điện thoại")]
     [RegularExpression(@"^\d{10,11}$", ErrorMessage = "Số điện thoại phải có 10-11 chữ số")]
     public string Mobile { get; set; } = string.Empty;
 
