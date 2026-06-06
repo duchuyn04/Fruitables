@@ -495,3 +495,75 @@
 }
 /*** Footer End ***/
 
+
+/* === RESPONSIVE OFFCANVAS FOR OLD BOOTSTRAP === */
+@media (min-width: 992px) {
+  .offcanvas-lg {
+    position: static !important;
+    z-index: auto;
+    flex-grow: 1;
+    width: auto !important;
+    height: auto !important;
+    visibility: visible !important;
+    background-color: transparent !important;
+    border: 0 !important;
+    transform: none !important;
+    transition: none;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  .offcanvas-lg .offcanvas-header {
+    display: none;
+  }
+  .offcanvas-lg .offcanvas-body {
+    display: flex;
+    flex-grow: 0;
+    padding: 0;
+    overflow-y: visible;
+  }
+}
+
+/* === RESPONSIVE NAVBAR COLLAPSE AS OFFCANVAS ON MOBILE === */
+@media (max-width: 991.98px) {
+  .navbar-collapse {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 300px;
+    max-width: 80%;
+    background-color: #fff !important;
+    z-index: 1045;
+    padding: 1.5rem 1rem;
+    box-shadow: 0.5rem 0 1rem rgba(0,0,0,0.15);
+    transition: transform 0.3s ease-in-out;
+    transform: translateX(-100%);
+    display: block;
+  }
+  .navbar-collapse.show {
+    transform: translateX(0);
+  }
+  .navbar-collapse.collapsing {
+    height: auto !important;
+    transition: transform 0.3s ease-in-out;
+  }
+}
+
+/* Polyfill for Bootstrap 5.0.0 offcanvas-lg */
+@media (min-width: 992px) {
+    .offcanvas-lg {
+        position: static;
+        z-index: auto;
+        flex-grow: 1;
+        width: auto !important;
+        height: auto !important;
+        visibility: visible !important;
+        background-color: transparent !important;
+        border: 0 !important;
+        transform: none !important;
+        transition: none;
+    }
+    .offcanvas-lg .offcanvas-header {
+        display: none;
+    }
+}

@@ -8,7 +8,7 @@
     <!-- Google Web Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Raleway:wght@600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
     <!-- Icon Font Stylesheet -->
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/all.css" />
@@ -31,7 +31,7 @@
         }
 
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'Be Vietnam Pro', sans-serif;
             background-color: #f4f6f9;
             overflow-x: hidden;
         }
@@ -66,7 +66,7 @@
 
         .sidebar-brand h4 {
             margin: 0;
-            font-family: 'Raleway', sans-serif;
+            font-family: 'Be Vietnam Pro', sans-serif;
             font-weight: 800;
         }
 
@@ -99,7 +99,7 @@
         .sidebar-nav-link {
             display: flex;
             align-items: center;
-            padding: 0.75rem 1.5rem;
+            padding: 1rem 1.5rem; /* Touch friendly padding */
             color: rgba(255,255,255,0.7);
             text-decoration: none;
             transition: all 0.2s ease;
@@ -166,6 +166,18 @@
             font-weight: 600;
         }
 
+        /* Sticky Action Column */
+        .sticky-action-col {
+            position: sticky;
+            right: 0;
+            background-color: inherit;
+            z-index: 1;
+            box-shadow: -2px 0 5px rgba(0,0,0,0.05);
+        }
+        .table-light th.sticky-action-col {
+            background-color: #f8f9fa;
+        }
+
         /* Buttons */
         .btn-primary {
             background: var(--primary-color);
@@ -178,11 +190,24 @@
         }
 
         /* Responsive */
+        /* Sidebar Overlay for Mobile */
+        .sidebar-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+            display: none;
+        }
+        .sidebar-overlay.show {
+            display: block;
+        }
+
         @@media (max-width: 992px) {
             .admin-sidebar {
                 margin-left: calc(-1 * var(--sidebar-width));
+                box-shadow: 2px 0 10px rgba(0,0,0,0.1);
             }
-            .admin-sidebar.show {
+            .admin-sidebar.open {
                 margin-left: 0;
             }
             .admin-main {
@@ -197,6 +222,9 @@
     <aside class="admin-sidebar" id="adminSidebar">
         @await Html.PartialAsync("_AdminSidebar")
     </aside>
+
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
     <!-- Main Content -->
     <main class="admin-main" id="adminMain">
@@ -319,10 +347,23 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         // Sidebar toggle
-        document.getElementById('sidebarToggle')?.addEventListener('click', function() {
-            document.getElementById('adminSidebar').classList.toggle('collapsed');
-            document.getElementById('adminMain').classList.toggle('expanded');
-        });
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const adminSidebar = document.getElementById('adminSidebar');
+        const adminMain = document.getElementById('adminMain');
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
+
+        function toggleSidebar() {
+            if (window.innerWidth <= 992) {
+                adminSidebar.classList.toggle('open');
+                sidebarOverlay.classList.toggle('show');
+            } else {
+                adminSidebar.classList.toggle('collapsed');
+                adminMain.classList.toggle('expanded');
+            }
+        }
+
+        sidebarToggle?.addEventListener('click', toggleSidebar);
+        sidebarOverlay?.addEventListener('click', toggleSidebar);
 
         // Initialize and auto-hide toasts
         document.addEventListener('DOMContentLoaded', function() {

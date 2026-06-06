@@ -46,7 +46,13 @@
     }
 }
 
-<div class="row g-4">
+<div class="offcanvas offcanvas-lg offcanvas-start bg-white" tabindex="-1" id="shopFilterOffcanvas" aria-labelledby="shopFilterOffcanvasLabel">
+    <div class="offcanvas-header border-bottom">
+        <h5 class="offcanvas-title" id="shopFilterOffcanvasLabel">Lọc Sản Phẩm</h5>
+        <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" data-bs-target="#shopFilterOffcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body flex-column">
+        <div class="row g-4 w-100 m-0">
     <div class="col-lg-12">
         <div class="mb-3">
             <h4>Categories</h4>
@@ -118,7 +124,9 @@
                 <h3 class="text-secondary fw-bold">Fresh <br> Fruits <br> Banner</h3>
             </div>
         </div>
+        </div>
     </div>
+</div>
 </div>
 
 <script>

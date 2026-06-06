@@ -209,6 +209,42 @@ public class DiagnosticsController : Controller
         return View();
     }
 
+    /// <summary>
+    /// Migrate existing addresses from 3-level to 2-level via AddressKit API.
+    /// Run BEFORE applying the SwitchToTwoLevelAddress EF migration.
+    /// </summary>
+    [HttpPost]
+    [AllowAnonymous]
+    public async Task<IActionResult> MigrateAddresses()
+    {
+        try
+        {
+            var result = await _migrationService.MigrateAddressesToTwoLevelAsync();
+
+            if (result.Success)
+            {
+                return Content($"✓ Address migration successful!\n" +
+                             $"- Addresses processed: {result.UsersProcessed}\n" +
+                             $"- Completed at: {result.CompletedAt:yyyy-MM-dd HH:mm:ss}\n\n" +
+                             $"You can now apply the EF migration:\n" +
+                             $"  dotnet ef database update", "text/plain");
+            }
+            else
+            {
+                var msg = $"✗ Address migration completed with errors!\n" +
+                          $"- Processed: {result.UsersProcessed}\n" +
+                          $"Errors:\n{string.Join("\n", result.Errors.Take(20))}";
+                if (result.Errors.Count > 20)
+                    msg += $"\n... and {result.Errors.Count - 20} more errors";
+                return Content(msg, "text/plain");
+            }
+        }
+        catch (Exception ex)
+        {
+            return Content($"✗ Fatal error: {ex.Message}\n{ex.StackTrace}", "text/plain");
+        }
+    }
+
     private int? GetCurrentUserId()
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;

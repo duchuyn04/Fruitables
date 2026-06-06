@@ -65,11 +65,35 @@
                                 
                                 @if (profile?.AvatarUrl != null && !profile.AvatarUrl.Contains("default-avatar"))
                                 {
+                                    <!-- Delete Avatar Modal -->
+                                    <div class="modal fade" id="deleteAvatarModal" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog modal-dialog-centered">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">Xóa ảnh đại diện</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    Bạn có chắc muốn xóa ảnh đại diện?
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                                                    <form asp-action="DeleteAvatar" method="post" id="deleteAvatarForm">
+                                                        @Html.AntiForgeryToken()
+                                                        <button type="submit" class="btn btn-danger">
+                                                            <i class="fa fa-trash me-1"></i>Xóa
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     <!-- Delete Avatar Form -->
-                                    <form asp-action="DeleteAvatar" method="post">
+                                    <form method="post">
                                         @Html.AntiForgeryToken()
-                                        <button type="submit" class="btn btn-outline-danger btn-sm w-100"
-                                                onclick="return confirm('Bạn có chắc muốn xóa ảnh đại diện?');">
+                                        <button type="button" class="btn btn-outline-danger btn-sm w-100"
+                                                onclick="new bootstrap.Modal(document.getElementById('deleteAvatarModal')).show();">
                                             <i class="fa fa-trash me-1"></i>Xóa ảnh
                                         </button>
                                     </form>
@@ -106,7 +130,7 @@
                                     
                                     <div class="mb-4">
                                         <label asp-for="Phone" class="form-label">Số điện thoại</label>
-                                        <input asp-for="Phone" class="form-control" placeholder="Nhập số điện thoại (10-20 số)" />
+                                        <input asp-for="Phone" class="form-control" placeholder="Nhập số điện thoại (10-11 số)" />
                                         <span asp-validation-for="Phone" class="text-danger small"></span>
                                     </div>
                                     
