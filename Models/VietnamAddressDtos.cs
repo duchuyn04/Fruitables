@@ -2,88 +2,73 @@ using System.Text.Json.Serialization;
 
 namespace Fruitables.Models;
 
-/// <summary>
-/// DTO for Province/City from Vietnam Address API
-/// </summary>
 public class ProvinceDto
 {
     [JsonPropertyName("code")]
-    public int Code { get; set; }
-    
+    public string Id { get; set; } = null!;
+
     [JsonPropertyName("name")]
     public string Name { get; set; } = null!;
-    
-    [JsonPropertyName("codename")]
-    public string Codename { get; set; } = null!;
-    
-    [JsonPropertyName("division_type")]
-    public string DivisionType { get; set; } = null!;
-    
-    [JsonPropertyName("phone_code")]
-    public int PhoneCode { get; set; }
-    
-    [JsonPropertyName("districts")]
-    public List<DistrictDto>? Districts { get; set; }
 }
 
-/// <summary>
-/// DTO for District from Vietnam Address API
-/// </summary>
-public class DistrictDto
+public class CommuneDto
 {
     [JsonPropertyName("code")]
-    public int Code { get; set; }
-    
+    public string Id { get; set; } = null!;
+
     [JsonPropertyName("name")]
     public string Name { get; set; } = null!;
-    
-    [JsonPropertyName("codename")]
-    public string Codename { get; set; } = null!;
-    
-    [JsonPropertyName("division_type")]
-    public string DivisionType { get; set; } = null!;
-    
-    [JsonPropertyName("province_code")]
-    public int ProvinceCode { get; set; }
-    
-    [JsonPropertyName("wards")]
-    public List<WardDto>? Wards { get; set; }
+
+    [JsonPropertyName("provinceCode")]
+    public string ProvinceId { get; set; } = null!;
 }
 
-/// <summary>
-/// DTO for Ward from Vietnam Address API
-/// </summary>
-public class WardDto
+public class AddressKitProvincesResponse
 {
-    [JsonPropertyName("code")]
-    public int Code { get; set; }
-    
-    [JsonPropertyName("name")]
-    public string Name { get; set; } = null!;
-    
-    [JsonPropertyName("codename")]
-    public string Codename { get; set; } = null!;
-    
-    [JsonPropertyName("division_type")]
-    public string DivisionType { get; set; } = null!;
-    
-    [JsonPropertyName("district_code")]
-    public int DistrictCode { get; set; }
+    [JsonPropertyName("provinces")]
+    public List<ProvinceDto> Provinces { get; set; } = new();
 }
 
-/// <summary>
-/// DTO for composing full address from components
-/// </summary>
+public class AddressKitCommunesResponse
+{
+    [JsonPropertyName("communes")]
+    public List<CommuneDto> Communes { get; set; } = new();
+}
+
 public class AddressComponentsDto
 {
-    public int ProvinceCode { get; set; }
+    public string ProvinceCode { get; set; } = null!;
     public string ProvinceName { get; set; } = null!;
-    
-    public int DistrictCode { get; set; }
-    public string DistrictName { get; set; } = null!;
-    
-    public int WardCode { get; set; }
-    public string WardName { get; set; } = null!;
-    
+
+    public string CommuneCode { get; set; } = null!;
+    public string CommuneName { get; set; } = null!;
+
     public string StreetAddress { get; set; } = null!;
+}
+
+public class ConvertAddressRequest
+{
+    [JsonPropertyName("provinceCode")]
+    public int ProvinceCode { get; set; }
+
+    [JsonPropertyName("districtCode")]
+    public int DistrictCode { get; set; }
+
+    [JsonPropertyName("wardCode")]
+    public int WardCode { get; set; }
+}
+
+public class ConvertAddressResponse
+{
+    [JsonPropertyName("provinceId")]
+    public string ProvinceId { get; set; } = string.Empty;
+
+    [JsonPropertyName("provinceName")]
+    public string ProvinceName { get; set; } = string.Empty;
+
+    [JsonPropertyName("communeId")]
+    public string CommuneId { get; set; } = string.Empty;
+
+    [JsonPropertyName("communeName")]
+    public string CommuneName { get; set; } = string.Empty;
 }

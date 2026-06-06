@@ -57,8 +57,7 @@ public class AddressService : IAddressService
         address.FullName = address.FullName?.Trim() ?? string.Empty;
         address.Phone = address.Phone?.Trim() ?? string.Empty;
         address.ProvinceName = address.ProvinceName?.Trim() ?? string.Empty;
-        address.DistrictName = address.DistrictName?.Trim() ?? string.Empty;
-        address.WardName = address.WardName?.Trim() ?? string.Empty;
+        address.CommuneName = address.CommuneName?.Trim() ?? string.Empty;
         address.StreetAddress = address.StreetAddress?.Trim() ?? string.Empty;
         
         // Sanitize StreetAddress to prevent XSS
@@ -80,12 +79,10 @@ public class AddressService : IAddressService
         if (address.StreetAddress.Length > 200)
             throw new ArgumentException("StreetAddress cannot exceed 200 characters", nameof(address));
 
-        if (address.ProvinceCode <= 0)
+        if (string.IsNullOrWhiteSpace(address.ProvinceCode))
             throw new ArgumentException("ProvinceCode is required", nameof(address));
-        if (address.DistrictCode <= 0)
-            throw new ArgumentException("DistrictCode is required", nameof(address));
-        if (address.WardCode <= 0)
-            throw new ArgumentException("WardCode is required", nameof(address));
+        if (string.IsNullOrWhiteSpace(address.CommuneCode))
+            throw new ArgumentException("CommuneCode is required", nameof(address));
 
         // Set creation time
         address.CreatedAt = DateTime.UtcNow;
@@ -120,10 +117,8 @@ public class AddressService : IAddressService
         existing.Phone = address.Phone;
         existing.ProvinceCode = address.ProvinceCode;
         existing.ProvinceName = address.ProvinceName;
-        existing.DistrictCode = address.DistrictCode;
-        existing.DistrictName = address.DistrictName;
-        existing.WardCode = address.WardCode;
-        existing.WardName = address.WardName;
+        existing.CommuneCode = address.CommuneCode;
+        existing.CommuneName = address.CommuneName;
         existing.StreetAddress = _vietnamAddressService.SanitizeStreetAddress(address.StreetAddress);
         existing.IsDefault = address.IsDefault;
         existing.UpdatedAt = DateTime.UtcNow;

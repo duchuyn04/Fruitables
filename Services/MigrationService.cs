@@ -1,3 +1,7 @@
+using System.Data.Common;
+using System.Net.Http.Json;
+using System.Text.Json;
+using Fruitables.Data;
 using Fruitables.Models;
 using Fruitables.Repositories.Interfaces;
 using Fruitables.Services.Interfaces;
@@ -11,15 +15,32 @@ public class MigrationService : IMigrationService
     private readonly IUnitOfWork _unitOfWork;
     private readonly IRbacService _rbacService;
     private readonly ILogger<MigrationService> _logger;
+    private readonly ApplicationDbContext _context;
+    private readonly IHttpClientFactory _httpClientFactory;
 
     public MigrationService(
         IUnitOfWork unitOfWork,
         IRbacService rbacService,
-        ILogger<MigrationService> logger)
+        ILogger<MigrationService> logger,
+        ApplicationDbContext context,
+        IHttpClientFactory httpClientFactory)
     {
         _unitOfWork = unitOfWork;
         _rbacService = rbacService;
         _logger = logger;
+        _context = context;
+        _httpClientFactory = httpClientFactory;
+    }
+
+    private class OldAddressRow
+    {
+        public int Id { get; set; }
+        public int ProvinceCode { get; set; }
+        public string ProvinceName { get; set; } = string.Empty;
+        public int DistrictCode { get; set; }
+        public string DistrictName { get; set; } = string.Empty;
+        public int WardCode { get; set; }
+        public string WardName { get; set; } = string.Empty;
     }
     
     public async Task<MigrationResult> MigrateToRbacAsync()
@@ -210,6 +231,153 @@ public class MigrationService : IMigrationService
         }
     }
     
+    public async Task<MigrationResult> MigrateAddressesToTwoLevelAsync()
+    {
+        var result = new MigrationResult { CompletedAt = DateTime.UtcNow };
+
+        // GUARD: Kiểm tra xem DB đã được migrate sang schema 2 cấp chưa.
+        // Sau khi migration SwitchToTwoLevelAddress chạy, các cột DistrictCode/DistrictName/WardCode
+        // đã bị xóa. Gọi hàm này sau đó sẽ crash với lỗi "Invalid column name".
+        try
+        {
+            using var checkConn = _context.Database.GetDbConnection();
+            await checkConn.OpenAsync();
+            using var checkCmd = checkConn.CreateCommand();
+            checkCmd.CommandText = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='Addresses' AND COLUMN_NAME='DistrictCode'";
+            var colExists = Convert.ToInt32(await checkCmd.ExecuteScalarAsync() ?? 0);
+            if (colExists == 0)
+            {
+                result.Success = true;
+                result.Errors.Add("Skipped: DB schema already on 2-level (DistrictCode column not found). No action needed.");
+                _logger.LogWarning("MigrateAddressesToTwoLevelAsync: DB already migrated. Skipping.");
+                return result;
+            }
+        }
+        catch (Exception ex)
+        {
+            result.Success = false;
+            result.Errors.Add($"Schema check failed: {ex.Message}");
+            return result;
+        }
+
+        try
+        {
+            _logger.LogInformation("Starting address 3-level → 2-level migration...");
+
+            var cache = new Dictionary<string, (string provinceId, string communeId, string communeName)>();
+            var errors = new List<string>();
+            int processed = 0;
+            int skipped = 0;
+
+            using var conn = _context.Database.GetDbConnection();
+            await conn.OpenAsync();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT Id, ProvinceCode, ProvinceName, DistrictCode, DistrictName, WardCode, WardName FROM Addresses";
+            using var reader = await cmd.ExecuteReaderAsync();
+
+            var client = _httpClientFactory.CreateClient("AddressKit");
+            var batch = new List<Address>();
+
+            while (await reader.ReadAsync())
+            {
+                var id = reader.GetInt32(0);
+                var provinceCode = reader.GetInt32(1);
+                var provinceName = reader.GetString(2);
+                var districtCode = reader.GetInt32(3);
+                var districtName = reader.GetString(4);
+                var wardCode = reader.GetInt32(5);
+                var wardName = reader.GetString(6);
+
+                var key = $"{provinceCode}-{districtCode}-{wardCode}";
+
+                if (!cache.TryGetValue(key, out var converted))
+                {
+                    var req = new ConvertAddressRequest
+                    {
+                        ProvinceCode = provinceCode,
+                        DistrictCode = districtCode,
+                        WardCode = wardCode
+                    };
+
+                    try
+                    {
+                        var httpResponse = await client.PostAsJsonAsync("convert", req);
+
+                        if (!httpResponse.IsSuccessStatusCode)
+                        {
+                            var body = await httpResponse.Content.ReadAsStringAsync();
+                            errors.Add($"API error for address {id} ({provinceName}/{districtName}/{wardName}): {httpResponse.StatusCode} {body}");
+                            skipped++;
+                            continue;
+                        }
+
+                        var conv = await httpResponse.Content.ReadFromJsonAsync<ConvertAddressResponse>();
+
+                        if (conv == null || string.IsNullOrEmpty(conv.CommuneId))
+                        {
+                            errors.Add($"Empty response for address {id}");
+                            skipped++;
+                            continue;
+                        }
+
+                        converted = (conv.ProvinceId, conv.CommuneId, conv.CommuneName);
+                        cache[key] = converted;
+                    }
+                    catch (HttpRequestException ex)
+                    {
+                        errors.Add($"HTTP error for address {id}: {ex.Message}");
+                        skipped++;
+                        continue;
+                    }
+                }
+
+                var address = await _unitOfWork.Addresses.GetByIdAsync(id);
+                if (address == null)
+                {
+                    errors.Add($"Address {id} not found in DB");
+                    skipped++;
+                    continue;
+                }
+
+                address.ProvinceCode = converted.provinceId;
+                address.ProvinceName = provinceName;
+                address.CommuneCode = converted.communeId;
+                address.CommuneName = converted.communeName;
+                batch.Add(address);
+                processed++;
+
+                if (batch.Count >= 100)
+                {
+                    await _unitOfWork.SaveChangesAsync();
+                    _logger.LogInformation("Migrated {Count} addresses so far...", processed);
+                    batch.Clear();
+                }
+            }
+
+            if (batch.Count > 0)
+            {
+                await _unitOfWork.SaveChangesAsync();
+            }
+
+            result.Success = errors.Count == 0;
+            result.UsersProcessed = processed;
+            result.Errors = errors;
+
+            _logger.LogInformation(
+                "Address migration done. Processed: {Processed}, Skipped: {Skipped}, Errors: {ErrorCount}",
+                processed, skipped, errors.Count);
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Fatal error during address migration");
+            result.Success = false;
+            result.Errors.Add($"Fatal: {ex.Message}");
+            return result;
+        }
+    }
+
     public async Task SeedDefaultRolesAsync()
     {
         try

@@ -425,3 +425,8 @@ build_output.txt
 
 # .NET tools
 dotnet-tools.json
+
+.playwright-mcp/
+test-results/
+skills-lock.json
+.agents/

@@ -151,10 +151,8 @@ public class UserManagementService : IUserManagementService
                 Phone = a.Phone,
                 ProvinceCode = a.ProvinceCode,
                 ProvinceName = a.ProvinceName,
-                DistrictCode = a.DistrictCode,
-                DistrictName = a.DistrictName,
-                WardCode = a.WardCode,
-                WardName = a.WardName,
+                CommuneCode = a.CommuneCode,
+                CommuneName = a.CommuneName,
                 StreetAddress = a.StreetAddress,
                 IsDefault = a.IsDefault
             }).ToList()

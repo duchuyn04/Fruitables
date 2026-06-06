@@ -14,16 +14,13 @@ namespace Fruitables.Areas.Admin.Controllers
     public class SettingsController : Controller
     {
         private readonly ISettingsService _settingsService;
-        private readonly IVietnamAddressService _vietnamAddressService;
         private readonly IShippingService _shippingService;
 
         public SettingsController(
             ISettingsService settingsService,
-            IVietnamAddressService vietnamAddressService,
             IShippingService shippingService)
         {
             _settingsService = settingsService;
-            _vietnamAddressService = vietnamAddressService;
             _shippingService = shippingService;
         }
 
@@ -537,10 +534,7 @@ namespace Fruitables.Areas.Admin.Controllers
         /// </summary>
         private async Task<ShippingSettingsViewModel> GetShippingViewModel()
         {
-            // Lấy cấu hình phí ship và danh sách quận hiện tại
             var config = await _shippingService.GetShippingConfigAsync();
-            var allDistricts = await _vietnamAddressService.GetDistrictsByProvinceAsync(79);
-            var districtNames = allDistricts.Select(d => d.Name).OrderBy(n => n).ToList();
 
             return new ShippingSettingsViewModel
             {
@@ -551,7 +545,7 @@ namespace Fruitables.Areas.Admin.Controllers
                 ReducedFeeZone3 = config.ReducedFeeZone3,
                 Zone1Districts = config.Zone1Districts,
                 Zone2Districts = config.Zone2Districts,
-                AllDistricts = districtNames
+                AllDistricts = new List<string>()
             };
         }
 

@@ -52,6 +52,13 @@ public interface IMigrationService
     /// Seed default test users (Customer, Admin, SuperAdmin)
     /// </summary>
     Task SeedDefaultUsersAsync();
+
+    /// <summary>
+    /// Migrate existing addresses from 3-level (province/district/ward) to 2-level (province/commune).
+    /// Calls AddressKit POST /convert for each address and updates ProvinceCode, CommuneCode, CommuneName.
+    /// <b>Must be run BEFORE applying the SwitchToTwoLevelAddress EF migration.</b>
+    /// </summary>
+    Task<MigrationResult> MigrateAddressesToTwoLevelAsync();
 }
 
 /// <summary>

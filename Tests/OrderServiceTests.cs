@@ -51,9 +51,8 @@ namespace Fruitables.Tests
                 FirstName = "Test",
                 StreetAddress = "123 Main St",
                 Mobile = "0123456789",
-                ProvinceCode = 1,
-                DistrictCode = 1,
-                WardCode = 1,
+                ProvinceCode = "1",
+                CommuneCode = "1",
                 PaymentMethod = PaymentMethod.COD,
                 ShippingMethod = ShippingMethod.FlatRate
             };
@@ -111,9 +110,8 @@ namespace Fruitables.Tests
                 FirstName = "Test",
                 StreetAddress = "123 Main St",
                 Mobile = "0123456789",
-                ProvinceCode = 1,
-                DistrictCode = 1,
-                WardCode = 1,
+                ProvinceCode = "1",
+                CommuneCode = "1",
                 PaymentMethod = PaymentMethod.COD,
                 ShippingMethod = ShippingMethod.FlatRate
             };
@@ -166,7 +164,7 @@ namespace Fruitables.Tests
             var checkoutModel = new CheckoutViewModel
             {
                 FirstName = "Test", StreetAddress = "123 St", Mobile = "0123456789",
-                ProvinceCode = 1, DistrictCode = 1, WardCode = 1,
+                ProvinceCode = "1", CommuneCode = "1",
                 PaymentMethod = PaymentMethod.COD, ShippingMethod = ShippingMethod.FlatRate
             };
 
@@ -241,12 +239,10 @@ namespace Fruitables.Tests
                 FirstName = "Test",
                 StreetAddress = "123 Main St",
                 Mobile = "0123456789",
-                ProvinceCode = 1,
+                ProvinceCode = "1",
                 ProvinceName = "Hanoi",
-                DistrictCode = 1,
-                DistrictName = "Ba Dinh",
-                WardCode = 1,
-                WardName = "Phuc Xa",
+                CommuneCode = "1",
+                CommuneName = "Phuc Xa",
                 PaymentMethod = PaymentMethod.COD,
                 ShippingMethod = ShippingMethod.FlatRate
             };
@@ -265,11 +261,12 @@ namespace Fruitables.Tests
             Assert.NotNull(updatedProduct);
             Assert.Equal(7, updatedProduct!.StockQuantity);
 
-            // New address saved with order in a single transaction.
             Assert.True(order.AddressId > 0);
             var address = await context.Addresses.FindAsync(order.AddressId);
             Assert.NotNull(address);
             Assert.Equal("Test", address!.FullName);
+            Assert.Equal("1", address.CommuneCode);
+            Assert.Equal("Phuc Xa", address.CommuneName);
 
             cartServiceMock.Verify(c => c.ClearCartAsync(sessionId), Times.Once);
             notifierMock.Verify(n => n.NotifyOrderCreatedAsync(order.Id, 100), Times.Once);
@@ -329,7 +326,7 @@ namespace Fruitables.Tests
             var checkoutModel = new CheckoutViewModel
             {
                 FirstName = "Test", StreetAddress = "123 St", Mobile = "0123456789",
-                ProvinceCode = 1, DistrictCode = 1, WardCode = 1,
+                ProvinceCode = "1", CommuneCode = "1",
                 PaymentMethod = PaymentMethod.COD, ShippingMethod = ShippingMethod.FlatRate
             };
 
@@ -420,9 +417,8 @@ namespace Fruitables.Tests
                 FirstName = "Bulk",
                 StreetAddress = "123 Bulk",
                 Mobile = "0123456789",
-                ProvinceCode = 1,
-                DistrictCode = 1,
-                WardCode = 1,
+                ProvinceCode = "1",
+                CommuneCode = "1",
                 PaymentMethod = PaymentMethod.COD,
                 ShippingMethod = ShippingMethod.FlatRate
             };

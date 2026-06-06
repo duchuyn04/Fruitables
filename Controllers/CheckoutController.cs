@@ -54,11 +54,10 @@ public class CheckoutController : Controller
         
         List<AddressViewModel> addressViewModels = new();
         int? defaultAddressId = null;
-        string? defaultDistrict = null;
+        string? defaultCommune = null;
         
         if (userId.HasValue)
         {
-            // Load danh sách địa chỉ đã lưu cho user
             var addresses = await _addressService.GetUserAddressesAsync(userId.Value);
             addressViewModels = addresses.Select(a => new AddressViewModel
             {
@@ -67,25 +66,22 @@ public class CheckoutController : Controller
                 Phone = a.Phone,
                 ProvinceCode = a.ProvinceCode,
                 ProvinceName = a.ProvinceName,
-                DistrictCode = a.DistrictCode,
-                DistrictName = a.DistrictName,
-                WardCode = a.WardCode,
-                WardName = a.WardName,
+                CommuneCode = a.CommuneCode,
+                CommuneName = a.CommuneName,
                 StreetAddress = a.StreetAddress,
                 IsDefault = a.IsDefault
             }).ToList();
             
-            // Lấy địa chỉ mặc định + district
             var defaultAddress = addresses.FirstOrDefault(a => a.IsDefault);
             if (defaultAddress != null)
             {
                 defaultAddressId = defaultAddress.Id;
-                defaultDistrict = defaultAddress.DistrictName;
+                defaultCommune = defaultAddress.CommuneName;
             }
         }
         
-        // Load cart, tính phí ship theo district mặc định
-        var cart = await _cartService.GetCartAsync(sessionId, defaultDistrict);
+        // Load cart, tính phí ship theo commune (xã) mặc định
+        var cart = await _cartService.GetCartAsync(sessionId, defaultCommune);
 
         // Giỏ hàng rỗng → redirect về cart
         if (!cart.Items.Any())
@@ -96,7 +92,7 @@ public class CheckoutController : Controller
         // Lưu snapshot phí ship khi vào checkout (chống thay đổi phí giữa chừng)
         if (cart.ShippingInfo != null)
         {
-            SaveShippingSnapshot(cart.ShippingInfo, defaultDistrict);
+            SaveShippingSnapshot(cart.ShippingInfo, defaultCommune);
         }
 
         ViewBag.CartCount = cart.Items.Sum(i => i.Quantity);
@@ -133,34 +129,23 @@ public class CheckoutController : Controller
         
         var sessionId = GetSessionId();
         var userId = GetCurrentUserId();
-
-        // Nếu SelectedAddressId không binding được → xóa lỗi validation
-        if (!model.SelectedAddressId.HasValue)
-        {
-            ModelState.Remove(nameof(model.SelectedAddressId));
-        }
         
         // Nếu chọn địa chỉ đã lưu → không validate các field address (lấy từ DB)
         if (model.SelectedAddressId.HasValue)
         {
             ModelState.Remove(nameof(model.FirstName));
             ModelState.Remove(nameof(model.ProvinceCode));
-            ModelState.Remove(nameof(model.DistrictCode));
-            ModelState.Remove(nameof(model.WardCode));
+            ModelState.Remove(nameof(model.CommuneCode));
             ModelState.Remove(nameof(model.StreetAddress));
             ModelState.Remove(nameof(model.Mobile));
         }
         
-        // Lấy district từ địa chỉ đã chọn hoặc từ form
+        // Lấy commune từ địa chỉ đã chọn hoặc từ form
         string? district = null;
         if (model.SelectedAddressId.HasValue)
         {
             var selectedAddress = await _unitOfWork.Addresses.GetByIdAsync(model.SelectedAddressId.Value);
-            district = selectedAddress?.DistrictName;
-        }
-        else
-        {
-            district = model.DistrictName;
+            district = selectedAddress?.CommuneName;
         }
         
         var cart = await _cartService.GetCartAsync(sessionId, district);
@@ -185,10 +170,8 @@ public class CheckoutController : Controller
                     Phone = a.Phone,
                     ProvinceCode = a.ProvinceCode,
                     ProvinceName = a.ProvinceName,
-                    DistrictCode = a.DistrictCode,
-                    DistrictName = a.DistrictName,
-                    WardCode = a.WardCode,
-                    WardName = a.WardName,
+                    CommuneCode = a.CommuneCode,
+                    CommuneName = a.CommuneName,
                     StreetAddress = a.StreetAddress,
                     IsDefault = a.IsDefault
                 }).ToList();
@@ -201,49 +184,6 @@ public class CheckoutController : Controller
             ViewBag.CartCount = cart.Items.Sum(i => i.Quantity);
             ViewBag.Cart = cart;
             return View("Index", model);
-        }
-
-        // Sanitize địa chỉ chống XSS
-        model.StreetAddress = _vietnamAddressService.SanitizeStreetAddress(model.StreetAddress);
-
-        // Nếu user chọn "lưu địa chỉ mới" → tạo mới trước khi đặt hàng
-        if (model.SaveAddress && !model.SelectedAddressId.HasValue && userId.HasValue)
-        {
-            // Compose đầy đủ code + name fields
-            var addressComponents = new AddressComponentsDto
-            {
-                ProvinceCode = model.ProvinceCode,
-                ProvinceName = model.ProvinceName ?? string.Empty,
-                DistrictCode = model.DistrictCode,
-                DistrictName = model.DistrictName ?? string.Empty,
-                WardCode = model.WardCode,
-                WardName = model.WardName ?? string.Empty,
-                StreetAddress = model.StreetAddress
-            };
-            
-            var newAddress = new Models.Address
-            {
-                UserId = userId.Value,
-                FullName = model.FullName ?? model.FirstName.Trim(),
-                Phone = model.Mobile,
-                ProvinceCode = model.ProvinceCode,
-                ProvinceName = model.ProvinceName ?? string.Empty,
-                DistrictCode = model.DistrictCode,
-                DistrictName = model.DistrictName ?? string.Empty,
-                WardCode = model.WardCode,
-                WardName = model.WardName ?? string.Empty,
-                StreetAddress = model.StreetAddress,
-                IsDefault = model.SetAsDefault,
-                CreatedAt = DateTime.UtcNow
-            };
-            
-            var savedAddress = await _addressService.CreateAddressAsync(newAddress);
-            model.SelectedAddressId = savedAddress.Id;
-            
-            if (model.SetAsDefault)
-            {
-                await _addressService.SetDefaultAddressAsync(userId.Value, savedAddress.Id);
-            }
         }
 
         // Lấy phí ship từ snapshot (đã lưu lúc vào checkout), fallback tính lại nếu không có
@@ -290,10 +230,8 @@ public class CheckoutController : Controller
                     Phone = a.Phone,
                     ProvinceCode = a.ProvinceCode,
                     ProvinceName = a.ProvinceName,
-                    DistrictCode = a.DistrictCode,
-                    DistrictName = a.DistrictName,
-                    WardCode = a.WardCode,
-                    WardName = a.WardName,
+                    CommuneCode = a.CommuneCode,
+                    CommuneName = a.CommuneName,
                     StreetAddress = a.StreetAddress,
                     IsDefault = a.IsDefault
                 }).ToList();

@@ -108,10 +108,8 @@ public class OrderService : IOrderService
                 Phone = model.Mobile,
                 ProvinceCode = model.ProvinceCode,
                 ProvinceName = model.ProvinceName ?? string.Empty,
-                DistrictCode = model.DistrictCode,
-                DistrictName = model.DistrictName ?? string.Empty,
-                WardCode = model.WardCode,
-                WardName = model.WardName ?? string.Empty,
+                CommuneCode = model.CommuneCode,
+                CommuneName = model.CommuneName ?? string.Empty,
                 StreetAddress = model.StreetAddress,
                 IsDefault = false,
                 CreatedAt = DateTime.UtcNow.AddHours(7)

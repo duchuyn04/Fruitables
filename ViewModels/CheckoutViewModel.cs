@@ -6,12 +6,13 @@ namespace Fruitables.ViewModels;
 public class CheckoutViewModel
 {
     // For selecting existing address
+    [Required(ErrorMessage = "Vui lòng chọn địa chỉ giao hàng")]
     public int? SelectedAddressId { get; set; }
 
     // Full name field (combines FirstName + LastName)
     public string? FullName { get; set; }
 
-    [Required, Display(Name = "First Name")]
+    [Display(Name = "First Name")]
     public string FirstName { get; set; } = string.Empty;
 
     [Display(Name = "Last Name")]
@@ -21,25 +22,16 @@ public class CheckoutViewModel
     public string? CompanyName { get; set; }
 
     // Structured address fields
-    [Required(ErrorMessage = "Vui lòng chọn Tỉnh/Thành phố")]
     [Display(Name = "Tỉnh/Thành phố")]
-    public int ProvinceCode { get; set; }
+    public string ProvinceCode { get; set; } = string.Empty;
 
     public string? ProvinceName { get; set; }
 
-    [Required(ErrorMessage = "Vui lòng chọn Quận/Huyện")]
-    [Display(Name = "Quận/Huyện")]
-    public int DistrictCode { get; set; }
-
-    public string? DistrictName { get; set; }
-
-    [Required(ErrorMessage = "Vui lòng chọn Phường/Xã")]
     [Display(Name = "Phường/Xã")]
-    public int WardCode { get; set; }
+    public string CommuneCode { get; set; } = string.Empty;
 
-    public string? WardName { get; set; }
+    public string? CommuneName { get; set; }
 
-    [Required(ErrorMessage = "Vui lòng nhập số nhà, tên đường")]
     [MaxLength(200, ErrorMessage = "Địa chỉ không được vượt quá 200 ký tự")]
     [Display(Name = "Số nhà, Tên đường")]
     public string StreetAddress { get; set; } = string.Empty;
@@ -52,7 +44,6 @@ public class CheckoutViewModel
     [Display(Name = "Postcode/Zip")]
     public string? Postcode { get; set; }
 
-    [Required]
     [RegularExpression(@"^\d{10,11}$", ErrorMessage = "Số điện thoại phải có 10-11 chữ số")]
     public string Mobile { get; set; } = string.Empty;
 
@@ -77,10 +68,6 @@ public class CheckoutViewModel
     // Cart summary
     public CartViewModel Cart { get; set; } = new();
 
-    /// <summary>
-    /// Composes full address from structured fields
-    /// Format: "{StreetAddress}, {WardName}, {DistrictName}, {ProvinceName}"
-    /// </summary>
     public string ComposedFullAddress =>
-        $"{StreetAddress}, {WardName}, {DistrictName}, {ProvinceName}";
+        $"{StreetAddress}, {CommuneName}, {ProvinceName}";
 }

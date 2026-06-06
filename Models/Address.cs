@@ -17,33 +17,23 @@ public class Address
     public string Phone { get; set; } = string.Empty;
 
     // Structured address fields
-    [Required]
-    public int ProvinceCode { get; set; }
+    [Required, MaxLength(20)]
+    public string ProvinceCode { get; set; } = string.Empty;
 
     [Required, MaxLength(100)]
     public string ProvinceName { get; set; } = string.Empty;
 
-    [Required]
-    public int DistrictCode { get; set; }
+    [Required, MaxLength(20)]
+    public string CommuneCode { get; set; } = string.Empty;
 
     [Required, MaxLength(100)]
-    public string DistrictName { get; set; } = string.Empty;
-
-    [Required]
-    public int WardCode { get; set; }
-
-    [Required, MaxLength(100)]
-    public string WardName { get; set; } = string.Empty;
+    public string CommuneName { get; set; } = string.Empty;
 
     [Required, MaxLength(200)]
     public string StreetAddress { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Computed full address from structured fields
-    /// Format: "{StreetAddress}, {WardName}, {DistrictName}, {ProvinceName}"
-    /// </summary>
     [NotMapped]
-    public string FullAddress => $"{StreetAddress}, {WardName}, {DistrictName}, {ProvinceName}";
+    public string FullAddress => $"{StreetAddress}, {CommuneName}, {ProvinceName}";
 
     public bool IsDefault { get; set; } = false;
 
