@@ -117,11 +117,9 @@
 
                     <!-- Google Login -->
                     <div class="d-grid">
-                        <form asp-action="ExternalLogin" asp-route-returnUrl="@ViewBag.ReturnUrl" method="post">
-                            <button type="submit" class="btn btn-auth-google btn-lg w-100" name="provider" value="Google">
-                                <i class="fab fa-google me-2"></i>Đăng nhập bằng Google
-                            </button>
-                        </form>
+                        <a asp-action="GoogleLogin" asp-route-returnUrl="@ViewBag.ReturnUrl" class="btn btn-auth-google btn-lg w-100">
+                            <i class="fab fa-google me-2"></i>Đăng nhập bằng Google
+                        </a>
                     </div>
                 }
 
