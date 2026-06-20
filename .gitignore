@@ -72,7 +72,6 @@ artifacts/
 ScaffoldingReadMe.txt
 
 # App Settings - Ignore sensitive configuration
-appsettings.json
 appsettings.Development.json
 appsettings.Production.json
 appsettings.*.json
