@@ -6,106 +6,301 @@
 {
     @foreach (var product in Model.Products)
     {
-        var primaryImage = product.Images?.FirstOrDefault(i => i.IsPrimary)?.ImageUrl 
-            ?? product.Images?.FirstOrDefault()?.ImageUrl 
+        var primaryImage = product.Images?.FirstOrDefault(i => i.IsPrimary)?.ImageUrl
+            ?? product.Images?.FirstOrDefault()?.ImageUrl
             ?? "~/img/fruite-item-5.jpg";
-        <div class="col-md-6 col-lg-6 col-xl-4">
-            <div class="rounded position-relative fruite-item">
-                <div class="fruite-img">
-                    <a asp-controller="Shop" asp-action="Detail" asp-route-slug="@product.Slug">
-                        <img src="@primaryImage" class="img-fluid w-100 rounded-top" alt="@product.Name">
-                    </a>
-                </div>
-                <div class="text-white bg-secondary px-3 py-1 rounded position-absolute" style="top: 10px; left: 10px;">
-                    @product.Category?.Name
-                </div>
-                <div class="p-4 border border-secondary border-top-0 rounded-bottom">
-                    <h4>
-                        <a asp-controller="Shop" asp-action="Detail" asp-route-slug="@product.Slug" class="text-dark">
-                            @product.Name
-                        </a>
-                    </h4>
-                    <p>@(product.ShortDescription ?? product.Description?.Substring(0, Math.Min(product.Description?.Length ?? 0, 80)) ?? "")</p>
-                    <div class="d-flex justify-content-between flex-lg-wrap">
-                        @if (product.SalePrice.HasValue)
+        var isSale = product.SalePrice.HasValue && product.SalePrice.Value < product.Price;
+        var displayPrice = isSale ? product.SalePrice!.Value : product.Price;
+        var discountPercent = isSale ? (int)Math.Round((1 - product.SalePrice!.Value / product.Price) * 100) : 0;
+
+        <article class="shop-product-card">
+            <a asp-controller="Shop" asp-action="Detail" asp-route-slug="@product.Slug" class="shop-product-image">
+                <img src="@primaryImage" alt="@product.Name">
+                @if (isSale)
+                {
+                    <span class="shop-sale-badge">-@discountPercent%</span>
+                }
+                @if (product.Category != null)
+                {
+                    <span class="shop-category-badge">@product.Category.Name</span>
+                }
+            </a>
+            <div class="shop-product-body">
+                <a asp-controller="Shop" asp-action="Detail" asp-route-slug="@product.Slug" class="shop-product-name">@product.Name</a>
+                <p>@(product.ShortDescription ?? product.Description?.Substring(0, Math.Min(product.Description?.Length ?? 0, 76)) ?? "Sản phẩm tươi ngon cho gia đình.")</p>
+                <div class="shop-product-footer">
+                    <div class="shop-price">
+                        <strong>@displayPrice.ToString("N0")đ</strong>
+                        <small>/ @product.Unit</small>
+                        @if (isSale)
                         {
-                            <p class="text-dark fs-5 fw-bold mb-0">
-                                @product.SalePrice.Value.ToString("N0")đ / @product.Unit
-                            </p>
+                            <del>@product.Price.ToString("N0")đ</del>
                         }
-                        else
-                        {
-                            <p class="text-dark fs-5 fw-bold mb-0">@product.Price.ToString("N0")đ / @product.Unit</p>
-                        }
-                        <form asp-controller="Cart" asp-action="AddToCart" method="post" class="d-inline">
-                            <input type="hidden" name="productId" value="@product.Id" />
-                            <button type="submit" class="btn border border-secondary rounded-pill px-3 text-primary">
-                                <i class="fa fa-shopping-bag me-2 text-primary"></i> Thêm vào giỏ
-                            </button>
-                        </form>
                     </div>
+                    <form asp-controller="Cart" asp-action="AddToCart" method="post">
+                        <input type="hidden" name="productId" value="@product.Id" />
+                        <button type="submit" aria-label="Thêm @product.Name vào giỏ hàng">
+                            <i class="fa fa-shopping-bag"></i>
+                            <span>Thêm</span>
+                        </button>
+                    </form>
                 </div>
             </div>
-        </div>
+        </article>
     }
-    
-    <!-- Pagination -->
+
     @if (Model.TotalPages > 1)
     {
-        <div class="col-12">
-            <div class="pagination d-flex justify-content-center mt-5">
-                @if (Model.CurrentPage > 1)
-                {
-                    <a asp-controller="Shop" asp-action="Index" 
-                       asp-route-categoryId="@Model.SelectedCategoryId" 
-                       asp-route-search="@Model.SearchTerm"
-                       asp-route-page="@(Model.CurrentPage - 1)" class="rounded">&laquo;</a>
-                }
-                @for (int i = 1; i <= Model.TotalPages; i++)
-                {
-                    <a asp-controller="Shop" asp-action="Index" 
-                       asp-route-categoryId="@Model.SelectedCategoryId" 
-                       asp-route-search="@Model.SearchTerm"
-                       asp-route-page="@i" 
-                       class="rounded @(i == Model.CurrentPage ? "active" : "")">@i</a>
-                }
-                @if (Model.CurrentPage < Model.TotalPages)
-                {
-                    <a asp-controller="Shop" asp-action="Index" 
-                       asp-route-categoryId="@Model.SelectedCategoryId" 
-                       asp-route-search="@Model.SearchTerm"
-                       asp-route-page="@(Model.CurrentPage + 1)" class="rounded">&raquo;</a>
-                }
-            </div>
-        </div>
+        <nav class="shop-pagination" aria-label="Phân trang sản phẩm">
+            @if (Model.CurrentPage > 1)
+            {
+                <a asp-controller="Shop" asp-action="Index"
+                   asp-route-categoryId="@Model.SelectedCategoryId"
+                   asp-route-search="@Model.SearchTerm"
+                   asp-route-minPrice="@Model.MinPrice"
+                   asp-route-maxPrice="@Model.MaxPrice"
+                   asp-route-sortBy="@Model.SortBy"
+                   asp-route-page="@(Model.CurrentPage - 1)" aria-label="Trang trước">
+                    <i class="fas fa-chevron-left"></i>
+                </a>
+            }
+            @for (int i = 1; i <= Model.TotalPages; i++)
+            {
+                <a asp-controller="Shop" asp-action="Index"
+                   asp-route-categoryId="@Model.SelectedCategoryId"
+                   asp-route-search="@Model.SearchTerm"
+                   asp-route-minPrice="@Model.MinPrice"
+                   asp-route-maxPrice="@Model.MaxPrice"
+                   asp-route-sortBy="@Model.SortBy"
+                   asp-route-page="@i"
+                   class="@(i == Model.CurrentPage ? "active" : "")">@i</a>
+            }
+            @if (Model.CurrentPage < Model.TotalPages)
+            {
+                <a asp-controller="Shop" asp-action="Index"
+                   asp-route-categoryId="@Model.SelectedCategoryId"
+                   asp-route-search="@Model.SearchTerm"
+                   asp-route-minPrice="@Model.MinPrice"
+                   asp-route-maxPrice="@Model.MaxPrice"
+                   asp-route-sortBy="@Model.SortBy"
+                   asp-route-page="@(Model.CurrentPage + 1)" aria-label="Trang tiếp theo">
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+            }
+        </nav>
     }
 }
 else
 {
-    <div class="col-12 text-center py-5">
-        <h4>Không tìm thấy sản phẩm</h4>
-        <p>Hãy thử điều chỉnh tìm kiếm hoặc bộ lọc.</p>
+    <div class="shop-empty-state">
+        <i class="fas fa-search"></i>
+        <h2>Không tìm thấy sản phẩm</h2>
+        <p>Hãy thử đổi từ khóa, danh mục hoặc mức giá để xem thêm sản phẩm phù hợp.</p>
         <a asp-controller="Shop" asp-action="Index" class="btn btn-primary">Xem tất cả sản phẩm</a>
     </div>
 }
 
 <style>
-/* Container ảnh - chiều cao cố định cho Shop page */
-.fruite-item .fruite-img {
-    height: 250px !important;
-    background-color: #f8f9fa !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    overflow: hidden !important;
-    border-radius: 8px 8px 0 0 !important;
-}
+    .shop-product-card {
+        overflow: hidden;
+        transition: transform 0.24s ease, box-shadow 0.24s ease;
+    }
 
-/* Ảnh sản phẩm - hiển thị toàn bộ không bị cắt */
-.fruite-item .fruite-img img {
-    width: 100% !important;
-    height: 100% !important;
-    object-fit: contain !important;
-    padding: 10px !important;
-}
+    .shop-product-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 18px 38px rgba(31, 41, 55, 0.11);
+    }
+
+    .shop-product-image {
+        position: relative;
+        display: flex;
+        height: 220px;
+        align-items: center;
+        justify-content: center;
+        background: #f8fafc;
+    }
+
+    .shop-product-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        padding: 16px;
+    }
+
+    .shop-sale-badge,
+    .shop-category-badge {
+        position: absolute;
+        top: 12px;
+        max-width: calc(100% - 24px);
+        padding: 5px 9px;
+        border-radius: 6px;
+        color: #ffffff;
+        font-size: 0.78rem;
+        font-weight: 900;
+    }
+
+    .shop-sale-badge {
+        left: 12px;
+        background: #df2f2f;
+    }
+
+    .shop-category-badge {
+        right: 12px;
+        overflow: hidden;
+        background: #81c408;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .shop-product-body {
+        padding: 16px;
+    }
+
+    .shop-product-name {
+        display: block;
+        min-height: 46px;
+        color: #273438;
+        font-size: 1.04rem;
+        font-weight: 900;
+        line-height: 1.35;
+        text-decoration: none;
+    }
+
+    .shop-product-name:hover {
+        color: #5f9307;
+    }
+
+    .shop-product-body p {
+        min-height: 44px;
+        margin: 8px 0 14px;
+        color: #64748b;
+        font-size: 0.9rem;
+    }
+
+    .shop-product-footer {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 10px;
+    }
+
+    .shop-price strong {
+        color: #df2f2f;
+        font-size: 1.16rem;
+    }
+
+    .shop-price small,
+    .shop-price del {
+        display: block;
+        color: #64748b;
+        font-size: 0.86rem;
+    }
+
+    .shop-product-footer form {
+        margin: 0;
+    }
+
+    .shop-product-footer button {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        min-height: 42px;
+        padding: 0 14px;
+        border: 1px solid #81c408;
+        border-radius: 999px;
+        background: #ffffff;
+        color: #5f9307;
+        font-weight: 900;
+    }
+
+    .shop-product-footer button:hover {
+        background: #81c408;
+        color: #ffffff;
+    }
+
+    .shop-pagination {
+        grid-column: 1 / -1;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 8px;
+        margin-top: 28px;
+    }
+
+    .shop-pagination a {
+        display: inline-flex;
+        width: 42px;
+        height: 42px;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background: #ffffff;
+        color: #45595b;
+        font-weight: 900;
+        text-decoration: none;
+        box-shadow: 0 8px 22px rgba(31, 41, 55, 0.08);
+    }
+
+    .shop-pagination a:hover,
+    .shop-pagination a.active {
+        background: #81c408;
+        color: #ffffff;
+    }
+
+    .shop-empty-state {
+        grid-column: 1 / -1;
+        padding: 52px 24px;
+        text-align: center;
+    }
+
+    .shop-empty-state i {
+        display: inline-flex;
+        width: 58px;
+        height: 58px;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 16px;
+        border-radius: 50%;
+        background: #f1f8df;
+        color: #81c408;
+        font-size: 1.3rem;
+    }
+
+    .shop-empty-state h2 {
+        color: #273438;
+        font-weight: 900;
+    }
+
+    .shop-empty-state p {
+        max-width: 520px;
+        margin: 0 auto 18px;
+        color: #64748b;
+    }
+
+    .shop-empty-state .btn {
+        border-radius: 999px;
+        font-weight: 800;
+    }
+
+    @@media (max-width: 575.98px) {
+        .shop-product-footer {
+            align-items: stretch;
+            flex-direction: column;
+        }
+
+        .shop-product-footer button {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+
+    @@media (prefers-reduced-motion: reduce) {
+        .shop-product-card {
+            transition: none;
+        }
+
+        .shop-product-card:hover {
+            transform: none;
+        }
+    }
 </style>

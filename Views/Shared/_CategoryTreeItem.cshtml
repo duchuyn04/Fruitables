@@ -3,11 +3,15 @@
     var selectedCategoryId = ViewBag.CategoryId as int? ?? ViewBag.SelectedCategoryId as int?;
     var isActive = selectedCategoryId == Model.Id;
     var hasChildren = Model.Children != null && Model.Children.Any();
+    var searchTerm = ViewBag.SearchTerm as string;
+    var minPrice = ViewBag.MinPrice as decimal?;
+    var maxPrice = ViewBag.MaxPrice as decimal?;
+    var sortBy = ViewBag.SortBy as string;
 }
 
 <li>
-    <div class="d-flex justify-content-between fruite-name" style="padding-left: @(Model.Level * 15)px">
-        <a asp-controller="Shop" asp-action="Index" asp-route-categoryId="@Model.Id" class="@(isActive ? "text-primary fw-bold" : "")">
+    <div class="shop-category-row" style="padding-left: @(Model.Level * 12)px">
+        <a asp-controller="Shop" asp-action="Index" asp-route-categoryId="@Model.Id" asp-route-search="@searchTerm" asp-route-minPrice="@minPrice" asp-route-maxPrice="@maxPrice" asp-route-sortBy="@sortBy" class="@(isActive ? "active" : "")">
             @if (hasChildren)
             {
                 <i class="fas fa-folder me-2"></i>
@@ -16,9 +20,9 @@
             {
                 <i class="fas fa-apple-alt me-2"></i>
             }
-            @Model.Name
+            <span>@Model.Name</span>
+            <small>@Model.ProductCount</small>
         </a>
-        <span>(@Model.ProductCount)</span>
     </div>
 </li>
 
