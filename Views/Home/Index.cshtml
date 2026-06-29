@@ -1,64 +1,471 @@
+@using Fruitables.Models
 @{
     ViewData["Title"] = "Home";
+
+    var products = ViewBag.AllProducts as List<Product> ?? new List<Product>();
+    var categories = ViewBag.Categories as List<Category> ?? new List<Category>();
+    var saleProducts = products
+        .Where(p => p.SalePrice.HasValue && p.SalePrice.Value < p.Price)
+        .Take(4)
+        .ToList();
+    var featuredProducts = products
+        .Where(p => p.IsFeatured)
+        .Take(4)
+        .ToList();
+
+    ViewBag.FeaturedProducts = featuredProducts.Any()
+        ? featuredProducts
+        : products.Take(6).ToList();
 }
 
-<!-- Hero Start -->
-<div class="container-fluid py-5 mb-5 hero-header">
-    <div class="container py-5">
-        <div class="row g-5 align-items-center">
-            <div class="col-md-12 col-lg-7">
-                <h4 class="mb-3 text-secondary">100% Organic Foods</h4>
-                <h1 class="mb-5 display-5 display-md-3 text-primary">Organic Veggies & Fruits Foods</h1>
-                <div class="position-relative mx-auto">
-                    <form asp-controller="Shop" asp-action="Index" method="get" class="d-flex w-100 w-md-75 mx-auto position-relative">
-                        <input name="search" class="form-control border-2 border-secondary w-100 py-3 px-4 rounded-pill" type="text" placeholder="Search">
-                        <button type="submit" class="btn btn-primary border-2 border-secondary py-3 px-4 position-absolute rounded-pill text-white h-100" style="top: 0; right: 0;">Submit Now</button>
-                    </form>
-                </div>
-            </div>
-            <div class="col-md-12 col-lg-5">
-                <div id="carouselId" class="carousel slide position-relative" data-bs-ride="carousel">
-                    <div class="carousel-inner" role="listbox">
-                        <div class="carousel-item active rounded">
-                            <img src="~/img/hero-img-1.png" class="img-fluid w-100 h-100 bg-secondary rounded" alt="First slide">
-                            <a href="#" class="btn px-4 py-2 text-white rounded">Fruits</a>
+<div class="home-marketplace">
+    <section class="container-fluid marketplace-hero">
+        <div class="container">
+            <div class="row g-4 align-items-stretch">
+                <div class="col-lg-3 order-3 order-lg-1">
+                    <div class="market-panel h-100">
+                        <div class="market-panel-title">
+                            <i class="fas fa-bars text-primary me-2"></i>Danh mục
                         </div>
-                        <div class="carousel-item rounded">
-                            <img src="~/img/hero-img-2.jpg" class="img-fluid w-100 h-100 rounded" alt="Second slide">
-                            <a href="#" class="btn px-4 py-2 text-white rounded">Vegetables</a>
+                        <div class="market-category-list">
+                            @if (categories.Any())
+                            {
+                                @foreach (var category in categories.Take(8))
+                                {
+                                    <a asp-controller="Shop" asp-action="Index" asp-route-categoryId="@category.Id" class="market-category-link">
+                                        <span>@category.Name</span>
+                                        <i class="fas fa-chevron-right"></i>
+                                    </a>
+                                }
+                            }
+                            else
+                            {
+                                <a asp-controller="Shop" asp-action="Index" class="market-category-link">
+                                    <span>Tất cả sản phẩm</span>
+                                    <i class="fas fa-chevron-right"></i>
+                                </a>
+                            }
                         </div>
                     </div>
-                    <button class="carousel-control-prev" type="button" data-bs-target="#carouselId" data-bs-slide="prev">
-                        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                        <span class="visually-hidden">Previous</span>
-                    </button>
-                    <button class="carousel-control-next" type="button" data-bs-target="#carouselId" data-bs-slide="next">
-                        <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                        <span class="visually-hidden">Next</span>
-                    </button>
+                </div>
+
+                <div class="col-lg-6 order-1 order-lg-2">
+                    <div class="market-hero-main h-100">
+                        <div class="market-kicker">Chợ nông sản tươi mỗi ngày</div>
+                        <h1>Deal rau củ, trái cây hữu cơ cho bữa ăn gia đình</h1>
+                        <p>Chọn nhanh sản phẩm tươi, giá tốt và giao tận nhà từ Fruitables.</p>
+                        <form asp-controller="Shop" asp-action="Index" method="get" class="market-search">
+                            <input name="search" class="form-control" type="text" placeholder="Tìm rau củ, trái cây, combo..." />
+                            <button type="submit" class="btn btn-secondary text-white">Tìm kiếm</button>
+                        </form>
+                        <div class="market-hero-actions">
+                            <a asp-controller="Shop" asp-action="Index" class="btn btn-primary">Mua ngay</a>
+                            <a href="#home-sale-products" class="btn btn-outline-light">Xem ưu đãi</a>
+                        </div>
+                        <img src="~/img/hero-img-1.png" alt="Fresh fruits" class="market-hero-image" />
+                    </div>
+                </div>
+
+                <div class="col-lg-3 order-2 order-lg-3">
+                    <div class="market-side-deals h-100">
+                        <a href="#home-sale-products" class="market-deal-card deal-hot">
+                            <span>Flash sale</span>
+                            <strong>Giá tốt hôm nay</strong>
+                            <small>Mua nhanh sản phẩm đang giảm</small>
+                        </a>
+                        <a asp-controller="Shop" asp-action="Index" class="market-deal-card">
+                            <span>Freeship</span>
+                            <strong>Đơn tươi giao tận nhà</strong>
+                            <small>Áp dụng theo chính sách cửa hàng</small>
+                        </a>
+                        <a asp-controller="Contact" asp-action="Index" class="market-deal-card">
+                            <span>Hỗ trợ</span>
+                            <strong>Tư vấn chọn hàng</strong>
+                            <small>Liên hệ khi cần gợi ý</small>
+                        </a>
+                    </div>
                 </div>
             </div>
+
+            <div class="market-quick-actions">
+                <a href="#home-sale-products"><i class="fas fa-bolt"></i><span>Flash sale</span></a>
+                <a href="#home-best-sellers"><i class="fas fa-fire"></i><span>Bán chạy</span></a>
+                <a asp-controller="Shop" asp-action="Index" asp-route-search="rau"><i class="fas fa-seedling"></i><span>Rau củ</span></a>
+                <a asp-controller="Shop" asp-action="Index" asp-route-search="trái cây"><i class="fas fa-apple-alt"></i><span>Trái cây</span></a>
+                <a asp-controller="Shop" asp-action="Index" asp-route-search="combo"><i class="fas fa-box-open"></i><span>Combo tiết kiệm</span></a>
+            </div>
         </div>
+    </section>
+
+    <partial name="_Features" />
+
+    @if (saleProducts.Any())
+    {
+        <section id="home-sale-products" class="container-fluid market-product-band py-5">
+            <div class="container">
+                <div class="market-section-heading">
+                    <div>
+                        <span class="market-section-label">Deal hôm nay</span>
+                        <h2>Giá tốt hôm nay</h2>
+                    </div>
+                    <a asp-controller="Shop" asp-action="Index" class="market-view-all">Xem tất cả</a>
+                </div>
+                <div class="row g-4">
+                    @foreach (var product in saleProducts)
+                    {
+                        <partial name="_ProductCard" model="product" view-data='new ViewDataDictionary(ViewData) { { "ShowCategoryBadge", true } }' />
+                    }
+                </div>
+            </div>
+        </section>
+    }
+
+    @if (featuredProducts.Any())
+    {
+        <section class="container-fluid market-product-band market-product-band-light py-5">
+            <div class="container">
+                <div class="market-section-heading">
+                    <div>
+                        <span class="market-section-label">Gợi ý cho bạn</span>
+                        <h2>Sản phẩm nổi bật</h2>
+                    </div>
+                    <a asp-controller="Shop" asp-action="Index" class="market-view-all">Mua thêm</a>
+                </div>
+                <div class="row g-4">
+                    @foreach (var product in featuredProducts)
+                    {
+                        <partial name="_ProductCard" model="product" view-data='new ViewDataDictionary(ViewData) { { "ShowCategoryBadge", true } }' />
+                    }
+                </div>
+            </div>
+        </section>
+    }
+
+    <partial name="_ProductsSection" />
+
+    @await Component.InvokeAsync("FeaturesBanner")
+
+    <div id="home-best-sellers">
+        <partial name="_BestSeller" />
     </div>
+
+    <partial name="_TestimonialSection" />
 </div>
-<!-- Hero End -->
 
-<!-- Features Section Start -->
-<partial name="_Features" />
-<!-- Features Section End -->
+<style>
+    .home-marketplace {
+        background: #fff;
+    }
 
-<!-- Fruits Shop Start-->
-<partial name="_ProductsSection" />
-<!-- Fruits Shop End-->
+    .marketplace-hero {
+        padding: 180px 0 32px;
+        background:
+            linear-gradient(135deg, rgba(129, 196, 8, 0.12), rgba(255, 180, 0, 0.16)),
+            #f8faf2;
+    }
 
-<!-- Features Banner Start -->
-@await Component.InvokeAsync("FeaturesBanner")
-<!-- Features Banner End -->
+    .market-panel,
+    .market-hero-main,
+    .market-side-deals {
+        border-radius: 8px;
+    }
 
-<!-- Best Seller Start -->
-<partial name="_BestSeller" />
-<!-- Best Seller End -->
+    .market-panel {
+        background: #fff;
+        border: 1px solid rgba(0, 0, 0, 0.06);
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+        overflow: hidden;
+    }
 
-<!-- Testimonial Start -->
-<partial name="_TestimonialSection" />
-<!-- Testimonial End -->
+    .market-panel-title {
+        padding: 16px 18px;
+        font-weight: 800;
+        border-bottom: 1px solid #eef2e6;
+    }
+
+    .market-category-list {
+        display: grid;
+        gap: 2px;
+        padding: 8px;
+    }
+
+    .market-category-link {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 42px;
+        padding: 9px 10px;
+        color: #334155;
+        border-radius: 6px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.95rem;
+    }
+
+    .market-category-link:hover {
+        background: #f1f8df;
+        color: #5f9307;
+    }
+
+    .market-category-link i {
+        font-size: 0.72rem;
+        color: #94a3b8;
+    }
+
+    .market-hero-main {
+        position: relative;
+        min-height: 390px;
+        padding: 34px;
+        overflow: hidden;
+        color: #fff;
+        background:
+            linear-gradient(135deg, rgba(45, 95, 6, 0.96), rgba(129, 196, 8, 0.82)),
+            url('/img/banner-fruits.jpg') center/cover;
+        box-shadow: 0 18px 45px rgba(45, 95, 6, 0.26);
+    }
+
+    .market-kicker {
+        display: inline-flex;
+        padding: 6px 12px;
+        background: rgba(255, 255, 255, 0.18);
+        border-radius: 999px;
+        font-weight: 800;
+        font-size: 0.86rem;
+        margin-bottom: 14px;
+    }
+
+    .market-hero-main h1 {
+        max-width: 470px;
+        margin: 0 0 12px;
+        color: #fff;
+        font-size: clamp(2rem, 4vw, 3.2rem);
+        line-height: 1.08;
+        font-weight: 900;
+    }
+
+    .market-hero-main p {
+        max-width: 420px;
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 1rem;
+        margin-bottom: 22px;
+    }
+
+    .market-search {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        max-width: 520px;
+        padding: 6px;
+        background: #fff;
+        border-radius: 999px;
+        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.2);
+    }
+
+    .market-search .form-control {
+        border: 0;
+        min-height: 48px;
+        border-radius: 999px;
+        padding-left: 18px;
+    }
+
+    .market-search .btn {
+        border-radius: 999px;
+        min-width: 120px;
+    }
+
+    .market-hero-actions {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 18px;
+    }
+
+    .market-hero-actions .btn {
+        border-radius: 999px;
+        padding: 10px 20px;
+    }
+
+    .market-hero-image {
+        position: absolute;
+        right: -18px;
+        bottom: -22px;
+        width: min(42%, 250px);
+        max-height: 230px;
+        object-fit: contain;
+        filter: drop-shadow(0 18px 26px rgba(0, 0, 0, 0.24));
+    }
+
+    .market-side-deals {
+        display: grid;
+        gap: 12px;
+    }
+
+    .market-deal-card {
+        display: flex;
+        min-height: 118px;
+        flex-direction: column;
+        justify-content: center;
+        padding: 18px;
+        background: #fff;
+        border-radius: 8px;
+        color: #1f2937;
+        text-decoration: none;
+        border: 1px solid rgba(0, 0, 0, 0.06);
+        box-shadow: 0 10px 26px rgba(15, 23, 42, 0.08);
+    }
+
+    .market-deal-card:hover {
+        color: #1f2937;
+        transform: translateY(-2px);
+    }
+
+    .market-deal-card span {
+        color: #e8590c;
+        font-size: 0.78rem;
+        font-weight: 900;
+        text-transform: uppercase;
+    }
+
+    .market-deal-card strong {
+        margin: 4px 0;
+        font-size: 1.05rem;
+    }
+
+    .market-deal-card small {
+        color: #64748b;
+    }
+
+    .market-deal-card.deal-hot {
+        background: linear-gradient(135deg, #ff6b00, #e03131);
+        color: #fff;
+    }
+
+    .market-deal-card.deal-hot span,
+    .market-deal-card.deal-hot small {
+        color: rgba(255, 255, 255, 0.88);
+    }
+
+    .market-quick-actions {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 18px;
+    }
+
+    .market-quick-actions a {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 58px;
+        padding: 10px;
+        background: #fff;
+        border-radius: 8px;
+        color: #1f2937;
+        font-weight: 800;
+        text-decoration: none;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.07);
+    }
+
+    .market-quick-actions a:hover {
+        color: #5f9307;
+    }
+
+    .market-quick-actions i {
+        color: #ff6b00;
+    }
+
+    .market-product-band {
+        background: #fff;
+    }
+
+    .market-product-band-light {
+        background: #f8faf2;
+    }
+
+    .market-section-heading {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+
+    .market-section-heading h2 {
+        margin: 0;
+        color: #1f2937;
+        font-size: clamp(1.6rem, 3vw, 2.3rem);
+        font-weight: 900;
+    }
+
+    .market-section-label {
+        display: inline-flex;
+        color: #e8590c;
+        font-weight: 900;
+        text-transform: uppercase;
+        font-size: 0.82rem;
+        margin-bottom: 4px;
+    }
+
+    .market-view-all {
+        color: #5f9307;
+        font-weight: 800;
+        text-decoration: none;
+        white-space: nowrap;
+    }
+
+    @@media (max-width: 991.98px) {
+        .marketplace-hero {
+            padding-top: 130px;
+        }
+
+        .market-hero-main {
+            min-height: 360px;
+        }
+
+        .market-quick-actions {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @@media (max-width: 575.98px) {
+        .marketplace-hero {
+            padding-top: 112px;
+        }
+
+        .market-hero-main {
+            padding: 24px;
+        }
+
+        .market-search {
+            display: block;
+            border-radius: 8px;
+        }
+
+        .market-search .form-control,
+        .market-search .btn {
+            width: 100%;
+            border-radius: 6px;
+        }
+
+        .market-search .btn {
+            margin-top: 8px;
+        }
+
+        .market-hero-image {
+            opacity: 0.35;
+            width: 55%;
+        }
+
+        .market-quick-actions {
+            grid-template-columns: 1fr;
+        }
+
+        .market-section-heading {
+            align-items: start;
+            flex-direction: column;
+        }
+    }
+</style>
